@@ -1,0 +1,35 @@
+{
+    "data": {
+        "edge": [
+            {
+                "from": "node_1",
+                "to": "node_2",
+                "effectSize": 0.1134,
+                "category": "hello",
+                "id": 1
+            },
+            {
+                "from": "node_3",
+                "to": "node_2",
+                "effectSize": 0.5,
+                "category": "hi",
+                "id": 2
+            }
+        ],
+        "node": [
+            {
+                "id": "node_1",
+                "category": "R"
+
+            },
+            {
+                "id": "node_2",
+                "category": "B"
+            },
+            {
+                "id": "node_3",
+                "category": "P"
+            }
+        ]
+    }
+}
