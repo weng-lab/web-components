@@ -16,28 +16,10 @@ export type { SearchBoxProps, SearchBoxWithSelectProps } from './components/Sear
 export { Select } from './components/Select';
 export type { SelectProps } from './components/Select';
 
-export { RangeSlider } from './components/Slider';
-export type { SliderProps } from './components/Slider';
-
-export { DataTable } from './components/DataTable';
-export type { DataTableProps, DataTableColumn } from './components/DataTable';
-
-export { ScatterPlot } from './components/ScatterPlot';
-export type { MiniMapProps, ChartProps, Point } from './components/ScatterPlot';
-
 export { CustomizedTable } from './components/Table';
 export type { CustomizedTableProps } from './components/Table';
 
 export { DropDownMenu } from './components/DropDownMenu';
 export type { DropDownMenuProps } from './components/DropDownMenu';
-
-export { Graph } from './components/Graph';
-export type { GraphProps } from './components/Graph';
-
-export { GenomeSearch } from './components/Autocomplete';
-export type { GenomeSearchProps, Result, Domain, ResultType } from './components/Autocomplete';
-
-export { ViolinPlot } from './components/ViolinPlot';
-export type { Distribution, ViolinPlotProps, ViolinPoint } from './components/ViolinPlot';
 
 export { PSYCHSCREEN_DEFAULT_THEME, PSYCHSCREEN_LIGHT_THEME, PSYCHSCREEN_DARK_THEME, PSYCHSCREEN_DEFAULT_FONT_FAMILY, PSYCHSCREEN_TONAL_PALETTES } from './components/Theme';

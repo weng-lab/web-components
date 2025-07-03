@@ -1,16 +1,16 @@
 {
-  "name": "@weng-lab/psychscreen-legacy-components",
+  "name": "@weng-lab/ui-components",
   "version": "0.0.1",
-  "description": "Legacy React MUI components for psychSCREEN",
+  "description": "Shared React MUI components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "build": "vite build"
   },
   "type": "module",
-  "module": "dist/psychscreen-legacy-components.es.js",
+  "module": "dist/ui-components.es.js",
   "types": "dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/psychscreen-legacy-components.es.js",
+      "import": "./dist/ui-components.es.js",
       "types": "./dist/src/index.d.ts"
     }
   },
@@ -20,6 +20,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "@tanstack/react-query": "^5.81.2"
+  },
   "peerDependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",

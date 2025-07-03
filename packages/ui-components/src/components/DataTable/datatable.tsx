@@ -8,8 +8,6 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-// import * as os from "os"
-import { genericSort } from '../utilities';
 import { DataTableProps, DataTableState, DataTableAction } from './types';
 import { reducer } from './reducer';
 
@@ -42,6 +40,17 @@ import { styled, alpha } from '@mui/material/styles';
 import { Stack } from '@mui/material';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+
+export function isNumeric(n: string): boolean {
+  const v: number = parseFloat(n)
+  return !isNaN(v) && isFinite(v)
+}
+
+export function genericSort(a: any, b: any): number {
+  if (isNumeric(a) && isNumeric(b)) return parseFloat(a) - parseFloat(b)
+  if (a.localeCompare) return a.localeCompare(b)
+  return 0
+}
 
 //Styling for Search component
 const Search = styled('div')(({ theme }) => ({

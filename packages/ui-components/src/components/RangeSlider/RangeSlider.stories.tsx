@@ -1,7 +1,6 @@
 import React from 'react';
 import { Meta, StoryObj } from '@storybook/react-vite';
 import { RangeSlider} from '../..';
-import "../../App.css";
 import { Button } from '@mui/material';
 import Typography from '@mui/material/Typography';
 

@@ -1,16 +1,16 @@
 {
-  "name": "@weng-lab/psychscreen-legacy-components",
+  "name": "@weng-lab/visualization",
   "version": "0.0.1",
-  "description": "Legacy React MUI components for psychSCREEN",
+  "description": "",
   "scripts": {
     "build": "vite build"
   },
   "type": "module",
-  "module": "dist/psychscreen-legacy-components.es.js",
+  "module": "dist/visualization.es.js",
   "types": "dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/psychscreen-legacy-components.es.js",
+      "import": "./dist/visualization.es.js",
       "types": "./dist/src/index.d.ts"
     }
   },
@@ -20,11 +20,21 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "cytoscape": "^3.32.0",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "cytoscape-popper": "^4.0.1",
+    "d3": "^7.9.0",
+    "html2canvas": "^1.4.1",
+    "tippy.js": "^6.3.7",
+    "use-react-screenshot": "^4.0.0"
+  },
   "peerDependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
+    "@visx/visx": "^3.12.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -33,6 +43,8 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
+    "@types/d3": "^7.4.3",
+    "@visx/visx": "^3.12.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   }

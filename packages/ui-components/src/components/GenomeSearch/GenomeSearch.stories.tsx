@@ -1,11 +1,11 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import GenomeSearch from './Autocomplete';
+import GenomeSearch from './GenomeSearch';
 import { Result } from './types';
 import { Button, TextField } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
 const meta = {
-    title: 'Autocomplete',
+    title: 'GenomeSearch',
     component: GenomeSearch,
     tags: ['autodocs'],
 } satisfies Meta<typeof GenomeSearch>;

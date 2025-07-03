@@ -1,10 +1,9 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import { Graph } from '../..';
+import { Graph } from '.';
 import data2 from './example-data/data2.json';
 import data3 from './example-data/data3.json';
 import data from './example-data/data.json';
 import { Edge, Node } from './types';
-import "../../App.css";
 
 function setColor(node: Node | Edge): string {
   if (node.category !== undefined) {
