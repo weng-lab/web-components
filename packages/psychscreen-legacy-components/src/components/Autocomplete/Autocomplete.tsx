@@ -12,7 +12,9 @@ import {
   AutocompleteProps,
   Box,
   Button,
+  ButtonProps,
   TextField,
+  TextFieldProps,
   Typography,
 } from "@mui/material";
 import { Autocomplete } from "@mui/material";
@@ -109,7 +111,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     enabled: false,
   });
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
     if (inputValue.length === 0) {
@@ -226,7 +228,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         filterOptions={(x) => x}
         renderInput={(params) => {
           if (slots && slots.input) {
-            return React.cloneElement(slots.input as React.ReactElement, {
+            return React.cloneElement(slots.input as React.ReactElement<TextFieldProps>, {
               ...params,
               onKeyDown: handleKeyDown,
               value: inputValue,
@@ -255,7 +257,7 @@ const Search: React.FC<GenomeSearchProps> = ({
       />
       {/* Submit Button */}
       {slots && slots.button ? (
-        React.cloneElement(slots.button as React.ReactElement, {
+        React.cloneElement(slots.button as React.ReactElement<ButtonProps, string | React.JSXElementConstructor<any>>, {
           onClick: () => onSubmit(),
         })
       ) : (

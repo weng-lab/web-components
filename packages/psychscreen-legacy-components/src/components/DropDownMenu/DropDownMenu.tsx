@@ -10,7 +10,7 @@ import { PSYCHSCREEN_TONAL_PALETTES } from '../Theme';
  */
 export type DropDownMenuProps = PaperProps;
 
-const DropDownMenu = styled(Paper)<DropDownMenuProps>(() => ({
+const DropDownMenu: React.FC<DropDownMenuProps> = styled(Paper)<DropDownMenuProps>(() => ({
     boxShadow: "0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px rgba(0, 0, 0, 0.3)",
     borderRadius: "4px",
     backgroundColor: PSYCHSCREEN_TONAL_PALETTES.get("Primary")!.get(100),

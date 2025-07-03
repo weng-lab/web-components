@@ -43,7 +43,7 @@ const HorizontalCard = (props: HorizontalCardProps) =>{
                             >    
                                 <CardContent>
                                     <Grid container>
-                                        <Grid item sm={10}>
+                                        <Grid size={{xs: 10}}>
                                             <Typography fontFamily={"Helvetica Neue"} gutterBottom variant="h5" component="div">
                                             {c.cardLabel}
                                             </Typography>
@@ -51,7 +51,7 @@ const HorizontalCard = (props: HorizontalCardProps) =>{
                                             {c.cardDesc}
                                             </Typography>
                                         </Grid>
-                                        <Grid item sm={2}>
+                                        <Grid size={{xs: 2}}>
                                             <ArrowForward onClick={(_) => {
                                                 props.onArrowClick && props.onArrowClick(c.val)
                                             }} style={{ width: "50px", height: "50px", color: "#E0E0E0" }}/>

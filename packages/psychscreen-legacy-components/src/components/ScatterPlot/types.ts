@@ -1,5 +1,6 @@
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom/lib/types";
+import { ReactElement } from 'react';
 
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
@@ -197,7 +198,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
             );
         }}
      */
-    tooltipBody?: (point: Point<T>) => JSX.Element;
+    tooltipBody?: (point: Point<T>) => ReactElement;
     miniMap?: MiniMapProps;
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
@@ -218,7 +219,7 @@ export type MapProps<T> = {
 }
 
 export type TooltipProps<T> = {
-    tooltipBody?: (point: Point<T>) => JSX.Element;
+    tooltipBody?: (point: Point<T>) => ReactElement;
     tooltipData: Point<T>;
 }
 

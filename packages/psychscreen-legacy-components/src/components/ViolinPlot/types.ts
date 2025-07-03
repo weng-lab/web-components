@@ -1,4 +1,5 @@
 import { ScaleBand, ScaleLinear } from "d3";
+import { ReactElement } from "react";
 
 type Outliers = "all" | "top" | "bottom" | "none"
 
@@ -50,7 +51,7 @@ export type ViolinPlotProps<T> = {
     labelOrientation?: "horizontal" | "vertical" | "leftDiagonal" | "rightDiagonal"
     onViolinClicked?: (distribution: Distribution<T>) => void;
     onPointClicked?: (point: ViolinPoint<T>) => void;
-    pointTooltipBody?: (point: ViolinPoint<T>) => JSX.Element;
+    pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
 }
 
 export interface CrossPlotProps<T> {
@@ -89,7 +90,7 @@ export interface TooltipProps<T> {
     top: number;
     data: TooltipData<T>;
     open: boolean;
-    pointTooltipBody?: (point: ViolinPoint<T>) => JSX.Element;
+    pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
 }
 
 export interface SingleViolinProps<T> {
@@ -104,7 +105,7 @@ export interface SingleViolinProps<T> {
     disableViolinPlot: boolean;
     disableCrossPlot: boolean;
     horizontal: boolean;
-    pointTooltipBody?: (point: ViolinPoint<T>) => JSX.Element;
+    pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
     onViolinClicked?: (distribution: Distribution<T>) => void | undefined;
     onPointClicked?: (point: ViolinPoint<T>) => void | undefined;
 }

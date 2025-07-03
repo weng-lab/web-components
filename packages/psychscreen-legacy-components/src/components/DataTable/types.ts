@@ -98,7 +98,7 @@ export interface DataTableProps<T> {
   downloadFileName?: string
   noOfDefaultColumns?: number
   showMoreColumns?: boolean
-  defaultColumnsToShow?: (string | JSX.Element)[]
+  defaultColumnsToShow?: string[]
   page?: number
   hideHeader?: boolean
   titleHoverInfo?: React.ReactNode,

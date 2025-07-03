@@ -1,4 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src"]
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+  },
+  "include": ["src"],
+  "exclude": ["**/*.stories.tsx", "dist", "node_modules"]
 }

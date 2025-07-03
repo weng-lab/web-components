@@ -29,7 +29,7 @@ export type AppBarProps = MUIAppBarProps & {
   centered?: boolean;
 };
 
-export const StyledAppBar = styled(MUIAppBar)<AppBarProps>((props) => ({
+export const StyledAppBar: React.FC<AppBarProps> = styled(MUIAppBar)<AppBarProps>((props) => ({
   backgroundColor: '#ffffff',
   color: '#000000',
   alignItems: props.centered === true ? 'center' : 'left',

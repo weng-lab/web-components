@@ -151,9 +151,7 @@ const DataTable = <T extends object>(
     [props.noOfDefaultColumns, props.columns]
   );
 
-  const [state, dispatch] = useReducer<
-    Reducer<DataTableState<T>, DataTableAction<T>>
-  >(reducer, {
+  const [state, dispatch] = useReducer(reducer, {
     sort: {
       column: props.sortColumn || 0,
       asc: !!props.sortDescending,
@@ -261,9 +259,9 @@ const DataTable = <T extends object>(
 
   //Shows/hides scroll indicators based on refs
   const monitorOverflow = (
-    containerRef: React.RefObject<HTMLDivElement>,
-    arrowRightRef: React.RefObject<HTMLButtonElement>,
-    arrowLeftRef: React.RefObject<HTMLButtonElement>
+    containerRef: React.RefObject<HTMLDivElement | null>,
+    arrowRightRef: React.RefObject<HTMLButtonElement | null>,
+    arrowLeftRef: React.RefObject<HTMLButtonElement | null>
   ) => {
     if (containerRef.current && arrowRightRef.current && arrowLeftRef.current) {
       const isOverflowing =
@@ -281,7 +279,7 @@ const DataTable = <T extends object>(
 
   //Attaches scroll and resize listeners to scrollable container
   useEffect(() => {
-    if (containerRef.current !== null) {
+    if (containerRef.current) {
       containerRef.current.addEventListener('scroll', () =>
         monitorOverflow(containerRef, arrowRightRef, arrowLeftRef)
       );

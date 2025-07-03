@@ -252,7 +252,7 @@ export const PSYCHSCREEN_BUTTON_DARK_THEME: Map<ButtonVariant, ButtonTheme> =
     ],
   ]);
 
-const Button = styled(MUIButton)<ButtonProps>(
+const Button: React.FC<ButtonProps> = styled(MUIButton)<ButtonProps>(
   ({ bvariant, btheme: ttheme }) => {
     const theme =
       ttheme === 'light'
