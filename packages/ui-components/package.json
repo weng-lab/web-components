@@ -1,7 +1,7 @@
 {
   "name": "@weng-lab/ui-components",
-  "version": "0.0.1",
-  "description": "Shared React MUI components for the Weng/Moore Labs suite of genomics web resources",
+  "version": "1.0.0",
+  "description": "React MUI components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "build": "vite build"
   },
