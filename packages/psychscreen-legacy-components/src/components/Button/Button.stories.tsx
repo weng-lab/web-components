@@ -4,7 +4,7 @@ import { Button } from '../..';
 import "../../App.css";
 
 const meta = {
-  title: 'Button',
+  title: 'psychscreen-legacy-components/Button',
   component: Button,
   tags: ['autodocs'],
   argTypes: {

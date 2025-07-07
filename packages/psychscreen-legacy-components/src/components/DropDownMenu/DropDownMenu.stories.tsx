@@ -5,7 +5,7 @@ import { DropDownMenu } from '../..';
 import "../../App.css";
 
 const meta = {
-  title: 'DropDownMenu',
+  title: 'psychscreen-legacy-components/DropDownMenu',
   component: DropDownMenu,
   tags: ['autodocs'],
   argTypes: {

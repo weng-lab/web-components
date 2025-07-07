@@ -128,7 +128,7 @@ function convertToSimple2(node: Node | Edge): string {
   return 'Edge';
 }
 const meta = {
-  title: 'Graph',
+  title: 'visualization/Graph',
   tags: ['autodocs'],
   component: Graph,
 } satisfies Meta<typeof Graph>;

@@ -4,7 +4,7 @@ import "../../App.css";
 import { MenuItem } from '@mui/material';
 
 const meta = {
-  title: 'Select', 
+  title: 'psychscreen-legacy-components/Select', 
   component: Select,
   tags: ['autodocs'],
   parameters: {

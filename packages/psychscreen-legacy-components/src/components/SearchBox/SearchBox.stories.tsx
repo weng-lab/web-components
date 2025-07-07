@@ -34,7 +34,7 @@ const SELECT_OPTIONS = [
 ]
 
 const meta = {
-  title: 'SearchBox', 
+  title: 'psychscreen-legacy-components/SearchBox', 
   component: SearchBox,
   tags: ['autodocs'],
   argTypes: {

@@ -24,7 +24,7 @@ const Template = ({ type }: {type: TypographyType}) => (
 );
 
 const meta = {
-  title: 'Typography',
+  title: 'psychscreen-legacy-components/Typography',
   component: Template,
   tags: ['autodocs'],
   parameters: {

@@ -3,7 +3,7 @@ import ScatterPlot from './scatterplot';
 import { MiniMapProps } from './types';
 
 const meta = {
-    title: 'ScatterPlot',
+    title: 'visualization/ScatterPlot',
     component: ScatterPlot,
     tags: ['autodocs'],
     argTypes: {

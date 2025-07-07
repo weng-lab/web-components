@@ -9,7 +9,7 @@ const tdata = Array.from(Array(1000).keys()).map((a)=> {
 })
 
 const meta  = {
-  title: 'CustomizedTable',
+  title: 'psychscreen-legacy-components/CustomizedTable',
   component: CustomizedTable,
   tags: ['autodocs'],
   argTypes: {

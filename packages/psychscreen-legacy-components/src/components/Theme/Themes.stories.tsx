@@ -97,7 +97,7 @@ const Demo: React.FC<{ view: View }> = ({ view }) => view === "palettes" ? (
 );
 
 const meta = {
-  title: 'Themes',
+  title: 'psychscreen-legacy-components/Themes',
   component: Demo,
   tags: ['autodocs'],
   parameters: {

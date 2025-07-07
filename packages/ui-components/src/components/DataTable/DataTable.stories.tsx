@@ -16,7 +16,7 @@ import {
 import { Close } from '@mui/icons-material';
 
 const meta = {
-  title: 'DataTable',
+  title: 'ui-components/DataTable',
   component: DataTable,
   tags: ['autodocs'],
   argTypes: {

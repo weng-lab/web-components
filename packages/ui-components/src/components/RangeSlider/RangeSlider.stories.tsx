@@ -5,7 +5,7 @@ import { Button } from '@mui/material';
 import Typography from '@mui/material/Typography';
 
 const meta = {
-  title: 'RangeSlider', 
+  title: 'ui-components/RangeSlider', 
   component: RangeSlider,
   tags: ['autodocs'],
   parameters: {

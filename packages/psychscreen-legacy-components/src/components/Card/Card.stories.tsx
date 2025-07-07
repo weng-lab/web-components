@@ -4,7 +4,7 @@ import "../../App.css";
 import { ThemeProvider } from '@emotion/react';
 
 const meta = {
-  title: 'HorizontalCard',
+  title: 'psychscreen-legacy-components/HorizontalCard',
   component: HorizontalCard,
   tags: ['autodocs'],
   argTypes: {

@@ -5,7 +5,7 @@ import { Button, TextField } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
 const meta = {
-    title: 'GenomeSearch',
+    title: 'ui-components/GenomeSearch',
     component: GenomeSearch,
     tags: ['autodocs'],
 } satisfies Meta<typeof GenomeSearch>;

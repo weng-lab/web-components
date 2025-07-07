@@ -4,7 +4,7 @@ import { testData } from './testData';
 import { Box, Typography } from '@mui/material';
 
 const meta = {
-    title: 'ViolinPlot',
+    title: 'visualization/ViolinPlot',
     component: ViolinPlot,
     tags: ['autodocs'],
     argTypes: {
