@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Visualization components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
-    "build": "vite build"
+    "clean": "rimraf dist",
+    "build": "pnpm run clean && vite build"
   },
   "type": "module",
   "module": "dist/visualization.es.js",
@@ -46,6 +47,7 @@
     "@types/d3": "^7.4.3",
     "@visx/visx": "^3.12.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "rimraf": "^6.0.1"
   }
 }
