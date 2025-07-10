@@ -44,6 +44,7 @@ Do you expect the consumer to have a version of it installed separately alongsid
   - Package peerDependencies --> Tells consumer to install the dependency
   - Package devDependencies --> Needed for local dev/build/test of the package
   - Root devDependencies --> Allows storybook access to the dependency when running from the root
+  - <b>ALSO: Modify the package's README and add it to the install commands</b>
 
 ### Why is `@visx/visx` a `peerDependency` of `/visualization` but all the needed visx packages installed separately at the root in `devDependencies`? 
 This is a slightly annoying feature of pnpm in this case, but it is working as designed. `@visx/visx` depends on all of the individual visx packages, but if you want them to actually appear in node_modules for the purpose of linting and building (instead of just being available to @visx/visx via the pnpm store) you need to explicitly list all of them out. Pnpm does this to eliminate the possibility of relying on undeclared transitive dependencies (dependencies of dependencies). `@visx/visx` is used as a `peerDependency` in `/visualization` as our apps currently use yarn or npm which flatten node_modules and do not face this issue. Otherwise there would be 10+ @visx/whatever peer dependencies which is no good.
