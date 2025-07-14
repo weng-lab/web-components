@@ -1,4 +1,4 @@
-import { ScaleBand, ScaleLinear } from "d3";
+import { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale';
 import { ReactElement } from "react";
 
 type Outliers = "all" | "top" | "bottom" | "none"
