@@ -1,0 +1,100 @@
+import {
+  DataGridPro,
+  GridAutosizeOptions,
+  useGridApiRef,
+} from "@mui/x-data-grid-pro";
+import { useMemo, useEffect, useCallback } from "react";
+import EmptyTableFallback from "./EmptyFallback";
+import { TableProps } from "./types";
+
+const Table = (props: TableProps) => {
+  /**
+   * Provide defaults
+   * @todo obey the defaults specified in the theme.
+   * Ex: Overriding pageSizeOptions like this overrides the defaults specified in the theme
+   */
+  const {
+    pagination = true,
+    columns,
+    density = "compact",
+    rows = [],
+    apiRef: externalApiRef,
+    onResize,
+    emptyTableFallback,
+    showToolbar = true,
+    divHeight = {},
+    ...restDataGridProps
+  } = props;
+
+  //Assign default ID if no ID is provided in the row data
+  const rowsWithIds = useMemo(
+    () => rows.map((row, index) => ({ ...row, id: row?.id || index })),
+    [rows]
+  );
+
+  const autosizeOptions: GridAutosizeOptions = useMemo(
+    () => ({
+      expand: true,
+      includeHeaders: true,
+      outliersFactor: 1.5,
+    }),
+    []
+  );
+
+  const internalApiRef = useGridApiRef();
+  // prioritize using the provided apiRef if available, otherwise create a new one
+  const apiRef = externalApiRef ?? internalApiRef;
+
+  const handleResizeCols = useCallback(() => {
+    // need to check .autosizeCoumns since the current was being set with an empty object
+    if (!apiRef.current?.autosizeColumns) return;
+    apiRef.current.autosizeColumns(autosizeOptions);
+  }, [apiRef, autosizeOptions]);
+
+  // trigger resize when rows or columns change so that rows/columns don't need to be memoized outisde of this component
+  // otherwise sometimes would snap back to default widths when rows/columns change
+  useEffect(() => {
+    handleResizeCols();
+  }, [rows, columns, handleResizeCols]);
+
+  const TableComponent = () => (
+    <DataGridPro
+      apiRef={apiRef}
+      columns={columns}
+      rows={rowsWithIds}
+      autosizeOnMount
+      onResize={(params, event, details) => {
+        if (onResize) {
+          onResize(params, event, details);
+        }
+        handleResizeCols();
+      }}
+      autosizeOptions={autosizeOptions}
+      disableRowSelectionOnClick
+      showToolbar={showToolbar}
+      density={density}
+      {...restDataGridProps}
+    />
+  );
+
+  const shouldDisplayEmptyFallback =
+    emptyTableFallback &&
+    rowsWithIds.length === 0 &&
+    !restDataGridProps.loading;
+
+  if (shouldDisplayEmptyFallback) {
+    return typeof emptyTableFallback === "string" ? (
+      <EmptyTableFallback message={emptyTableFallback} />
+    ) : (
+      emptyTableFallback
+    );
+  }
+
+  return (
+    <div style={{display: 'flex', flexDirection: 'column', ...divHeight}}>
+      <TableComponent />
+    </div>
+  );
+};
+
+export default Table;
