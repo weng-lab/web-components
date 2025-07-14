@@ -56,7 +56,20 @@ const Table = (props: TableProps) => {
   useEffect(() => {
     handleResizeCols();
   }, [rows, columns, handleResizeCols]);
-
+  
+  const shouldDisplayEmptyFallback =
+  emptyTableFallback &&
+  rowsWithIds.length === 0 &&
+  !restDataGridProps.loading;
+  
+  if (shouldDisplayEmptyFallback) {
+    return typeof emptyTableFallback === "string" ? (
+      <EmptyTableFallback message={emptyTableFallback} />
+    ) : (
+      emptyTableFallback
+    );
+  }
+  
   const TableComponent = () => (
     <DataGridPro
       apiRef={apiRef}
@@ -77,21 +90,8 @@ const Table = (props: TableProps) => {
     />
   );
 
-  const shouldDisplayEmptyFallback =
-    emptyTableFallback &&
-    rowsWithIds.length === 0 &&
-    !restDataGridProps.loading;
-
-  if (shouldDisplayEmptyFallback) {
-    return typeof emptyTableFallback === "string" ? (
-      <EmptyTableFallback message={emptyTableFallback} />
-    ) : (
-      emptyTableFallback
-    );
-  }
-
   return (
-    <div style={{display: 'flex', flexDirection: 'column', ...divHeight}}>
+    <div style={{display: 'flex', flexDirection: 'column', width: '100%', ...divHeight}}>
       <TableComponent />
     </div>
   );

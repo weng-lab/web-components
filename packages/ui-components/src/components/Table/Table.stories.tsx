@@ -98,7 +98,7 @@ export const FixedHeightWrapper: Story = {
     rows,
     label: "This table has a fixed 350px height",
     divHeight: {
-      height: '350px'
+      height: '200px'
     }
   }
 }
