@@ -84,6 +84,18 @@ export const EmptyTableFallback: Story = {
   },
 };
 
+export const ErrorFallback: Story = {
+  args: {
+    columns,
+    rows,
+    label: "Intact Hi-C Loops",
+    divHeight: {
+      height: '350px'
+    },
+    error: true,
+  }
+}
+
 export const FlexWrapper: Story = {
   args: {
     columns,

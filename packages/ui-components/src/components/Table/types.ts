@@ -33,7 +33,7 @@ export interface TableProps extends DataGridProProps {
   getRowId?: DataGridProProps["getRowId"];
   /**
    * Element to be rendered instead of `DataGridPro` when `rows` has a length of `0`.
-   * If a string is passed will use `EmptyFallback` component
+   * If a string is passed will use `TableFallback` component
    */
   emptyTableFallback?: string | ReactElement;
   /**
@@ -56,6 +56,11 @@ export interface TableProps extends DataGridProProps {
     minHeight?: string
     maxHeight?: string
   }
+  /**
+   * Used for failed fetches. If true will display error fallback
+   * @default false
+   */
+  error?: boolean
 }
 
 export type TableToolbarProps = {

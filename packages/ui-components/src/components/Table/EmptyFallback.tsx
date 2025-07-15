@@ -1,17 +1,18 @@
-import { Paper, Typography } from "@mui/material";
+import { InfoOutlineRounded, WarningAmberRounded } from "@mui/icons-material";
+import { Stack, Typography } from "@mui/material";
 
-export type EmptyTableFallbackProps = {
-  message: string
-}
+export type TableFallbackProps = {
+  message: string;
+  variant: "error" | "empty";
+};
 
-const EmptyTableFallback = ({message}: EmptyTableFallbackProps) => {
+const TableFallback = ({ message, variant }: TableFallbackProps) => {
   return (
-    <Paper>
-      <Typography variant="h6" p={2} border={"1px solid #e0e0e0"} borderRadius={1}>
-        {message}
-      </Typography>
-    </Paper>
+    <Stack direction={"row"} border={"1px solid #e0e0e0"} borderRadius={1} p={2} spacing={1}>
+      {variant === "empty" ? <InfoOutlineRounded /> : <WarningAmberRounded />}
+      <Typography>{message}</Typography>
+    </Stack>
   );
 };
 
-export default EmptyTableFallback
+export default TableFallback;

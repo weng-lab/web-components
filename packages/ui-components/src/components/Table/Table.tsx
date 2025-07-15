@@ -4,7 +4,7 @@ import {
   useGridApiRef,
 } from "@mui/x-data-grid-pro";
 import { useMemo, useEffect, useCallback } from "react";
-import EmptyTableFallback from "./EmptyFallback";
+import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 
 const Table = (props: TableProps) => {
@@ -24,6 +24,7 @@ const Table = (props: TableProps) => {
     showToolbar = true,
     divHeight = {},
     sx = {},
+    error = false,
     ...restDataGridProps
   } = props;
 
@@ -65,10 +66,14 @@ const Table = (props: TableProps) => {
 
   if (shouldDisplayEmptyFallback) {
     return typeof emptyTableFallback === "string" ? (
-      <EmptyTableFallback message={emptyTableFallback} />
+      <TableFallback message={emptyTableFallback} variant="empty" />
     ) : (
       emptyTableFallback
     );
+  }
+
+  if (error) {
+    return <TableFallback message={`Error fetching ${restDataGridProps.label}`} variant="error" />
   }
 
   return (
