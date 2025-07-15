@@ -16,7 +16,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story ={
+export const Default: Story = {
   args: {
     title:'DNase Z-score',
     width: 250,
@@ -29,7 +29,7 @@ export const Default: Story ={
   }
 }
 
-export const WidthTest: Story ={
+export const WidthTest: Story = {
   args: {
     title:'Width Test',
     width: '100%',
