@@ -1,4 +1,4 @@
-import * as d3 from "d3";
+import { mean } from '@visx/vendor/d3-array';
 
 //measure the height of the longest tick
 export const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
@@ -68,7 +68,7 @@ export function kernelDensityEstimator(
     return (data: number[]) => {
         return X.map((x) => ({
             value: x,
-            count: d3.mean(data, (v) => kernel(x - v)) || 0,
+            count: mean(data, (v) => kernel(x - v)) || 0,
         }));
     };
 }

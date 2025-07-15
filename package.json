@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "dev": "vite"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
   "devDependencies": {
     "@chromatic-com/storybook": "^4",
     "@emotion/react": "^11.14.0",
@@ -48,6 +50,5 @@
     "vite": "^7.0.0",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.3"
-  },
-  "packageManager": "pnpm@10.13.1"
+  }
 }

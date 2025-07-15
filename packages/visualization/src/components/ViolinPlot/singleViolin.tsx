@@ -1,4 +1,8 @@
-import * as d3 from "d3";
+import { scaleLinear } from '@visx/scale';
+import { max as d3max } from '@visx/vendor/d3-array';
+import { curveBasis } from '@visx/curve';
+import { line } from '@visx/shape';
+import { range } from '@visx/vendor/d3-array';
 import React, { useCallback, useMemo } from "react";
 import CrossPlot from "./crossPlot";
 import { calculateBoxStats, scottRule, silvermanRule, kernelDensityEstimator, gaussian, seededRandom } from "./helpers";
@@ -41,7 +45,7 @@ const SingleViolin = <T,>({
     const pointsNoOutliers: ViolinPoint<T>[] = distribution.data.filter(d => !outliers.includes(d.value))
 
     const violinData = useMemo(() => {
-        const ticks = d3.range(min, max, .1);
+        const ticks = range(min, max, .1);
 
         //bandwidth / binwidth for smoothing, based on user input
         const bandwidth = typeof violinProps?.bandwidth === "number"
@@ -96,8 +100,8 @@ const SingleViolin = <T,>({
 
     //center of each Violin
     const violinCenter = horizontal ? (labelScale(labels[distIndex]) ?? 0) + violinWidth / 2 : (labelScale(labels[distIndex]) ?? 0) + offset + violinWidth / 2;
-    const widthScale = d3.scaleLinear()
-        .domain([0, d3.max(violinData, d => Math.abs(d.count)) || 1])
+    const widthScale = scaleLinear()
+        .domain([0, d3max(violinData, d => Math.abs(d.count)) || 1])
         .range([0, violinWidth / 2]);
 
     //filter out nan values if any
@@ -106,21 +110,21 @@ const SingleViolin = <T,>({
     //mirror the data so that both sides are drawn
     const points = [
         ...filteredData.map(d => ({
-            x: violinCenter + widthScale(d.count),
+            x: violinCenter + (widthScale(d.count) as number),
             y: valueScale(d.value),
         })),
         ...filteredData.slice().reverse().map(d => ({
-            x: violinCenter - widthScale(d.count),
+            x: violinCenter - (widthScale(d.count) as number),
             y: valueScale(d.value),
         }))
     ];
 
     if (points.length > 0) points.push(points[0]); // Close the path
 
-    const violinPath = d3.line<{ x: number; y: number }>()
+    const violinPath = line<{ x: number; y: number }>()
         .x(d => horizontal ? d.y : d.x)
         .y(d => horizontal ? d.x : d.y)
-        .curve(d3.curveBasis)(points) ?? null;
+        .curve(curveBasis)(points) ?? null;
 
     return (
         <React.Fragment key={distribution.label ?? `group-${distIndex}`}>
