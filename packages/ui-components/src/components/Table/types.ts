@@ -33,7 +33,7 @@ export interface TableProps extends DataGridProProps {
   getRowId?: DataGridProProps["getRowId"];
   /**
    * Element to be rendered instead of `DataGridPro` when `rows` has a length of `0`.
-   * If a string is passed will use `EmptyTableFallback` component
+   * If a string is passed will use `EmptyFallback` component
    */
   emptyTableFallback?: string | ReactElement;
   /**

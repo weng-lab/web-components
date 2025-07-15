@@ -10,7 +10,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@8.3.1+sha1.75c6e8a4075abfc494770f998bf37b9ada110f51",
   "devDependencies": {
     "@chromatic-com/storybook": "^4",
     "@emotion/react": "^11.14.0",
@@ -49,5 +48,6 @@
     "vite": "^7.0.0",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.3"
-  }
+  },
+  "packageManager": "pnpm@10.13.1"
 }

@@ -57,12 +57,12 @@ const Table = (props: TableProps) => {
   useEffect(() => {
     handleResizeCols();
   }, [rows, columns, handleResizeCols]);
-  
+
   const shouldDisplayEmptyFallback =
-  emptyTableFallback &&
-  rowsWithIds.length === 0 &&
-  !restDataGridProps.loading;
-  
+    emptyTableFallback &&
+    rowsWithIds.length === 0 &&
+    !restDataGridProps.loading;
+
   if (shouldDisplayEmptyFallback) {
     return typeof emptyTableFallback === "string" ? (
       <EmptyTableFallback message={emptyTableFallback} />
@@ -70,36 +70,39 @@ const Table = (props: TableProps) => {
       emptyTableFallback
     );
   }
-  
-  const TableComponent = () => (
-    <DataGridPro
-      apiRef={apiRef}
-      columns={columns}
-      rows={rowsWithIds}
-      autosizeOnMount
-      onResize={(params, event, details) => {
-        if (onResize) {
-          onResize(params, event, details);
-        }
-        handleResizeCols();
-      }}
-      autosizeOptions={autosizeOptions}
-      disableRowSelectionOnClick
-      showToolbar={showToolbar}
-      density={density}
-      sx={{
-        "& .MuiDataGrid-toolbarDivider": {
-          height: "20px",
-        },
-        ...sx,
-      }}
-      {...restDataGridProps}
-    />
-  );
 
   return (
-    <div style={{display: 'flex', flexDirection: 'column', width: '100%', ...divHeight}}>
-      <TableComponent />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        ...divHeight,
+      }}
+    >
+      <DataGridPro
+        apiRef={apiRef}
+        columns={columns}
+        rows={rowsWithIds}
+        autosizeOnMount
+        onResize={(params, event, details) => {
+          if (onResize) {
+            onResize(params, event, details);
+          }
+          handleResizeCols();
+        }}
+        autosizeOptions={autosizeOptions}
+        disableRowSelectionOnClick
+        showToolbar={showToolbar}
+        density={density}
+        sx={{
+          "& .MuiDataGrid-toolbarDivider": {
+            height: "20px",
+          },
+          ...sx,
+        }}
+        {...restDataGridProps}
+      />
     </div>
   );
 };
