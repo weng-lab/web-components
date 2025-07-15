@@ -23,6 +23,7 @@ const Table = (props: TableProps) => {
     emptyTableFallback,
     showToolbar = true,
     divHeight = {},
+    sx = {},
     ...restDataGridProps
   } = props;
 
@@ -86,6 +87,12 @@ const Table = (props: TableProps) => {
       disableRowSelectionOnClick
       showToolbar={showToolbar}
       density={density}
+      sx={{
+        "& .MuiDataGrid-toolbarDivider": {
+          height: "20px",
+        },
+        ...sx,
+      }}
       {...restDataGridProps}
     />
   );
