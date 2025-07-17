@@ -23,5 +23,10 @@ export interface BarPlotProps<T> {
   /**
    * If true, will cutoff negative values in the chart at -0.5, and add a 
    */
-  cutoffNegativeValues?: boolean
+  cutoffNegativeValues?: boolean;
+  /**
+   * Change the space each bar takes up (increaseing by a facotr of 4 + 15)
+   * @default 0 (15)
+   */
+  barSize?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 }

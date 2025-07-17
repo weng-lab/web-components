@@ -21,7 +21,8 @@ const BarPlot = <T,>({
     onBarClicked,
     TooltipContents,
     show95thPercentileLine = false,
-    cutoffNegativeValues = false
+    cutoffNegativeValues = false,
+    barSize
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
@@ -72,8 +73,9 @@ const BarPlot = <T,>({
 
     /**
      * @todo why is this not working as expected. Was 30 in SCREEN, why does it need to be 15 here?
+     * figure out a better way to increase bar size other than just a factor of 4 + 15, kind of dumb @matt
      */
-    const dataHeight = data.length * 15
+    const dataHeight = data.length * (15 + (barSize ?? 0) * 4)
     const totalHeight = dataHeight + spaceForTopAxis + spaceOnBottom
 
     const maxValue = useMemo(() => Math.max(...data.map((d) => d.value)), [data])
@@ -93,7 +95,8 @@ const BarPlot = <T,>({
             domain: [
                 // If cutting off negative values, the lower bound is max(negativeCutoff, minValue).
                 cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue),
-                Math.max(0, maxValue)
+                // Make some room past the last tick (7% of the range of the data)
+                Math.max(0, maxValue) + 0.07 * (maxValue - minValue)
             ], // always include 0 as anchor if values do not cross 0
             range: [0, Math.max(ParentWidth - spaceForCategory - spaceForLabel, 0)],
         }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentWidth, spaceForLabel])
@@ -181,11 +184,15 @@ const BarPlot = <T,>({
                             }}
                         />
                         {data.map((d, i) => {
+                            const hovered = d.id === tooltipData?.id;
+
                             const pointValue = cutoffNegativeValues ? Math.max(d.value, negativeCutoff) : d.value
                             const barHeight = yScale.bandwidth()
                             const barWidth = Math.abs(xScale(pointValue) - xScale(0))
                             const barY = yScale(d.id)
                             const barX = pointValue > 0 ? xScale(0) : xScale(pointValue)
+
+
                             return (
                                 <Group
                                     key={i}
@@ -216,6 +223,7 @@ const BarPlot = <T,>({
                                             fill={d.color || "black"}
                                             opacity={cutoffNegativeValues && pointValue === negativeCutoff ? 0.4 : 1}
                                             rx={3}
+                                            stroke={hovered ? "black" : "none"}
                                         />
                                         {/* Value label next to the bar */}
                                         <Text

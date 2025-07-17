@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BarData } from './packages/visualization/src/components/BarPlot/types.ts'
 import BarPlot from './packages/visualization/src/components/BarPlot/barplot'
+import Box from '@mui/material/Box';
 
 //Testing page for looking at components outside of storybook if needed (pnpm dev)
 
@@ -72,12 +73,13 @@ function TestingPage() {
   );
 
   return (
-    <div style={{ padding: 32, height: "100%", width: "100%" }}>
+    <Box height={"57vh"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
       <BarPlot
         data={sampleData}
+        barSize={10}
         TooltipContents={TooltipContents}
       />
-    </div>
+    </Box>
   );
 }
 
