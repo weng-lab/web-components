@@ -1,6 +1,6 @@
 export interface BarData<T> {
-  category: string;
-  label: string;
+  category?: string;
+  label?: string;
   value: number;
   /**
    * Unique ID for the data point. This is a string and not number since scaleBand needs a string[] for it's domain

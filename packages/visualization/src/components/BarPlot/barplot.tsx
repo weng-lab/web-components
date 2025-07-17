@@ -13,6 +13,22 @@ import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
+const fontSize = 14
+
+//helper function to get the approx length of the longest category in px
+const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
+    const el = document.createElement("g");
+    el.style.position = "absolute";
+    el.style.visibility = "hidden";
+    el.style.fontSize = `${fontSize}px`;
+    el.style.fontFamily = fontFamily;
+    el.style.whiteSpace = "nowrap";
+    el.textContent = text;
+    document.body.appendChild(el);
+    const width = el.getBoundingClientRect().width;
+    document.body.removeChild(el);
+    return width + 10;
+};
 
 const BarPlot = <T,>({
     data,
@@ -63,12 +79,14 @@ const BarPlot = <T,>({
 
     const { parentRef, width: ParentWidth } = useParentSize({ debounceTime: 150 });
 
+    
     // Y padding
     const spaceForTopAxis = 50
     const spaceOnBottom = 20
-
+    
     // X padding
-    const spaceForCategory = 130
+    const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", fontSize, "Arial")))
+    const spaceForCategory = maxCategoryLength
     const gapBetweenTextAndBar = 10
 
     /**
@@ -274,7 +292,7 @@ const BarPlot = <T,>({
                         left={tooltipLeft}
                         style={{ ...defaultTooltipStyles, backgroundColor: '#283238', color: 'white', zIndex: 1000 }}
                     >
-                        {tooltipData?.category && (
+                        {tooltipData && (
                             <TooltipContents {...tooltipData as BarData<T>} />
                         )}
                     </TooltipWithBounds>

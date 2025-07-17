@@ -14,7 +14,6 @@ function TestingPage() {
 
   const sampleData: BarData<MyMetadata>[] = [
     {
-      category: "Group A",
       label: "Apples",
       value: 30,
       id: "apples-a",

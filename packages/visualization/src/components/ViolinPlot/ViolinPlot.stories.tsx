@@ -4,7 +4,7 @@ import { testData } from './testData';
 import { Box, Typography } from '@mui/material';
 
 const meta = {
-    title: 'visualization/ViolinPlot',
+    title: 'ViolinPlot',
     component: ViolinPlot,
     tags: ['autodocs'],
     argTypes: {
@@ -31,16 +31,6 @@ export const Default: Story = {
         loading: false,
         axisLabel: "Axis Label",
         labelOrientation: "rightDiagonal"
-    },
-};
-
-export const Horizontal: Story = {
-    args: {
-        distributions: testData,
-        loading: false,
-        axisLabel: "Axis Label",
-        labelOrientation: "leftDiagonal",
-        horizontal: true
     },
 };
 
