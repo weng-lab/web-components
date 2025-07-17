@@ -14,6 +14,50 @@ function TestingPage() {
 
   const sampleData: BarData<MyMetadata>[] = [
     {
+      category: "Group B",
+      label: "Grapes",
+      value: 50,
+      id: "grapes-b",
+      color: "#4BC0C0",
+      metadata: {
+        description: "Seedless grapes from Group B",
+        source: "Vineyard 4"
+      }
+    },
+    {
+      category: "Group B",
+      label: "Grapes",
+      value: 50,
+      id: "grapes-b2",
+      color: "#4BC0C0",
+      metadata: {
+        description: "Seedless grapes from Group B",
+        source: "Vineyard 4"
+      }
+    },
+    {
+      category: "Group C",
+      label: "Bananas",
+      value: 25,
+      id: "bananas-C",
+      color: "#FFCD56",
+      metadata: {
+        description: "Sweet bananas from Group B",
+        source: "Plantation 3"
+      }
+    },
+    {
+      category: "Group C",
+      label: "Bananas",
+      value: 25,
+      id: "bananas-c2",
+      color: "#FFCD56",
+      metadata: {
+        description: "Sweet bananas from Group B",
+        source: "Plantation 3"
+      }
+    },
+    {
       label: "Apples",
       value: 30,
       id: "apples-a",
@@ -45,17 +89,6 @@ function TestingPage() {
         source: "Plantation 3"
       }
     },
-    {
-      category: "Group B",
-      label: "Grapes",
-      value: 50,
-      id: "grapes-b",
-      color: "#4BC0C0",
-      metadata: {
-        description: "Seedless grapes from Group B",
-        source: "Vineyard 4"
-      }
-    }
   ];
 
   const TooltipContents = (bar: BarData<MyMetadata>) => (
@@ -72,11 +105,12 @@ function TestingPage() {
   );
 
   return (
-    <Box height={"57vh"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
+    <Box height={"70vh"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
       <BarPlot
         data={sampleData}
         barSize={10}
         TooltipContents={TooltipContents}
+        sortByCategory={true}
       />
     </Box>
   );
