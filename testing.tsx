@@ -110,7 +110,6 @@ function TestingPage() {
         data={sampleData}
         barSize={10}
         TooltipContents={TooltipContents}
-        sortByCategory={true}
       />
     </Box>
   );
