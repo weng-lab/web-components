@@ -83,7 +83,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     enabled: false,
   });
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (inputValue.length === 0) {
@@ -108,6 +108,13 @@ const Search: React.FC<GenomeSearchProps> = ({
         if (searchCCRE && inputValue.toLowerCase().startsWith("em")) refetchCCREs();
       }
     }, 100);
+
+    // Cleanup function
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, [inputValue]);
 
   useEffect(() => {
@@ -117,7 +124,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   useEffect(() => {
     if (isLoading) return;
     const resultsList = [];
-    if (geneData && searchGene ) {
+    if (geneData && searchGene) {
       resultsList.push(...geneResultList(geneData, geneLimit || 3));
     }
     if (assembly === "GRCh38") {
@@ -154,6 +161,11 @@ const Search: React.FC<GenomeSearchProps> = ({
     searchSnp,
     searchCoordinate,
     inputValue,
+    assembly,
+    geneLimit,
+    icreLimit,
+    ccreLimit,
+    snpLimit,
   ]);
 
   // Handle submit
@@ -162,8 +174,8 @@ const Search: React.FC<GenomeSearchProps> = ({
     if (results?.length === 1) {
       sel = results[0];
     }
-    if (!sel.title) return;
-    onSearchSubmit && onSearchSubmit(sel);
+    if (!sel?.title) return;
+    onSearchSubmit?.(sel);
   }, [onSearchSubmit, selection, results]);
 
   // Handle enter key down
