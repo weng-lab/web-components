@@ -99,7 +99,7 @@ const Search: React.FC<GenomeSearchProps> = ({
 
     // Set new timeout
     timeoutRef.current = setTimeout(() => {
-      if (searchGene) refetchGenes();
+      if (searchGene && !isDomain(inputValue)) refetchGenes();
       if (assembly === "GRCh38") {
         if (searchICRE && inputValue.toLowerCase().startsWith("eh")) refetchICREs();
         if (searchCCRE && inputValue.toLowerCase().startsWith("eh")) refetchCCREs();
@@ -117,14 +117,14 @@ const Search: React.FC<GenomeSearchProps> = ({
   useEffect(() => {
     if (isLoading) return;
     const resultsList = [];
-    if (geneData && searchGene) {
+    if (geneData && searchGene ) {
       resultsList.push(...geneResultList(geneData, geneLimit || 3));
     }
     if (assembly === "GRCh38") {
       if (icreData && searchICRE && inputValue.toLowerCase().startsWith("eh")) {
         resultsList.push(...icreResultList(icreData.data.iCREQuery, icreLimit || 3));
       }
-      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {
+      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("eh")) {
         resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
       }
       if (snpData && searchSnp && inputValue.toLowerCase().startsWith("rs")) {
