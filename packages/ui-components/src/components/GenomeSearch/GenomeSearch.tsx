@@ -83,7 +83,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     enabled: false,
   });
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (inputValue.length === 0) {
@@ -99,7 +99,7 @@ const Search: React.FC<GenomeSearchProps> = ({
 
     // Set new timeout
     timeoutRef.current = setTimeout(() => {
-      if (searchGene) refetchGenes();
+      if (searchGene && !isDomain(inputValue)) refetchGenes();
       if (assembly === "GRCh38") {
         if (searchICRE && inputValue.toLowerCase().startsWith("eh")) refetchICREs();
         if (searchCCRE && inputValue.toLowerCase().startsWith("eh")) refetchCCREs();
@@ -108,6 +108,13 @@ const Search: React.FC<GenomeSearchProps> = ({
         if (searchCCRE && inputValue.toLowerCase().startsWith("em")) refetchCCREs();
       }
     }, 100);
+
+    // Cleanup function
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, [inputValue]);
 
   useEffect(() => {
@@ -124,7 +131,7 @@ const Search: React.FC<GenomeSearchProps> = ({
       if (icreData && searchICRE && inputValue.toLowerCase().startsWith("eh")) {
         resultsList.push(...icreResultList(icreData.data.iCREQuery, icreLimit || 3));
       }
-      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {
+      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("eh")) {
         resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
       }
       if (snpData && searchSnp && inputValue.toLowerCase().startsWith("rs")) {
@@ -154,6 +161,11 @@ const Search: React.FC<GenomeSearchProps> = ({
     searchSnp,
     searchCoordinate,
     inputValue,
+    assembly,
+    geneLimit,
+    icreLimit,
+    ccreLimit,
+    snpLimit,
   ]);
 
   // Handle submit
@@ -162,8 +174,8 @@ const Search: React.FC<GenomeSearchProps> = ({
     if (results?.length === 1) {
       sel = results[0];
     }
-    if (!sel.title) return;
-    onSearchSubmit && onSearchSubmit(sel);
+    if (!sel?.title) return;
+    onSearchSubmit?.(sel);
   }, [onSearchSubmit, selection, results]);
 
   // Handle enter key down
