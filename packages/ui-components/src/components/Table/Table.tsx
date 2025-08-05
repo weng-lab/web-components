@@ -27,6 +27,7 @@ const Table = (props: TableProps) => {
     sx = {},
     error = false,
     toolbarSlot,
+    slots = {},
     ...restDataGridProps
   } = props;
 
@@ -109,7 +110,8 @@ const Table = (props: TableProps) => {
           ...sx,
         }}
         slots={{
-          toolbar: () => <CustomToolbar label={restDataGridProps.label} extraComponentSlot={toolbarSlot} />
+          toolbar: () => <CustomToolbar label={restDataGridProps.label} extraComponentSlot={toolbarSlot} />,
+          ...slots
         }}
         {...restDataGridProps}
       />
