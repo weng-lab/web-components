@@ -120,7 +120,7 @@ export const OverrideToolbar: Story = {
   args: {
     columns,
     rows,
-    label: "This table's is using the extra slot",
+    label: "This table is using the extra toolbar slot",
     divHeight: {
       height: '350px'
     },
