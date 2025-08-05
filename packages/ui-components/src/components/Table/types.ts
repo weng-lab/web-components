@@ -3,7 +3,7 @@ import { ReactElement, ReactNode } from "react";
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
-export interface TableProps extends Omit<DataGridProProps, ""> {
+export interface TableProps extends DataGridProProps {
   /**
    * Rows to be consumed in the table.
    * 
