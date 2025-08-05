@@ -3,7 +3,7 @@ import { ReactElement, ReactNode } from "react";
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
-export interface TableProps extends DataGridProProps {
+export interface TableProps extends Omit<DataGridProProps, ""> {
   /**
    * Rows to be consumed in the table.
    * 
@@ -61,6 +61,11 @@ export interface TableProps extends DataGridProProps {
    * @default false
    */
   error?: boolean
+
+  /**
+   * Slot for extra component to be rendered within the toolbar, to the left of the filters
+   */
+  toolbarSlot?: ReactNode
 }
 
 export type TableToolbarProps = {
