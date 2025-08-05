@@ -61,6 +61,11 @@ export interface TableProps extends DataGridProProps {
    * @default false
    */
   error?: boolean
+
+  /**
+   * Slot for extra component to be rendered within the toolbar, to the left of the filters
+   */
+  toolbarSlot?: ReactNode
 }
 
 export type TableToolbarProps = {
