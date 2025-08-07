@@ -2,6 +2,7 @@ import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-pro";
+import { Button } from "@mui/material";
 
 const meta = {
   title: "ui-components/Table",
@@ -112,5 +113,17 @@ export const FixedHeightWrapper: Story = {
     divHeight: {
       height: '350px'
     }
+  }
+}
+
+export const OverrideToolbar: Story = {
+  args: {
+    columns,
+    rows,
+    label: "This table is using the extra toolbar slot",
+    divHeight: {
+      height: '350px'
+    },
+    toolbarSlot: <Button variant="outlined" sx={{textTransform: 'none'}} size="small">Extra Button</Button>
   }
 }

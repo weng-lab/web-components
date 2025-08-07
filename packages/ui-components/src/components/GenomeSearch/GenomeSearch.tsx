@@ -1,29 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getCCREs, getGenes, getICREs, getSNPs } from "./queries";
-import {
-  ccreResultList,
-  geneResultList,
-  getCoordinates,
-  icreResultList,
-  isDomain,
-  snpResultList,
-} from "./utils";
-import {
-  AutocompleteProps,
-  Box,
-  Button,
-  ButtonProps,
-  TextField,
-  TextFieldProps,
-  Typography,
-} from "@mui/material";
+import { ccreResultList, geneResultList, getCoordinates, icreResultList, isDomain, snpResultList } from "./utils";
+import { AutocompleteProps, Box, Button, ButtonProps, TextField, TextFieldProps, Typography } from "@mui/material";
 import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 
 /**
  * An autocomplete search component for genomic landmarks such as genes, SNPs, ICRs, and CCRs.
@@ -54,9 +35,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   // State variables
   const [inputValue, setInputValue] = useState("");
   const [selection, setSelection] = useState<Result>({} as Result);
-  const [results, setResults] = useState<Result[] | null>(
-    defaultResults || null
-  );
+  const [results, setResults] = useState<Result[] | null>(defaultResults || null);
   const [isLoading, setIsLoading] = useState(false);
 
   const searchGene = queries.includes("Gene");
@@ -81,8 +60,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     isFetching: ccreFetching,
   } = useQuery({
     queryKey: ["ccres", inputValue],
-    queryFn: () =>
-      getCCREs(inputValue, assembly, ccreLimit || 3, showiCREFlag || false),
+    queryFn: () => getCCREs(inputValue, assembly, ccreLimit || 3, showiCREFlag || false),
     enabled: false,
   });
   const {
@@ -91,13 +69,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     isFetching: geneFetching,
   } = useQuery({
     queryKey: ["genes", inputValue],
-    queryFn: () =>
-      getGenes(
-        inputValue,
-        assembly,
-        geneLimit || 3,
-        geneVersion || assembly === "GRCh38" ? 29 : 25
-      ),
+    queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion || assembly === "GRCh38" ? 29 : 25),
     enabled: false,
   });
 
@@ -111,7 +83,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     enabled: false,
   });
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (inputValue.length === 0) {
@@ -127,13 +99,22 @@ const Search: React.FC<GenomeSearchProps> = ({
 
     // Set new timeout
     timeoutRef.current = setTimeout(() => {
-      if (searchGene) refetchGenes();
-      if (searchICRE && inputValue.toLowerCase().startsWith("eh"))
-        refetchICREs();
-      if (searchCCRE && inputValue.toLowerCase().startsWith("eh"))
-        refetchCCREs();
-      if (searchSnp && inputValue.toLowerCase().startsWith("rs")) refetchSNPs();
+      if (searchGene && !isDomain(inputValue)) refetchGenes();
+      if (assembly === "GRCh38") {
+        if (searchICRE && inputValue.toLowerCase().startsWith("eh")) refetchICREs();
+        if (searchCCRE && inputValue.toLowerCase().startsWith("eh")) refetchCCREs();
+        if (searchSnp && inputValue.toLowerCase().startsWith("rs")) refetchSNPs();
+      } else {
+        if (searchCCRE && inputValue.toLowerCase().startsWith("em")) refetchCCREs();
+      }
     }, 100);
+
+    // Cleanup function
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, [inputValue]);
 
   useEffect(() => {
@@ -146,21 +127,22 @@ const Search: React.FC<GenomeSearchProps> = ({
     if (geneData && searchGene) {
       resultsList.push(...geneResultList(geneData, geneLimit || 3));
     }
-    if (icreData && searchICRE && inputValue.toLowerCase().startsWith("eh")) {
-      resultsList.push(
-        ...icreResultList(icreData.data.iCREQuery, icreLimit || 3)
-      );
+    if (assembly === "GRCh38") {
+      if (icreData && searchICRE && inputValue.toLowerCase().startsWith("eh")) {
+        resultsList.push(...icreResultList(icreData.data.iCREQuery, icreLimit || 3));
+      }
+      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("eh")) {
+        resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
+      }
+      if (snpData && searchSnp && inputValue.toLowerCase().startsWith("rs")) {
+        resultsList.push(...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit || 3));
+      }
+    } else {
+      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {
+        resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
+      }
     }
-    if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("eh")) {
-      resultsList.push(
-        ...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3)
-      );
-    }
-    if (snpData && searchSnp && inputValue.toLowerCase().startsWith("rs")) {
-      resultsList.push(
-        ...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit || 3)
-      );
-    }
+
     if (isDomain(inputValue) && searchCoordinate) {
       resultsList.push(...getCoordinates(inputValue, assembly));
     }
@@ -179,6 +161,11 @@ const Search: React.FC<GenomeSearchProps> = ({
     searchSnp,
     searchCoordinate,
     inputValue,
+    assembly,
+    geneLimit,
+    icreLimit,
+    ccreLimit,
+    snpLimit,
   ]);
 
   // Handle submit
@@ -187,8 +174,8 @@ const Search: React.FC<GenomeSearchProps> = ({
     if (results?.length === 1) {
       sel = results[0];
     }
-    if (!sel.title) return;
-    onSearchSubmit && onSearchSubmit(sel);
+    if (!sel?.title) return;
+    onSearchSubmit?.(sel);
   }, [onSearchSubmit, selection, results]);
 
   // Handle enter key down
@@ -207,14 +194,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   };
 
   return (
-    <Box
-      display="flex"
-      flexDirection="row"
-      gap={2}
-      style={{ ...style }}
-      sx={{ ...sx }}
-      {...slotProps?.box}
-    >
+    <Box display="flex" flexDirection="row" gap={2} style={{ ...style }} sx={{ ...sx }} {...slotProps?.box}>
       <Autocomplete
         onChange={onChange}
         options={inputValue === "" ? defaultResults || [] : results || []}
@@ -232,8 +212,7 @@ const Search: React.FC<GenomeSearchProps> = ({
               ...params,
               onKeyDown: handleKeyDown,
               value: inputValue,
-              onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                setInputValue(event.target.value),
+              onChange: (event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value),
             });
           }
           return (
@@ -242,18 +221,14 @@ const Search: React.FC<GenomeSearchProps> = ({
               label="Search"
               onKeyDown={handleKeyDown}
               value={inputValue}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                setInputValue(event.target.value)
-              }
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
               {...slotProps?.input}
             />
           );
         }}
         style={style}
         sx={sx}
-        {...(autocompleteProps as Partial<
-          AutocompleteProps<Result, false, true, false, React.ElementType>
-        >)}
+        {...(autocompleteProps as Partial<AutocompleteProps<Result, false, true, false, React.ElementType>>)}
       />
       {/* Submit Button */}
       {slots && slots.button ? (
@@ -261,11 +236,7 @@ const Search: React.FC<GenomeSearchProps> = ({
           onClick: () => onSubmit(),
         })
       ) : (
-        <Button
-          variant="contained"
-          onClick={() => onSubmit()}
-          {...slotProps?.button}
-        >
+        <Button variant="contained" onClick={() => onSubmit()} {...slotProps?.button}>
           {slotProps?.button?.children || "Go"}
         </Button>
       )}
@@ -284,12 +255,8 @@ function renderGroup(params: any, inputValue: string) {
   const sortedOptions =
     Array.isArray(params.children) && !isDomain(inputValue)
       ? params.children.sort((a: any, b: any) => {
-          const aTitle = (
-            a.props?.children?.props?.children?.[0]?.props?.children || ""
-          ).toLowerCase();
-          const bTitle = (
-            b.props?.children?.props?.children?.[0]?.props?.children || ""
-          ).toLowerCase();
+          const aTitle = (a.props?.children?.props?.children?.[0]?.props?.children || "").toLowerCase();
+          const bTitle = (b.props?.children?.props?.children?.[0]?.props?.children || "").toLowerCase();
           const query = inputValue.toLowerCase();
           // Exact matches first
           if (aTitle === query && bTitle !== query) return -1;
@@ -310,10 +277,7 @@ function renderGroup(params: any, inputValue: string) {
 
   return (
     <div key={params.key}>
-      <Typography
-        variant="subtitle2"
-        sx={{ color: "gray", paddingInline: 1.5, paddingBlock: 1 }}
-      >
+      <Typography variant="subtitle2" sx={{ color: "gray", paddingInline: 1.5, paddingBlock: 1 }}>
         {params.group}
       </Typography>
       {sortedOptions}
@@ -328,11 +292,7 @@ function renderGroup(params: any, inputValue: string) {
  * @param results - The results from the query
  * @returns A rendered "no options" text
  */
-function noOptionsText(
-  inputValue: string,
-  isLoading: boolean,
-  results: Result[] | null
-) {
+function noOptionsText(inputValue: string, isLoading: boolean, results: Result[] | null) {
   return (
     <Typography variant="caption">
       {inputValue
@@ -354,12 +314,7 @@ function noOptionsText(
  */
 function renderOptions(props: any, option: Result) {
   return (
-    <li
-      {...props}
-      key={`${option.type}-${option.title || "untitled"}-${
-        option.description || "no-description"
-      }`}
-    >
+    <li {...props} key={`${option.type}-${option.title || "untitled"}-${option.description || "no-description"}`}>
       <Box>
         <Typography
           variant="body1"
@@ -369,11 +324,7 @@ function renderOptions(props: any, option: Result) {
         >
           {option.title}
         </Typography>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          style={{ whiteSpace: "pre-line" }}
-        >
+        <Typography variant="body2" color="text.secondary" style={{ whiteSpace: "pre-line" }}>
           {option.description}
         </Typography>
       </Box>

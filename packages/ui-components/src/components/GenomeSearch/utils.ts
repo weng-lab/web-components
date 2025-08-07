@@ -17,45 +17,38 @@ export function getCoordinates(input: string, assembly: string): Result[] {
   const results: Result[] = [];
   input = input.replace(/,/g, "");
 
-  if (input.includes(":") && input.includes("-")) {
-    const chromosome = input.split(":")[0];
-    const start = parseInt(input.split(":")[1].split("-")[0]) || 0;
-    const end = parseInt(input.split(":")[1].split("-")[1]) || start + 1000;
-    const chrLength = chromosomeLengths[assembly][chromosome];
+  let chromosome: string, start: number, end: number;
 
-    // Only set coordinates if end is greater than start and within chromosome length
-    if (end > start && chrLength && end <= chrLength) {
-      results.push({
-        title: `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
-        domain: {
-          chromosome: chromosome,
-          start: start,
-          end: end,
-        },
-        description: `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
-        type: "Coordinate",
-      });
-    }
+  if (input.includes(":") && input.includes("-")) {
+    chromosome = input.split(":")[0];
+    start = parseInt(input.split(":")[1].split("-")[0]) || 0;
+    end = parseInt(input.split(":")[1].split("-")[1]) || start + 1000;
   } else if (input.includes("\t")) {
-    const [chromosome, start, end] = input.split("\t");
-    const chrLength = chromosomeLengths[assembly][chromosome];
-    if (
-      parseInt(end) > parseInt(start) &&
-      chrLength &&
-      parseInt(end) <= chrLength
-    ) {
-      results.push({
-        title: `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
-        domain: {
-          chromosome: chromosome,
-          start: parseInt(start),
-          end: parseInt(end),
-        },
-        description: `${chromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
-        type: "Coordinate",
-      });
-    }
+    const [chr, startStr, endStr] = input.split("\t");
+    chromosome = chr;
+    start = parseInt(startStr);
+    end = parseInt(endStr);
+  } else {
+    return results;
   }
+
+  // Normalize chromosome name to use capital X and Y
+  const normalizedChromosome = chromosome.replace(/chrx$/, 'chrX').replace(/chry$/, 'chrY');
+  
+  const chrLength = chromosomeLengths[assembly][chromosome];
+  if (end > start && chrLength && end <= chrLength) {
+    results.push({
+      title: `${normalizedChromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
+      domain: {
+        chromosome: normalizedChromosome,
+        start: start,
+        end: end,
+      },
+      description: `${normalizedChromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
+      type: "Coordinate",
+    });
+  }
+
   return results;
 }
 
@@ -198,7 +191,7 @@ const chromosomeLengths: { [key: string]: { [key: string]: number } } = {
 export function isDomain(input: string) {
   const hasTabs = input.includes("\t");
   const hasHyphens = input.includes("-");
-  const hasChromosomeNumber = input.length >= 4 && /^\d$/.test(input[3]);
+  const hasChromosomeNumber = input.length >= 4 && /^[0-9xyXY]$/.test(input[3]);
   return (
     (hasTabs || hasHyphens) && input.startsWith("chr") && hasChromosomeNumber
   );

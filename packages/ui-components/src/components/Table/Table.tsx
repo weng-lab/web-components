@@ -6,6 +6,7 @@ import {
 import { useMemo, useEffect, useCallback } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
+import { CustomToolbar } from "./CustomToolbar";
 
 const Table = (props: TableProps) => {
   /**
@@ -25,6 +26,8 @@ const Table = (props: TableProps) => {
     divHeight = {},
     sx = {},
     error = false,
+    toolbarSlot,
+    slots = {},
     ...restDataGridProps
   } = props;
 
@@ -105,6 +108,10 @@ const Table = (props: TableProps) => {
             height: "20px",
           },
           ...sx,
+        }}
+        slots={{
+          toolbar: () => <CustomToolbar label={restDataGridProps.label} extraComponentSlot={toolbarSlot} />,
+          ...slots
         }}
         {...restDataGridProps}
       />
