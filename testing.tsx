@@ -108,7 +108,7 @@ function TestingPage() {
     <Box height={"70vh"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
       <BarPlot
         data={sampleData}
-        barSize={10}
+        barSize={1}
         TooltipContents={TooltipContents}
       />
     </Box>

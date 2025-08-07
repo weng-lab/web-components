@@ -40,7 +40,6 @@ const BarPlot = <T,>({
     cutoffNegativeValues = false,
     barSize,
     sortByCategory = false,
-    barOrientation = "horizontal"
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
@@ -134,14 +133,14 @@ const BarPlot = <T,>({
     const totalHeight = dataHeight + spaceForTopAxis + spaceOnBottom
 
     // Scales
-    const yScaleHorizontal = useMemo(() =>
+    const yScale = useMemo(() =>
         scaleBand<string>({
             domain: bars.map((d) => d.id),
             range: [0, dataHeight],
             padding: 0.15,
         }), [bars, dataHeight])
 
-    const xScaleHorizontal = useMemo(() =>
+    const xScale = useMemo(() =>
         scaleLinear<number>({
             domain: [
                 // If cutting off negative values, the lower bound is max(negativeCutoff, minValue).
@@ -151,25 +150,6 @@ const BarPlot = <T,>({
             ], // always include 0 as anchor if values do not cross 0
             range: [0, Math.max(ParentWidth - spaceForCategory - spaceForLabel, 0)],
         }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentWidth, spaceForLabel])
-
-    const yScaleVertical = useMemo(() =>
-        scaleLinear<number>({
-            domain: [
-                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue),
-                Math.max(0, maxValue) + 0.07 * (maxValue - minValue)
-            ],
-            range: [ParentHeight, 0],
-        }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentHeight, spaceForLabel])
-
-    const xScaleVertical = useMemo(() =>
-        scaleBand<string>({
-            domain: bars.map((d) => d.id),
-            range: [0, dataHeight],
-            padding: 0.15,
-        }), [bars, dataHeight])
-
-    const labelScale = barOrientation === "horizontal" ? yScaleHorizontal : xScaleVertical
-    const valueScale = barOrientation === "horizontal" ? xScaleHorizontal : yScaleVertical
 
     //Find where each category label would go when sorting by categories
     const categoryLabels = useMemo(() => {
@@ -187,8 +167,8 @@ const BarPlot = <T,>({
         }, {});
 
         return Object.entries(barsByCategory).map(([category, groupBars]) => {
-            const topY = Math.min(...groupBars.map(b => labelScale(b.id) ?? 0));
-            const bottomY = Math.max(...groupBars.map(b => (labelScale(b.id) ?? 0) + labelScale.bandwidth()));
+            const topY = Math.min(...groupBars.map(b => yScale(b.id) ?? 0));
+            const bottomY = Math.max(...groupBars.map(b => (yScale(b.id) ?? 0) + yScale.bandwidth()));
             const midY = topY + (bottomY - topY) / 2;
 
             return {
@@ -196,14 +176,14 @@ const BarPlot = <T,>({
                 y: midY
             };
         });
-    }, [bars, labelScale, sortByCategory]);
+    }, [bars, yScale, sortByCategory]);
 
 
     //This feels really dumb but I couldn't figure out a better way to have the labels not overflow sometimes - JF 11/8/24
     //Whenever xScale is adjusted, it checks to see if any of the labels overflow the container, and if so
     //it sets the spaceForLabel to be the amount overflowed.
     useEffect(() => {
-        if (!ParentWidth || barOrientation === "vertical") { setLabelSpaceDecided(true); return }
+        if (!ParentWidth) { setLabelSpaceDecided(true); return }
 
         let maxOverflow = 0
         let minUnderflow: number | null = null
@@ -213,7 +193,7 @@ const BarPlot = <T,>({
 
             if (textElement) {
                 const textWidth = textElement.getBBox().width;
-                const barWidth = valueScale(d.value);
+                const barWidth = xScale(d.value);
 
                 const totalWidth = spaceForCategory + barWidth + gapBetweenTextAndBar + textWidth
                 const overflow = totalWidth - ParentWidth
@@ -243,7 +223,7 @@ const BarPlot = <T,>({
             setLabelSpaceDecided(true)
         }
 
-    }, [data, valueScale, spaceForLabel, labelSpaceDecided, SVGref, ParentWidth, topAxisLabel, uniqueID]);
+    }, [data, xScale, spaceForLabel, labelSpaceDecided, SVGref, ParentWidth, topAxisLabel, uniqueID]);
 
     console.log(ParentHeight)
 
@@ -261,90 +241,55 @@ const BarPlot = <T,>({
                         }
                         outerSvgRef.current = node;
                     }}
-                    width={barOrientation === "horizontal" ? ParentWidth : totalHeight}
-                    height={barOrientation === "horizontal" ? totalHeight : ParentHeight}
+                    width={ParentWidth}
+                    height={totalHeight}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
-                    <Group left={barOrientation === "horizontal" ? spaceForCategory : spaceForTopAxis} top={barOrientation === "horizontal" ? spaceForTopAxis : -spaceForCategory}>
+                    <Group left={spaceForCategory} top={spaceForTopAxis}>
                         {/* Top Axis with Label */}
-                        {barOrientation === "horizontal" ? (
-                            <AxisTop
-                                scale={valueScale}
-                                top={0}
-                                label={topAxisLabel}
-                                labelProps={{ dy: -5, fontSize: 14, fontFamily }}
-                                numTicks={ParentWidth < 700 ? 4 : undefined}
-                                tickFormat={(value: NumberValue, index: number) => {
-                                    const num = typeof value === 'number' ? value : value.valueOf();
+                        <AxisTop
+                            scale={xScale}
+                            top={0}
+                            label={topAxisLabel}
+                            labelProps={{ dy: -5, fontSize: 14, fontFamily }}
+                            numTicks={ParentWidth < 700 ? 4 : undefined}
+                            tickFormat={(value: NumberValue, index: number) => {
+                                const num = typeof value === 'number' ? value : value.valueOf();
 
-                                    if (index === 0 && num < 0 && cutoffNegativeValues && data.some(d => d.value <= negativeCutoff)) {
-                                        return "Low Signal";
-                                    } else {
-                                        return num.toString();
-                                    }
-                                }}
-                            />
-                        ) : (
-                            <AxisLeft
-                                scale={valueScale}
-                                top={0}
-                                label={topAxisLabel}
-                                labelProps={{ dy: -5, fontSize: 14, fontFamily }}
-                                numTicks={ParentWidth < 700 ? 4 : undefined}
-                                tickFormat={(value: NumberValue, index: number) => {
-                                    const num = typeof value === 'number' ? value : value.valueOf();
+                                if (index === 0 && num < 0 && cutoffNegativeValues && data.some(d => d.value <= negativeCutoff)) {
+                                    return "Low Signal";
+                                } else {
+                                    return num.toString();
+                                }
+                            }}
+                        />
 
-                                    if (index === 0 && num < 0 && cutoffNegativeValues && data.some(d => d.value <= negativeCutoff)) {
-                                        return "Low Signal";
-                                    } else {
-                                        return num.toString();
-                                    }
-                                }}
-                            />
-                        )}
                         {bars.map((d, i) => {
                             const hovered = d.id === tooltipData?.id;
 
                             const pointValue = cutoffNegativeValues ? Math.max(d.value, negativeCutoff) : d.value;
 
                             // Shared values
-                            const isHorizontal = barOrientation === "horizontal";
-                            const bandPos = labelScale(d.id);
-                            const bandSize = labelScale.bandwidth();
+                            const bandPos = yScale(d.id);
+                            const bandSize = yScale.bandwidth();
 
                             // Bar geometry
-                            const barX = isHorizontal
-                                ? (pointValue > 0 ? valueScale(0) : valueScale(pointValue))
-                                : (bandPos ?? 0);
+                            const barX = (pointValue > 0 ? xScale(0) : xScale(pointValue))
 
-                            const barY = isHorizontal
-                                ? (bandPos ?? 0)
-                                : (pointValue > 0 ? valueScale(pointValue) : valueScale(0));
+                            const barY = (bandPos ?? 0)
 
-                            const barWidth = isHorizontal
-                                ? Math.abs(valueScale(pointValue) - valueScale(0))
-                                : labelScale.bandwidth();
+                            const barWidth = Math.abs(xScale(pointValue) - xScale(0))
 
-                            const barHeight = isHorizontal
-                                ? labelScale.bandwidth()
-                                : Math.abs(valueScale(pointValue) - valueScale(0));
+                            const barHeight = yScale.bandwidth()
 
                             // Label positions
-                            const categoryLabelX = isHorizontal
-                                ? -gapBetweenTextAndBar
-                                : (bandPos ?? 0) + bandSize / 2;
+                            const categoryLabelX = -gapBetweenTextAndBar
 
-                            const categoryLabelY = isHorizontal
-                                ? (bandPos ?? 0) + bandSize / 2
-                                : dataHeight + gapBetweenTextAndBar;
+                            const categoryLabelY = (bandPos ?? 0) + bandSize / 2
 
-                            const valueLabelX = isHorizontal
-                                ? barX + barWidth + gapBetweenTextAndBar
-                                : barX + barWidth / 2;
+                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar
 
-                            const valueLabelY = isHorizontal
-                                ? barY + barHeight / 2
-                                : barY - gapBetweenTextAndBar;
+                            const valueLabelY = barY + barHeight / 2
 
                             return (
                                 <Group
@@ -360,8 +305,8 @@ const BarPlot = <T,>({
                                         <Text
                                             x={categoryLabelX}
                                             y={categoryLabelY}
-                                            dy={isHorizontal ? ".35em" : 0}
-                                            textAnchor={isHorizontal ? "end" : "middle"}
+                                            dy={".35em"}
+                                            textAnchor={"end"}
                                             fill="black"
                                             fontSize={12}
                                         >
@@ -385,8 +330,8 @@ const BarPlot = <T,>({
                                             id={`label-${i}-${uniqueID}`}
                                             x={valueLabelX}
                                             y={valueLabelY}
-                                            dy={isHorizontal ? ".35em" : 0}
-                                            textAnchor={isHorizontal ? "start" : "middle"}
+                                            dy={".35em"}
+                                            textAnchor={"start"}
                                             fill="black"
                                             fontSize={12}
                                         >
@@ -411,31 +356,19 @@ const BarPlot = <T,>({
                                 {category}
                             </Text>
                         ))}
-                        {barOrientation === "horizontal" ? (
-                            <>
-                                <line
-                                    x1={valueScale(0)}
-                                    x2={valueScale(0)}
-                                    y1={0}
-                                    y2={dataHeight}
-                                    stroke="#000000"
-                                />
-                            </>
-                        ) : (
-                            <>
-                                <line
-                                    y1={valueScale(0)}
-                                    y2={valueScale(0)}
-                                    x1={0}
-                                    x2={dataHeight}
-                                    stroke="#000000"
-                                />
-                            </>
-                        )}
-                        {show95thPercentileLine && valueScale.domain()[1] > 1.645 &&
+                        <>
                             <line
-                                x1={valueScale(1.645)}
-                                x2={valueScale(1.645)}
+                                x1={xScale(0)}
+                                x2={xScale(0)}
+                                y1={0}
+                                y2={dataHeight}
+                                stroke="#000000"
+                            />
+                        </>
+                        {show95thPercentileLine && xScale.domain()[1] > 1.645 &&
+                            <line
+                                x1={xScale(1.645)}
+                                x2={xScale(1.645)}
                                 y1={0}
                                 y2={dataHeight}
                                 stroke={"black"}

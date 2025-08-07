@@ -30,10 +30,4 @@ export interface BarPlotProps<T> {
    */
   barSize?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   sortByCategory?: boolean;
-  /**
-   * how the bars and axes should be oriented visually,
-   * @default horizontal
-   * @todo vertical code exists but not ready yet, only use horizontal for now
-   */
-  barOrientation?: "horizontal" | "vertical";
 }
