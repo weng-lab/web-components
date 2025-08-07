@@ -2,6 +2,7 @@ import { CrossPlotProps } from "./types";
 import { Group } from "@visx/group";
 import { Line } from '@visx/shape';
 
+
 const CrossPlot = <T,>({ crossProps, left, top, median, firstQuartile, thirdQuartile, valueScale, medianWidth, tooltipData, handleMouseMove, handleCrossClick, disableViolinPlot, tooltip, horizontal }: CrossPlotProps<T>) => {
 
     return (

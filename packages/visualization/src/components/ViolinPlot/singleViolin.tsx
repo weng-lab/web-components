@@ -41,11 +41,17 @@ const SingleViolin = <T,>({
     //get all the stats for the box plot
     const { min, max, firstQuartile, thirdQuartile, median, outliers } = calculateBoxStats(data, crossProps?.outliers ?? "all");
 
-    const outlierPoints: ViolinPoint<T>[] = distribution.data.filter(d => outliers.includes(d.value))
+    const outlierPoints: ViolinPoint<T>[] = distribution.data
+        .filter(d => outliers.includes(d.value))
+        .map(d => ({
+            ...d,
+            outlier: true
+        }));
     const pointsNoOutliers: ViolinPoint<T>[] = distribution.data.filter(d => !outliers.includes(d.value))
 
     const violinData = useMemo(() => {
-        const ticks = range(min, max, .1);
+        const step = (max - min) / Math.max(100, data.length);
+        const ticks = range(min, max, step);
 
         //bandwidth / binwidth for smoothing, based on user input
         const bandwidth = typeof violinProps?.bandwidth === "number"
@@ -63,7 +69,7 @@ const SingleViolin = <T,>({
         return [...densityData].sort((a, b) => a.value - b.value)
     }, [data, max, min, violinProps])
 
-    const violinWidth = labelScale.bandwidth();
+    const violinWidth = Math.min(labelScale.bandwidth(), 50);
     const boxWidth = crossProps?.medianWidth ?? violinWidth * .25;
 
     const violinTooltip: TooltipData<T> = useMemo(() => ({
@@ -99,7 +105,7 @@ const SingleViolin = <T,>({
     };
 
     //center of each Violin
-    const violinCenter = horizontal ? (labelScale(labels[distIndex]) ?? 0) + violinWidth / 2 : (labelScale(labels[distIndex]) ?? 0) + offset + violinWidth / 2;
+    const violinCenter = horizontal ? (labelScale(labels[distIndex]) ?? 0) + violinWidth / 2 : (labelScale(labels[distIndex]) ?? 0) + offset + labelScale.bandwidth() / 2;
     const widthScale = scaleLinear()
         .domain([0, d3max(violinData, d => Math.abs(d.count)) || 1])
         .range([0, violinWidth / 2]);
@@ -108,7 +114,7 @@ const SingleViolin = <T,>({
     const filteredData = violinData.filter(d => d && d.count != null && d.value != null);
 
     //mirror the data so that both sides are drawn
-    const points = [
+    let points = [
         ...filteredData.map(d => ({
             x: violinCenter + (widthScale(d.count) as number),
             y: valueScale(d.value),
@@ -119,7 +125,13 @@ const SingleViolin = <T,>({
         }))
     ];
 
-    if (points.length > 0) points.push(points[0]); // Close the path
+    // close the path at the second point instead of the first since points 0,1 are closer together
+    if (points.length > 2) {
+        const modifiedPoints = points.slice(1);
+        modifiedPoints.push(points[0]);
+        modifiedPoints.push(points[1]);
+        points = modifiedPoints;
+    }
 
     const violinPath = line<{ x: number; y: number }>()
         .x(d => horizontal ? d.y : d.x)
@@ -136,21 +148,23 @@ const SingleViolin = <T,>({
                     transform={horizontal ? `translate(${offset}, 0)` : undefined}
                 >
                     {distribution.data.length >= (violinProps?.pointDisplayThreshold ?? 3) && !disableViolinPlot && violinPath && (
-                        <path
-                            d={violinPath}
-                            fill={distribution.violinColor ?? 'none'}
-                            fillOpacity={distribution.opacity ?? 0.3}
-                            stroke={distribution.violinColor ?? 'black'}
-                            strokeOpacity={distribution.opacity ?? 1}
-                            strokeWidth={
-                                tooltipData === violinTooltip
-                                    ? (violinProps?.stroke ?? 1) + 1
-                                    : violinProps?.stroke ?? 1
-                            }
-                            pointerEvents="all"
-                            onMouseMove={(e) => handleMouseMove(e, violinTooltip)}
-                            onClick={handleViolinClick}
-                        />
+                        <>
+                            <path
+                                d={violinPath}
+                                fill={distribution.violinColor ?? 'none'}
+                                fillOpacity={distribution.opacity ?? 0.3}
+                                stroke={distribution.violinColor ?? 'black'}
+                                strokeOpacity={distribution.opacity ?? 1}
+                                strokeWidth={
+                                    tooltipData === violinTooltip
+                                        ? (violinProps?.stroke ?? 1) + 1
+                                        : violinProps?.stroke ?? 1
+                                }
+                                pointerEvents="all"
+                                onMouseMove={(e) => handleMouseMove(e, violinTooltip)}
+                                onClick={handleViolinClick}
+                            />
+                        </>
                     )
                     }
                     {distribution.data.length >= (violinProps?.pointDisplayThreshold ?? 3) && !disableCrossPlot &&
