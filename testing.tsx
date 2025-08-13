@@ -28,6 +28,50 @@ function TestingPage() {
       category: "Group B",
       label: "Grapes",
       value: 50,
+      id: "grapes-g",
+      color: "#4BC0C0",
+      metadata: {
+        description: "Seedless grapes from Group B",
+        source: "Vineyard 4"
+      }
+    },
+    {
+      category: "Group B",
+      label: "Grapes",
+      value: 50,
+      id: "grapes-l",
+      color: "#4BC0C0",
+      metadata: {
+        description: "Seedless grapes from Group B",
+        source: "Vineyard 4"
+      }
+    },
+    {
+      category: "Group B",
+      label: "Grapes",
+      value: 50,
+      id: "grapes-k",
+      color: "#4BC0C0",
+      metadata: {
+        description: "Seedless grapes from Group B",
+        source: "Vineyard 4"
+      }
+    },
+    {
+      category: "Group B",
+      label: "Grapes",
+      value: 50,
+      id: "grapes-j",
+      color: "#4BC0C0",
+      metadata: {
+        description: "Seedless grapes from Group B",
+        source: "Vineyard 4"
+      }
+    },
+    {
+      category: "Group B",
+      label: "Grapes",
+      value: 50,
       id: "grapes-b2",
       color: "#4BC0C0",
       metadata: {
@@ -108,7 +152,7 @@ function TestingPage() {
     <Box height={"70vh"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
       <BarPlot
         data={sampleData}
-        barSize={1}
+        barSize={10}
         TooltipContents={TooltipContents}
       />
     </Box>

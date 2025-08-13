@@ -25,9 +25,10 @@ export interface BarPlotProps<T> {
    */
   cutoffNegativeValues?: boolean;
   /**
-   * Change the space each bar takes up (increaseing by a facotr of 4 + 15)
-   * @default 0 (15)
+   * Change the space each bar takes up in pixels
+   * @default auto takes up space based on length of data
    */
-  barSize?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  barSize?: number
   sortByCategory?: boolean;
+  fill?: boolean;
 }

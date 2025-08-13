@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bar } from '@visx/shape';
 import { scaleBand, scaleLinear } from '@visx/scale';
-import { AxisLeft, AxisTop } from '@visx/axis';
+import { AxisTop } from '@visx/axis';
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
 import { useParentSize } from '@visx/responsive';
@@ -40,6 +40,7 @@ const BarPlot = <T,>({
     cutoffNegativeValues = false,
     barSize,
     sortByCategory = false,
+    fill = false,
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
@@ -129,16 +130,16 @@ const BarPlot = <T,>({
      * @todo why is this not working as expected. Was 30 in SCREEN, why does it need to be 15 here?
      * figure out a better way to increase bar size other than just a factor of 4 + 15, kind of dumb @matt
      */
-    const dataHeight = bars.length * (15 + (barSize ?? 0) * 4)
-    const totalHeight = dataHeight + spaceForTopAxis + spaceOnBottom
+    const dataHeight = bars.length * ( barSize ?? 15)
+    const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom : dataHeight + spaceForTopAxis + spaceOnBottom
 
     // Scales
     const yScale = useMemo(() =>
         scaleBand<string>({
             domain: bars.map((d) => d.id),
-            range: [0, dataHeight],
+            range: [0, totalHeight],
             padding: 0.15,
-        }), [bars, dataHeight])
+        }), [bars, totalHeight])
 
     const xScale = useMemo(() =>
         scaleLinear<number>({
@@ -225,8 +226,6 @@ const BarPlot = <T,>({
 
     }, [data, xScale, spaceForLabel, labelSpaceDecided, SVGref, ParentWidth, topAxisLabel, uniqueID]);
 
-    console.log(ParentHeight)
-
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%' }}>
@@ -242,7 +241,7 @@ const BarPlot = <T,>({
                         outerSvgRef.current = node;
                     }}
                     width={ParentWidth}
-                    height={totalHeight}
+                    height={ParentHeight}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
                     <Group left={spaceForCategory} top={spaceForTopAxis}>
@@ -271,7 +270,7 @@ const BarPlot = <T,>({
 
                             // Shared values
                             const bandPos = yScale(d.id);
-                            const bandSize = yScale.bandwidth();
+                            const bandSize = barSize ?? yScale.bandwidth();
 
                             // Bar geometry
                             const barX = (pointValue > 0 ? xScale(0) : xScale(pointValue))
@@ -280,7 +279,7 @@ const BarPlot = <T,>({
 
                             const barWidth = Math.abs(xScale(pointValue) - xScale(0))
 
-                            const barHeight = yScale.bandwidth()
+                            const barHeight = barSize ?? yScale.bandwidth()
 
                             // Label positions
                             const categoryLabelX = -gapBetweenTextAndBar
@@ -361,7 +360,7 @@ const BarPlot = <T,>({
                                 x1={xScale(0)}
                                 x2={xScale(0)}
                                 y1={0}
-                                y2={dataHeight}
+                                y2={totalHeight}
                                 stroke="#000000"
                             />
                         </>
@@ -370,7 +369,7 @@ const BarPlot = <T,>({
                                 x1={xScale(1.645)}
                                 x2={xScale(1.645)}
                                 y1={0}
-                                y2={dataHeight}
+                                y2={totalHeight}
                                 stroke={"black"}
                                 strokeDasharray={'5 7'}
                             />
