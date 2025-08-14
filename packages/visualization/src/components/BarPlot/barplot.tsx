@@ -38,8 +38,8 @@ const BarPlot = <T,>({
     TooltipContents,
     show95thPercentileLine = false,
     cutoffNegativeValues = false,
-    barSize,
-    sortByCategory = false,
+    barSize = 15,
+    barSpacing = 2,
     fill = false,
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
@@ -94,51 +94,24 @@ const BarPlot = <T,>({
     const minValue = useMemo(() => Math.min(...data.map((d) => d.value)), [data])
     const negativeCutoff = -0.5
 
-    //Sort categories and include spacers for invisible bars between each category
-    const sortedCategories = useMemo(() => {
-        if (!sortByCategory) return data;
-
-        const sorted = [...data].sort((a, b) =>
-            (a.category ?? "").localeCompare(b.category ?? "")
-        );
-
-        const result: typeof data = [];
-        let prevCategory: string | null = null;
-        let spacerIndex = 0;
-
-        for (const item of sorted) {
-            const currCategory = item.category ?? '';
-            if (prevCategory !== null && prevCategory !== currCategory) {
-                result.push({
-                    id: `__spacer-${spacerIndex++}`,
-                    category: currCategory,
-                    label: '',
-                    value: 0,
-                    color: 'transparent',
-                });
-            }
-            result.push(item);
-            prevCategory = currCategory;
+    const bars = data.flatMap((item, index) => [
+        item,
+        {
+            id: `spacer-${index}`,
+            value: 0,
+            color: "transparent",
         }
+    ]).slice(0, -1);
 
-        return result;
-    }, [data, sortByCategory]);
-
-    const bars = sortByCategory ? sortedCategories : data;
-
-    /**
-     * @todo why is this not working as expected. Was 30 in SCREEN, why does it need to be 15 here?
-     * figure out a better way to increase bar size other than just a factor of 4 + 15, kind of dumb @matt
-     */
-    const dataHeight = bars.length * ( barSize ?? 15)
-    const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom : dataHeight + spaceForTopAxis + spaceOnBottom
+    const dataHeight = ((data.length) * (barSize)) + ((data.length - 1) * (barSpacing))
+    const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom : dataHeight
 
     // Scales
     const yScale = useMemo(() =>
         scaleBand<string>({
             domain: bars.map((d) => d.id),
             range: [0, totalHeight],
-            padding: 0.15,
+            paddingOuter: 0.15,
         }), [bars, totalHeight])
 
     const xScale = useMemo(() =>
@@ -151,34 +124,6 @@ const BarPlot = <T,>({
             ], // always include 0 as anchor if values do not cross 0
             range: [0, Math.max(ParentWidth - spaceForCategory - spaceForLabel, 0)],
         }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentWidth, spaceForLabel])
-
-    //Find where each category label would go when sorting by categories
-    const categoryLabels = useMemo(() => {
-        if (!sortByCategory) return [];
-
-        const barsByCategory = bars.reduce<Record<string, BarData<T>[]>>((acc, bar) => {
-            if (typeof bar.id === "string" && bar.id.startsWith("__spacer")) {
-                return acc; // Skip spacer bars
-            }
-
-            const key = bar.category ?? '';
-            if (!acc[key]) acc[key] = [];
-            acc[key].push(bar);
-            return acc;
-        }, {});
-
-        return Object.entries(barsByCategory).map(([category, groupBars]) => {
-            const topY = Math.min(...groupBars.map(b => yScale(b.id) ?? 0));
-            const bottomY = Math.max(...groupBars.map(b => (yScale(b.id) ?? 0) + yScale.bandwidth()));
-            const midY = topY + (bottomY - topY) / 2;
-
-            return {
-                category,
-                y: midY
-            };
-        });
-    }, [bars, yScale, sortByCategory]);
-
 
     //This feels really dumb but I couldn't figure out a better way to have the labels not overflow sometimes - JF 11/8/24
     //Whenever xScale is adjusted, it checks to see if any of the labels overflow the container, and if so
@@ -241,7 +186,7 @@ const BarPlot = <T,>({
                         outerSvgRef.current = node;
                     }}
                     width={ParentWidth}
-                    height={ParentHeight}
+                    height={fill ? ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
                     <Group left={spaceForCategory} top={spaceForTopAxis}>
@@ -270,7 +215,8 @@ const BarPlot = <T,>({
 
                             // Shared values
                             const bandPos = yScale(d.id);
-                            const bandSize = barSize ?? yScale.bandwidth();
+                            console.log(bandPos)
+                            const bandSize = d.id.split("-")[0] === "spacer" ? barSpacing : barSize;
 
                             // Bar geometry
                             const barX = (pointValue > 0 ? xScale(0) : xScale(pointValue))
@@ -279,7 +225,7 @@ const BarPlot = <T,>({
 
                             const barWidth = Math.abs(xScale(pointValue) - xScale(0))
 
-                            const barHeight = barSize ?? yScale.bandwidth()
+                            const barHeight = d.id.split("-")[0] === "spacer" ? barSpacing : barSize
 
                             // Label positions
                             const categoryLabelX = -gapBetweenTextAndBar
@@ -300,18 +246,16 @@ const BarPlot = <T,>({
                                     fontFamily={fontFamily}
                                 >
                                     {/* Category label */}
-                                    {!sortByCategory && (
-                                        <Text
-                                            x={categoryLabelX}
-                                            y={categoryLabelY}
-                                            dy={".35em"}
-                                            textAnchor={"end"}
-                                            fill="black"
-                                            fontSize={12}
-                                        >
-                                            {d.category}
-                                        </Text>
-                                    )}
+                                    <Text
+                                        x={categoryLabelX}
+                                        y={categoryLabelY}
+                                        dy={".35em"}
+                                        textAnchor={"end"}
+                                        fill="black"
+                                        fontSize={12}
+                                    >
+                                        {d.category}
+                                    </Text>
                                     <Group>
                                         <Bar
                                             key={`bar-${d.label}`}
@@ -340,21 +284,6 @@ const BarPlot = <T,>({
                                 </Group>
                             );
                         })}
-                        {/* Category labels when sorting (one label per category) */}
-                        {sortByCategory && categoryLabels.map(({ category, y }, i) => (
-                            <Text
-                                key={`category-${i}`}
-                                x={-gapBetweenTextAndBar}
-                                y={y}
-                                dy=".35em"
-                                textAnchor="end"
-                                fill="black"
-                                fontSize={12}
-                                fontFamily={fontFamily}
-                            >
-                                {category}
-                            </Text>
-                        ))}
                         <>
                             <line
                                 x1={xScale(0)}

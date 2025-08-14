@@ -26,9 +26,17 @@ export interface BarPlotProps<T> {
   cutoffNegativeValues?: boolean;
   /**
    * Change the space each bar takes up in pixels
-   * @default auto takes up space based on length of data
+   * @default 15
    */
-  barSize?: number
-  sortByCategory?: boolean;
+  barSize?: number;
+  /**
+   * Change the space between each bar in pixels
+   * @default 2
+   */
+  barSpacing?: number;
+  /**
+   * Fit the chart into the parents height
+   * will make barSpacing negligible 
+   */
   fill?: boolean;
 }
