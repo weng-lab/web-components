@@ -16,7 +16,7 @@ function TestingPage() {
   const sampleData: BarData<MyMetadata>[] = [
     // Group A
     {
-      category: "Group A",
+      category: "adrenal gland",
       label: "Apples",
       value: 30,
       id: "apples-a1",
@@ -24,7 +24,7 @@ function TestingPage() {
       metadata: { description: "Red apples from Group A", source: "Orchard 1" }
     },
     {
-      category: "Group A",
+      category: "liver",
       label: "Oranges",
       value: 45,
       id: "oranges-a1",
@@ -32,7 +32,7 @@ function TestingPage() {
       metadata: { description: "Juicy oranges from Group A", source: "Orchard 2" }
     },
     {
-      category: "Group A",
+      category: "large intestine",
       label: "Pears",
       value: 38,
       id: "pears-a1",
@@ -40,7 +40,7 @@ function TestingPage() {
       metadata: { description: "Crisp pears from Group A", source: "Orchard 3" }
     },
     {
-      category: "Group A",
+      category: "embryo",
       label: "Cherries",
       value: 28,
       id: "cherries-a1",
@@ -50,7 +50,7 @@ function TestingPage() {
 
     // Group B
     {
-      category: "Group B",
+      category: "connective tissue",
       label: "Grapes",
       value: 50,
       id: "grapes-b1",
@@ -117,7 +117,7 @@ function TestingPage() {
     },
     {
       category: "Group C",
-      label: "Watermelon",
+      label: "3577.22, Adrenal gland, femal... (ENCSR801MKV)",
       value: 60,
       id: "watermelon-c1",
       color: "#4DB6AC",

@@ -14,7 +14,6 @@ import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
-const fontSize = 14
 
 //helper function to get the approx length of the longest category in px
 const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
@@ -116,7 +115,7 @@ const BarPlot = <T,>({
     const legendHeight = lolipopValues.length > 0 ? 50 : 0
 
     // X padding
-    const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", fontSize, "Arial")))
+    const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial")))
     const spaceForCategory = maxCategoryLength
     const gapBetweenTextAndBar = 10
 
@@ -159,12 +158,12 @@ const BarPlot = <T,>({
     //Whenever xScale is adjusted, it checks to see if any of the labels overflow the container, and if so
     //it sets the spaceForLabel to be the amount overflowed.
     useEffect(() => {
-        if (!ParentWidth) { setLabelSpaceDecided(true); return }
+        if (!ParentWidth) { return }
 
         let maxOverflow = 0
         let minUnderflow: number | null = null
 
-        data.forEach((d, i) => {
+        bars.forEach((d, i) => {
             const textElement = document.getElementById(`label-${i}-${uniqueID}`) as unknown as SVGSVGElement;
 
             if (textElement) {
@@ -205,7 +204,7 @@ const BarPlot = <T,>({
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
             {lolipopValues.length > 0 && (
-                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={250} legendValues={legendValues}/>
+                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={250} legendValues={legendValues} />
             )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
@@ -303,7 +302,7 @@ const BarPlot = <T,>({
                                         {d.lolipopValue && (
                                             <>
                                                 <Circle
-                                                    r={getLolipopRadius(d.lolipopValue)* 1.5}
+                                                    r={getLolipopRadius(d.lolipopValue) * 1.5}
                                                     cx={barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill={d.color}
