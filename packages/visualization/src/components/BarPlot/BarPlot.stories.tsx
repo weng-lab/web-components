@@ -3,7 +3,7 @@ import Barplot from './barplot';
 import { BarData } from './types';
 
 const meta = {
-    title: 'Barplot',
+    title: 'visualization/Barplot',
     component: Barplot,
     tags: ['autodocs'],
     argTypes: {
