@@ -34,7 +34,7 @@ const Search: React.FC<GenomeSearchProps> = ({
 }) => {
   // State variables
   const [inputValue, setInputValue] = useState("");
-  const [selection, setSelection] = useState<Result>({} as Result);
+  const [selection, setSelection] = useState<Result | null>(null);
   const [results, setResults] = useState<Result[] | null>(defaultResults || null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -168,35 +168,40 @@ const Search: React.FC<GenomeSearchProps> = ({
     snpLimit,
   ]);
 
+  //Clear input on assembly change
+  useEffect(() => {
+    setInputValue("")
+    setSelection(null)
+  }, [assembly])
+
   // Handle submit
   const onSubmit = useCallback(() => {
-    let sel = selection;
-    if (results?.length === 1) {
-      sel = results[0];
-    }
-    if (!sel?.title) return;
-    onSearchSubmit?.(sel);
-  }, [onSearchSubmit, selection, results]);
+    if (selection && onSearchSubmit) onSearchSubmit(selection);
+  }, [onSearchSubmit, selection]);
 
   // Handle enter key down
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Enter") {
-        onSubmit();
+        const exactMatch = results?.find(x => x.title?.toLowerCase() === inputValue.toLowerCase())
+        if (exactMatch) {
+          setSelection(exactMatch)
+          if (onSearchSubmit) onSearchSubmit(exactMatch)
+        }
       }
     },
-    [onSubmit]
+    [results, setSelection, onSearchSubmit]
   );
 
-  const onChange = (_event: React.SyntheticEvent, newValue: Result | null) => {
-    let sel = newValue || ({} as Result);
-    setSelection(sel);
+  const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result) => {
+    setSelection(newValue);
   };
 
   return (
     <Box display="flex" flexDirection="row" gap={2} style={{ ...style }} sx={{ ...sx }} {...slotProps?.box}>
       <Autocomplete
         onChange={onChange}
+        value={selection as Result}
         options={inputValue === "" ? defaultResults || [] : results || []}
         getOptionLabel={(option: Result) => {
           return option.title || "";
@@ -204,6 +209,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         groupBy={(option: Result) => option.type || ""}
         renderGroup={(params) => renderGroup(params, inputValue)}
         noOptionsText={noOptionsText(inputValue, isLoading, results)}
+        isOptionEqualToValue={(option, value) => option.title === value.title}
         renderOption={renderOptions}
         filterOptions={(x) => x}
         renderInput={(params) => {
