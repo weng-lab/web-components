@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bar } from '@visx/shape';
-import { scaleBand, scaleLinear } from '@visx/scale';
+import { Bar, Circle } from '@visx/shape';
+import { scaleBand, scaleLinear, scaleLog } from '@visx/scale';
 import { AxisTop } from '@visx/axis';
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
@@ -11,6 +11,7 @@ import { TooltipWithBoundsProps } from '@visx/tooltip/lib/tooltips/TooltipWithBo
 import { CircularProgress } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
+import Legend from './legend';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 const fontSize = 14
@@ -41,6 +42,8 @@ const BarPlot = <T,>({
     barSize = 15,
     barSpacing = 2,
     fill = false,
+    legnedTitle,
+    legendValues = [1, 0.05, 0.01, 0.001]
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
@@ -81,9 +84,36 @@ const BarPlot = <T,>({
 
     const { parentRef, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
 
+    const lolipopValues = data
+        .map(d => d.lolipopValue)
+        .filter((v): v is number => v !== undefined);
+
+    const rScaleAdjustment = 0.005
+
+    /**
+     * Scale for the radius of the FDR circle. Use getFDRradius instead of this directly to avoid going outside of the domain
+     */
+    const rScale = useMemo(() =>
+        scaleLog<number>({
+            base: 10,
+            domain: [rScaleAdjustment, 1], // Min/Max of fdr values in data
+            range: [10, 2],
+            round: true,
+        }),
+        []
+    )
+
+    /**
+     * 
+     * @param x 
+     * @returns rScale(Math.max(0.005, x)) to avoid the very large values near 0
+     */
+    const getLolipopRadius = useCallback((x: number) => rScale(Math.max(rScaleAdjustment, x)), [rScale])
+
     // Y padding
     const spaceForTopAxis = 50
     const spaceOnBottom = 20
+    const legendHeight = lolipopValues.length > 0 ? 50 : 0
 
     // X padding
     const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", fontSize, "Arial")))
@@ -104,14 +134,14 @@ const BarPlot = <T,>({
     ]).slice(0, -1);
 
     const dataHeight = ((data.length) * (barSize)) + ((data.length - 1) * (barSpacing))
-    const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom : dataHeight
+    const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom - legendHeight : dataHeight
 
     // Scales
     const yScale = useMemo(() =>
         scaleBand<string>({
             domain: bars.map((d) => d.id),
             range: [0, totalHeight],
-            paddingOuter: 0.15,
+            paddingOuter: 0.5,
         }), [bars, totalHeight])
 
     const xScale = useMemo(() =>
@@ -173,7 +203,10 @@ const BarPlot = <T,>({
 
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
-        <div ref={parentRef} style={{ minWidth: '500px', height: '100%' }}>
+        <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
+            {lolipopValues.length > 0 && (
+                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={250} legendValues={legendValues}/>
+            )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
                 :
@@ -186,7 +219,7 @@ const BarPlot = <T,>({
                         outerSvgRef.current = node;
                     }}
                     width={ParentWidth}
-                    height={fill ? ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
+                    height={fill ? ParentHeight - legendHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
                     <Group left={spaceForCategory} top={spaceForTopAxis}>
@@ -215,7 +248,6 @@ const BarPlot = <T,>({
 
                             // Shared values
                             const bandPos = yScale(d.id);
-                            console.log(bandPos)
                             const bandSize = d.id.split("-")[0] === "spacer" ? barSpacing : barSize;
 
                             // Bar geometry
@@ -232,7 +264,7 @@ const BarPlot = <T,>({
 
                             const categoryLabelY = (bandPos ?? 0) + bandSize / 2
 
-                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar
+                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lolipopValue ? getLolipopRadius(d.lolipopValue) : 0)
 
                             const valueLabelY = barY + barHeight / 2
 
@@ -268,6 +300,23 @@ const BarPlot = <T,>({
                                             rx={3}
                                             stroke={hovered ? "black" : "none"}
                                         />
+                                        {d.lolipopValue && (
+                                            <>
+                                                <Circle
+                                                    r={getLolipopRadius(d.lolipopValue)* 1.5}
+                                                    cx={barX + barWidth}
+                                                    cy={barY + barHeight / 2}
+                                                    fill={d.color}
+                                                    stroke={hovered ? "black" : "none"}
+                                                />
+                                                <Circle
+                                                    r={getLolipopRadius(d.lolipopValue)}
+                                                    cx={barX + barWidth}
+                                                    cy={barY + barHeight / 2}
+                                                    fill='black'
+                                                />
+                                            </>
+                                        )}
                                         {/* Value label */}
                                         <Text
                                             id={`label-${i}-${uniqueID}`}

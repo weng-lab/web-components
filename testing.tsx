@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BarData } from './packages/visualization/src/components/BarPlot/types.ts'
 import BarPlot from './packages/visualization/src/components/BarPlot/barplot'
 import Box from '@mui/material/Box';
+import { scaleLog } from '@visx/scale';
 
 //Testing page for looking at components outside of storybook if needed (pnpm dev)
 
@@ -154,6 +155,7 @@ function TestingPage() {
       value: 40,
       id: "raspberries-d1",
       color: "#E91E63",
+      lolipopValue: .01,
       metadata: { description: "Fresh raspberries from Group D", source: "Farm 9" }
     }
   ];
@@ -176,6 +178,8 @@ function TestingPage() {
       <BarPlot
         data={sampleData}
         TooltipContents={TooltipContents}
+        fill
+        topAxisLabel='TPM'
       />
     </Box>
   );
