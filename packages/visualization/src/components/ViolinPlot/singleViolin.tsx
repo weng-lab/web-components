@@ -139,11 +139,11 @@ const SingleViolin = <T,>({
         .curve(curveBasis)(points) ?? null;
 
     return (
-        <React.Fragment key={distribution.label ?? `group-${distIndex}`}>
+        <React.Fragment key={`frag-${distIndex}`}>
             {
                 //display plots if enough data provided
                 <g
-                    key={distribution.label ?? `group-${distIndex}`}
+                    key={`group-${distIndex}`}
                     onMouseLeave={hideTooltip}
                     transform={horizontal ? `translate(${offset}, 0)` : undefined}
                 >
@@ -207,7 +207,7 @@ const SingleViolin = <T,>({
 
                         return (
                             <circle
-                                key={index}
+                                key={`outlier-${index}`}
                                 cx={cx}
                                 cy={cy}
                                 r={isHighlighted ? radius + 1 : radius}
@@ -251,7 +251,7 @@ const SingleViolin = <T,>({
 
                             return (
                                 <path
-                                    key={`${distribution.label ?? distIndex}-point-${index}`}
+                                    key={`${distIndex}-point-${index}`}
                                     d={`M ${cx},${cy} m -${radius},0 a ${radius},${radius} 0 1,0 ${2 * radius},0 a ${radius},${radius} 0 1,0 -${2 * radius},0`}
                                     stroke={isHighlighted ? "black" : "none"}
                                     fill={point.color ?? distribution.violinColor ?? "black"}
@@ -284,7 +284,7 @@ const SingleViolin = <T,>({
 
                             return (
                                 <circle
-                                    key={index}
+                                    key={`thresh-${index}`}
                                     cx={cx}
                                     cy={cy}
                                     r={isHighlighted ? radius + 1 : radius}
