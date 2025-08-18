@@ -44,7 +44,7 @@ const MiniMap = <T,>({
                                 const transformedY = yScale(point.y) * scaleFactor;
                                 context.beginPath();
                                 context.arc(transformedX, transformedY, 3 * scaleFactor, 0, Math.PI * 2);
-                                if (point.color) { context.fillStyle = point.color };
+                                context.fillStyle = point.color ?? "black";
                                 context.fill();
                             });
                         }

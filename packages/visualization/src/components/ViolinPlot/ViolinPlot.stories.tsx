@@ -34,16 +34,6 @@ export const Default: Story = {
     },
 };
 
-export const Horizontal: Story = {
-    args: {
-        distributions: testData,
-        loading: false,
-        axisLabel: "Axis Label",
-        labelOrientation: "leftDiagonal",
-        horizontal: true
-    },
-};
-
 export const Bandwidth: Story = {
     args: {
         distributions: testData,

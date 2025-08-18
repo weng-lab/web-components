@@ -10,10 +10,11 @@ export type Datum = {
 
 export type ViolinPoint<T> = {
     value: number;
+    outlier?: boolean;
     color?: string;
     radius?: number;
     opacity?: number;
-    metaData?: T;
+    metadata?: T;
 }
 
 export type Distribution<T> = {
@@ -42,6 +43,7 @@ export type CrossProps = {
 export type ViolinPlotProps<T> = {
     distributions: Distribution<T>[];
     loading: boolean;
+    svgRef?: React.RefObject<SVGSVGElement>;
     axisLabel?: string;
     disableCrossPlot?: boolean;
     disableViolinPlot?: boolean;
