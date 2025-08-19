@@ -2,7 +2,8 @@ import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-pro";
-import { Button } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
+import { InfoOutline, QuestionMark } from "@mui/icons-material";
 
 const meta = {
   title: "ui-components/Table",
@@ -127,3 +128,25 @@ export const OverrideToolbar: Story = {
     toolbarSlot: <Button variant="outlined" sx={{textTransform: 'none'}} size="small">Extra Button</Button>
   }
 }
+
+export const LabelTooltip: Story = {
+  args: {
+    columns,
+    rows,
+    label: "Table Title",
+    labelTooltip: "This is a tooltip"
+  },
+};
+
+export const LabelTooltipCustomElement: Story = {
+  args: {
+    columns,
+    rows,
+    label: "Table Title",
+    labelTooltip: (
+      <Tooltip title={"tooltip contents"}>
+        <QuestionMark fontSize="inherit" />
+      </Tooltip>
+    ),
+  },
+};
