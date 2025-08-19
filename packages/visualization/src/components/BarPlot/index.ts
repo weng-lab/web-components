@@ -1,3 +1,3 @@
-import Barplot from "./barplot"
-export { Barplot }
+import BarPlot from "./barplot"
+export { BarPlot }
 export type { BarPlotProps, BarData } from "./types"
