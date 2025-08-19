@@ -61,10 +61,10 @@ const StyledTextField = styled(TextField)<{
 type CustomToolbarProps = {
   label: DataGridProProps["label"];
   labelTooltip: TableProps["labelTooltip"];
-  extraComponentSlot?: React.ReactNode;
+  toolbarSlot?: React.ReactNode;
 };
 
-export function CustomToolbar({ label, labelTooltip, extraComponentSlot }: CustomToolbarProps) {
+export function CustomToolbar({ label, labelTooltip, toolbarSlot }: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
@@ -82,9 +82,9 @@ export function CustomToolbar({ label, labelTooltip, extraComponentSlot }: Custo
         )}
       </Typography>
 
-      {extraComponentSlot && (
+      {toolbarSlot && (
         <>
-          {extraComponentSlot}
+          {toolbarSlot}
           <Divider orientation="vertical" variant="middle" flexItem sx={{ mx: 0.5 }} />
         </>
       )}
