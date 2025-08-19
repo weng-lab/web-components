@@ -4,7 +4,7 @@ import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-pro";
 import { Box, Button, Popper, PopperProps, Stack, Tooltip, Typography } from "@mui/material";
-import { InfoOutline, QuestionMark } from "@mui/icons-material";
+import { QuestionMark } from "@mui/icons-material";
 
 const meta = {
   title: "ui-components/Table",
