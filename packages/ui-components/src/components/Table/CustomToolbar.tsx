@@ -26,6 +26,8 @@ import InputAdornment from "@mui/material/InputAdornment";
 import CancelIcon from "@mui/icons-material/Cancel";
 import SearchIcon from "@mui/icons-material/Search";
 import Typography from "@mui/material/Typography";
+import { TableProps } from "./types";
+import { InfoOutline } from "@mui/icons-material";
 
 type OwnerState = {
   expanded: boolean;
@@ -58,22 +60,31 @@ const StyledTextField = styled(TextField)<{
 
 type CustomToolbarProps = {
   label: DataGridProProps["label"];
-  extraComponentSlot?: React.ReactNode;
-}
+  labelTooltip: TableProps["labelTooltip"];
+  toolbarSlot?: React.ReactNode;
+};
 
-export function CustomToolbar({ label, extraComponentSlot }: CustomToolbarProps) {
+export function CustomToolbar({ label, labelTooltip, toolbarSlot }: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
   return (
     <Toolbar>
-      <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5 }}>
+      <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
         {label}
+        {/* ReactNode can be more than just an element, string, or number but not accounting for that for simplicity */}
+        {labelTooltip && (typeof labelTooltip === "string" || typeof labelTooltip === "number") ? (
+          <Tooltip title={labelTooltip}>
+            <InfoOutline fontSize="inherit" color="primary" />
+          </Tooltip>
+        ) : (
+          labelTooltip
+        )}
       </Typography>
 
-      {extraComponentSlot && (
+      {toolbarSlot && (
         <>
-          {extraComponentSlot}
+          {toolbarSlot}
           <Divider orientation="vertical" variant="middle" flexItem sx={{ mx: 0.5 }} />
         </>
       )}

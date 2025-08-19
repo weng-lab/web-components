@@ -12,7 +12,7 @@ const Table = (props: TableProps) => {
   /**
    * Provide defaults
    * @todo obey the defaults specified in the theme.
-   * Ex: Overriding pageSizeOptions like this overrides the defaults specified in the theme
+   * Ex: Overriding density like this overrides the defaults specified in the theme
    */
   const {
     pagination = true,
@@ -26,10 +26,14 @@ const Table = (props: TableProps) => {
     divHeight = {},
     sx = {},
     error = false,
-    toolbarSlot,
     slots = {},
+    label,
+    labelTooltip,
+    toolbarSlot,
     ...restDataGridProps
   } = props;
+
+  const toolbarProps = { label, labelTooltip, toolbarSlot };
 
   //Assign default ID if no ID is provided in the row data
   const rowsWithIds = useMemo(
@@ -76,7 +80,7 @@ const Table = (props: TableProps) => {
   }
 
   if (error) {
-    return <TableFallback message={`Error fetching ${restDataGridProps.label}`} variant="error" />
+    return <TableFallback message={`Error fetching ${label}`} variant="error" />
   }
 
   return (
@@ -110,7 +114,7 @@ const Table = (props: TableProps) => {
           ...sx,
         }}
         slots={{
-          toolbar: () => <CustomToolbar label={restDataGridProps.label} extraComponentSlot={toolbarSlot} />,
+          toolbar: () => <CustomToolbar {...toolbarProps} />,
           ...slots
         }}
         {...restDataGridProps}

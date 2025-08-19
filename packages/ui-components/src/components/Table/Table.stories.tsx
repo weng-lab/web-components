@@ -1,8 +1,10 @@
+import * as React from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-pro";
-import { Button } from "@mui/material";
+import { Box, Button, Popper, PopperProps, Stack, Tooltip, Typography } from "@mui/material";
+import { QuestionMark } from "@mui/icons-material";
 
 const meta = {
   title: "ui-components/Table",
@@ -14,9 +16,7 @@ const meta = {
   },
   decorators: [
     (Story) => {
-      LicenseInfo.setLicenseKey(
-        process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY as string
-      );
+      LicenseInfo.setLicenseKey(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY as string);
       return <Story />;
     },
   ],
@@ -91,19 +91,19 @@ export const ErrorFallback: Story = {
     rows,
     label: "Intact Hi-C Loops",
     divHeight: {
-      height: '350px'
+      height: "350px",
     },
     error: true,
-  }
-}
+  },
+};
 
 export const FlexWrapper: Story = {
   args: {
     columns,
     rows,
     label: "This table fills container",
-  }
-}
+  },
+};
 
 export const FixedHeightWrapper: Story = {
   args: {
@@ -111,19 +111,85 @@ export const FixedHeightWrapper: Story = {
     rows,
     label: "This table has a fixed 350px height",
     divHeight: {
-      height: '350px'
-    }
-  }
-}
+      height: "350px",
+    },
+  },
+};
 
-export const OverrideToolbar: Story = {
+export const UseToolbarSlot: Story = {
   args: {
     columns,
     rows,
     label: "This table is using the extra toolbar slot",
     divHeight: {
-      height: '350px'
+      height: "350px",
     },
-    toolbarSlot: <Button variant="outlined" sx={{textTransform: 'none'}} size="small">Extra Button</Button>
-  }
-}
+  },
+  render: (args) => {
+    const [count, setCount] = React.useState(0);
+    const [anchorEl, setAnchorEl] = React.useState<PopperProps["anchorEl"]>(null);
+
+    const handleIncrementAge = React.useCallback(() => {
+      setCount((prev) => prev + 1);
+    }, []);
+
+    const handleTogglePopper = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      if (anchorEl) {
+        setAnchorEl(null);
+      } else {
+        const rect = e.currentTarget.getBoundingClientRect() //must capture here before setting state with it!
+        setAnchorEl({ getBoundingClientRect: () => rect });
+      }
+    };
+
+    const modifiedRows = React.useMemo(() => {
+      return rows.map((x) => {
+        return { ...x, age: x.age === null ? null : x.age + count };
+      });
+    }, [rows, count]);
+
+    return (
+      <Stack gap={2}>
+        <Typography>Age increased by {count}</Typography>
+        <Table
+          {...args}
+          rows={modifiedRows}
+          toolbarSlot={
+            <Button variant="contained" size="small" onClick={handleTogglePopper}>
+              Toggle Popper
+            </Button>
+          }
+        />
+        <Popper open={Boolean(anchorEl)} anchorEl={anchorEl}>
+          <Box sx={{ border: 1, p: 1, bgcolor: "background.paper" }}>
+            <Button size="small" onClick={handleIncrementAge}>
+              Increment Age
+            </Button>
+          </Box>
+        </Popper>
+      </Stack>
+    );
+  },
+};
+
+export const LabelTooltip: Story = {
+  args: {
+    columns,
+    rows,
+    label: "Table Title",
+    labelTooltip: "This is a tooltip",
+  },
+};
+
+export const LabelTooltipCustomElement: Story = {
+  args: {
+    columns,
+    rows,
+    label: "Table Title",
+    labelTooltip: (
+      <Tooltip title={"tooltip contents"}>
+        <QuestionMark fontSize="inherit" />
+      </Tooltip>
+    ),
+  },
+};
