@@ -59,7 +59,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     refetch: refetchCCREs,
     isFetching: ccreFetching,
   } = useQuery({
-    queryKey: ["ccres", inputValue],
+    queryKey: ["ccres", inputValue, assembly],
     queryFn: () => getCCREs(inputValue, assembly, ccreLimit || 3, showiCREFlag || false),
     enabled: false,
   });
@@ -68,7 +68,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     refetch: refetchGenes,
     isFetching: geneFetching,
   } = useQuery({
-    queryKey: ["genes", inputValue],
+    queryKey: ["genes", inputValue, assembly],
     queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion || assembly === "GRCh38" ? 29 : 25),
     enabled: false,
   });
@@ -78,7 +78,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     refetch: refetchSNPs,
     isFetching: snpFetching,
   } = useQuery({
-    queryKey: ["snps", inputValue],
+    queryKey: ["snps", inputValue, assembly],
     queryFn: () => getSNPs(inputValue, assembly, snpLimit || 3),
     enabled: false,
   });
