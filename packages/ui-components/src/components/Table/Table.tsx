@@ -12,7 +12,7 @@ const Table = (props: TableProps) => {
   /**
    * Provide defaults
    * @todo obey the defaults specified in the theme.
-   * Ex: Overriding pageSizeOptions like this overrides the defaults specified in the theme
+   * Ex: Overriding density like this overrides the defaults specified in the theme
    */
   const {
     pagination = true,

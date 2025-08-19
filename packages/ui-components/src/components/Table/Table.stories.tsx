@@ -1,8 +1,9 @@
+import * as React from 'react'
 import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-pro";
-import { Button, Tooltip } from "@mui/material";
+import { Box, Button, Popper, Tooltip } from "@mui/material";
 import { InfoOutline, QuestionMark } from "@mui/icons-material";
 
 const meta = {
@@ -117,7 +118,31 @@ export const FixedHeightWrapper: Story = {
   }
 }
 
-export const OverrideToolbar: Story = {
+function SimplePopper() {
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(anchorEl ? null : event.currentTarget);
+  };
+
+  const open = Boolean(anchorEl);
+  const id = open ? 'simple-popper' : undefined;
+
+  return (
+    <div>
+      <button aria-describedby={id} type="button" onClick={handleClick}>
+        Toggle Popper
+      </button>
+      <Popper id={id} open={open} anchorEl={anchorEl}>
+        <Box sx={{ border: 1, p: 1, bgcolor: 'background.paper' }}>
+          The content of the Popper.
+        </Box>
+      </Popper>
+    </div>
+  );
+}
+
+export const UseToolbarSlot: Story = {
   args: {
     columns,
     rows,
@@ -125,7 +150,7 @@ export const OverrideToolbar: Story = {
     divHeight: {
       height: '350px'
     },
-    toolbarSlot: <Button variant="outlined" sx={{textTransform: 'none'}} size="small">Extra Button</Button>
+    toolbarSlot: <SimplePopper />
   }
 }
 
