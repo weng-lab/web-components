@@ -6,3 +6,6 @@ export type { GraphProps } from './components/Graph';
 
 export { ViolinPlot } from './components/ViolinPlot';
 export type { Distribution, ViolinPlotProps, ViolinPoint } from './components/ViolinPlot';
+
+export { BarPlot } from './components/BarPlot';
+export type { BarPlotProps, BarData } from './components/BarPlot';
