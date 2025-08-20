@@ -3,7 +3,7 @@ import { LollipopLegendProps } from "./types";
 
 const Legend: React.FC<LollipopLegendProps> = ({
     label,
-    getLolipopRadius,
+    getlollipopRadius,
     height,
     width,
     legendValues,
@@ -19,7 +19,7 @@ const Legend: React.FC<LollipopLegendProps> = ({
         }
     }, [label]);
 
-    const itemWidths = legendValues.map(v => getLolipopRadius(v) * 2 + 12);
+    const itemWidths = legendValues.map(v => getlollipopRadius(v) * 2 + 12);
     const totalItemsWidth =
         itemWidths.reduce((sum, w) => sum + w, 0) + gap * (legendValues.length - 1);
 
@@ -59,7 +59,7 @@ const Legend: React.FC<LollipopLegendProps> = ({
                     />
                     <g transform={`translate(${labelWidth + dividerGap * 2}, 0)`}>
                         {legendValues.map((value, idx) => {
-                            const circleR = getLolipopRadius(value);
+                            const circleR = getlollipopRadius(value);
                             const offsetX =
                                 itemWidths.slice(0, idx).reduce((sum, w) => sum + w, 0) +
                                 idx * gap;

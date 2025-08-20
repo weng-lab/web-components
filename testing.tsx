@@ -156,7 +156,7 @@ function TestingPage() {
       value: 40,
       id: "raspberries-d1",
       color: "#E91E63",
-      lolipopValue: .01,
+      lollipopValue: .01,
       metadata: { description: "Fresh raspberries from Group D", source: "Farm 9" }
     }
   ];

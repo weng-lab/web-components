@@ -41,7 +41,7 @@ const BarPlot = <T,>({
     barSize = 15,
     barSpacing = 2,
     fill = false,
-    legnedTitle,
+    legendTitle,
     legendValues = [1, 0.05, 0.01, 0.001]
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
@@ -83,8 +83,8 @@ const BarPlot = <T,>({
 
     const { parentRef, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
 
-    const lolipopValues = data
-        .map(d => d.lolipopValue)
+    const lollipopValues = data
+        .map(d => d.lollipopValue)
         .filter((v): v is number => v !== undefined);
 
     const rScaleAdjustment = 0.005
@@ -107,12 +107,12 @@ const BarPlot = <T,>({
      * @param x 
      * @returns rScale(Math.max(0.005, x)) to avoid the very large values near 0
      */
-    const getLolipopRadius = useCallback((x: number) => rScale(Math.max(rScaleAdjustment, x)), [rScale])
+    const getlollipopRadius = useCallback((x: number) => rScale(Math.max(rScaleAdjustment, x)), [rScale])
 
     // Y padding
     const spaceForTopAxis = 50
     const spaceOnBottom = 20
-    const legendHeight = lolipopValues.length > 0 ? 30 : 0
+    const legendHeight = lollipopValues.length > 0 ? 30 : 0
 
     // X padding
     const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial")))
@@ -203,8 +203,8 @@ const BarPlot = <T,>({
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
-            {lolipopValues.length > 0 && (
-                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
+            {lollipopValues.length > 0 && (
+                <Legend values={lollipopValues} label={legendTitle ?? ""} getlollipopRadius={getlollipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
             )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
@@ -263,7 +263,7 @@ const BarPlot = <T,>({
 
                             const categoryLabelY = (bandPos ?? 0) + bandSize / 2
 
-                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lolipopValue && d.value >= 0 ? getLolipopRadius(d.lolipopValue) : 0)
+                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lollipopValue && d.value >= 0 ? getlollipopRadius(d.lollipopValue) : 0)
 
                             const valueLabelY = barY + barHeight / 2
 
@@ -299,17 +299,17 @@ const BarPlot = <T,>({
                                             rx={3}
                                             stroke={hovered ? "black" : "none"}
                                         />
-                                        {d.lolipopValue && (
+                                        {d.lollipopValue && (
                                             <>
                                                 <Circle
-                                                    r={getLolipopRadius(d.lolipopValue) * 1.5}
+                                                    r={getlollipopRadius(d.lollipopValue) * 1.5}
                                                     cx={d.value < 0 ? barX : barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill={d.color}
                                                     stroke={hovered ? "black" : "none"}
                                                 />
                                                 <Circle
-                                                    r={getLolipopRadius(d.lolipopValue)}
+                                                    r={getlollipopRadius(d.lollipopValue)}
                                                     cx={d.value < 0 ? barX : barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill='black'
