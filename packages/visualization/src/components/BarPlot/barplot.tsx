@@ -147,7 +147,7 @@ const BarPlot = <T,>({
         scaleLinear<number>({
             domain: [
                 // If cutting off negative values, the lower bound is max(negativeCutoff, minValue).
-                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue),
+                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue - 0.07 * (maxValue - minValue)),
                 // Make some room past the last tick (7% of the range of the data)
                 Math.max(0, maxValue) + 0.07 * (maxValue - minValue)
             ], // always include 0 as anchor if values do not cross 0
