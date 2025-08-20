@@ -1,6 +1,5 @@
 import { DataGridProProps, GridColDef } from "@mui/x-data-grid-pro";
-import { ReactElement, ReactNode } from "react";
-export type { GridColDef as TableColDef }; 
+import { ReactElement, ReactNode } from "react"; 
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
