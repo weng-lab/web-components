@@ -112,7 +112,7 @@ const BarPlot = <T,>({
     // Y padding
     const spaceForTopAxis = 50
     const spaceOnBottom = 20
-    const legendHeight = lolipopValues.length > 0 ? 50 : 0
+    const legendHeight = lolipopValues.length > 0 ? 30 : 0
 
     // X padding
     const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial")))
@@ -204,7 +204,7 @@ const BarPlot = <T,>({
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
             {lolipopValues.length > 0 && (
-                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={250} legendValues={legendValues} />
+                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
             )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
@@ -263,7 +263,7 @@ const BarPlot = <T,>({
 
                             const categoryLabelY = (bandPos ?? 0) + bandSize / 2
 
-                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lolipopValue ? getLolipopRadius(d.lolipopValue) : 0)
+                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lolipopValue && d.value >= 0 ? getLolipopRadius(d.lolipopValue) : 0)
 
                             const valueLabelY = barY + barHeight / 2
 
@@ -303,14 +303,14 @@ const BarPlot = <T,>({
                                             <>
                                                 <Circle
                                                     r={getLolipopRadius(d.lolipopValue) * 1.5}
-                                                    cx={barX + barWidth}
+                                                    cx={d.value < 0 ? barX : barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill={d.color}
                                                     stroke={hovered ? "black" : "none"}
                                                 />
                                                 <Circle
                                                     r={getLolipopRadius(d.lolipopValue)}
-                                                    cx={barX + barWidth}
+                                                    cx={d.value < 0 ? barX : barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill='black'
                                                 />
