@@ -1,5 +1,6 @@
-import { DataGridProProps } from "@mui/x-data-grid-pro";
+import { DataGridProProps, GridColDef } from "@mui/x-data-grid-pro";
 import { ReactElement, ReactNode } from "react";
+export type { GridColDef as TableColDef }; 
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
@@ -71,10 +72,3 @@ export interface TableProps extends DataGridProProps {
    */
   labelTooltip?: ReactNode
 }
-
-export type TableToolbarProps = {
-  /**
-   * Optional ReactNode to be used in the table toolbar. Strings and numbers will be rendered as Typography variant h6.
-   */
-  title?: ReactNode;
-};

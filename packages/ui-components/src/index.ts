@@ -5,7 +5,7 @@ export { DataTable } from './components/DataTable';
 export type { DataTableProps, DataTableColumn } from './components/DataTable';
 
 export { Table } from './components/Table';
-export type * from './components/Table';
+export type { TableProps, TableColDef } from "./components/Table";
 
 export { GenomeSearch } from './components/GenomeSearch';
 export type { GenomeSearchProps, Result, Domain, ResultType } from './components/GenomeSearch';
