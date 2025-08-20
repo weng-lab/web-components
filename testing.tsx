@@ -183,13 +183,14 @@ function TestingPage() {
 
   return (
     <Box height={"70vh"} overflow={"auto"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
-      {/* <BarPlot
+      <BarPlot
         data={sampleData}
         TooltipContents={TooltipContents}
         fill
         topAxisLabel='TPM'
-      /> */}
-      <ViolinPlot
+        legendTitle='FDR'
+      />
+      {/* <ViolinPlot
           
           distributions={testData}
           loading={false}
@@ -203,7 +204,7 @@ function TestingPage() {
           crossProps={{
             outliers: "all"
           }}
-        />
+        /> */}
     </Box>
   );
 }

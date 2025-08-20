@@ -16,7 +16,7 @@ import Legend from './legend';
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
 //helper function to get the approx length of the longest category in px
-const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
+export const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
     const el = document.createElement("g");
     el.style.position = "absolute";
     el.style.visibility = "hidden";
@@ -41,7 +41,7 @@ const BarPlot = <T,>({
     barSize = 15,
     barSpacing = 2,
     fill = false,
-    legendTitle,
+    legendTitle = "FDR",
     legendValues = [1, 0.05, 0.01, 0.001]
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
@@ -204,7 +204,7 @@ const BarPlot = <T,>({
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
             {lollipopValues.length > 0 && (
-                <Legend values={lollipopValues} label={legendTitle ?? ""} getlollipopRadius={getlollipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
+                <Legend values={lollipopValues} label={legendTitle} getlollipopRadius={getlollipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
             )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
@@ -218,7 +218,7 @@ const BarPlot = <T,>({
                         outerSvgRef.current = node;
                     }}
                     width={ParentWidth}
-                    height={fill ? ParentHeight - legendHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
+                    height={fill ? ParentHeight ? ParentHeight - legendHeight : ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
                     <Group left={spaceForCategory} top={spaceForTopAxis}>
