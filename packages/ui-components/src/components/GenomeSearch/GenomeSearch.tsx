@@ -195,6 +195,7 @@ const Search: React.FC<GenomeSearchProps> = ({
 
   const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result) => {
     setSelection(newValue);
+    setInputValue(newValue?.title || "") //needed so that the matching to inputValue works on enter press after selection
   };
 
   return (
