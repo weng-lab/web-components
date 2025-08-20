@@ -161,19 +161,6 @@ function TestingPage() {
     }
   ];
 
-  const TooltipContents = (bar: BarData<MyMetadata>) => (
-    <div style={{ padding: 2 }}>
-      <strong>{bar.label}</strong>
-      <div>Value: {bar.value}</div>
-      {bar.metadata && (
-        <>
-          <div>Description: {bar.metadata.description}</div>
-          <div>Source: {bar.metadata.source}</div>
-        </>
-      )}
-    </div>
-  );
-
   const testData = [
     {"label": "adipose", "data": [4.68, 5.72, 4.81, 10.12, 5.07, 18.83].map(value => ({ value })), violinColor: "blue"},
     {"label": "adrenal gland", "data": [19.86, 23.6, 5.04, 4.09, 23.08, 8.15, 15.44].map(value => ({ value })), violinColor: "red"},
@@ -182,13 +169,14 @@ function TestingPage() {
   ]
 
   return (
-    <Box height={"70vh"} overflow={"auto"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
+    <Box height={"700px"} overflow={"auto"} width={"auto"} padding={2} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, position: "relative" }}>
       <BarPlot
         data={sampleData}
-        TooltipContents={TooltipContents}
-        fill
-        topAxisLabel='TPM'
+        topAxisLabel='log2(Fold Enrichment)'
         legendTitle='FDR'
+        barSize={3}
+        barSpacing={20}
+        cutoffNegativeValues
       />
       {/* <ViolinPlot
           

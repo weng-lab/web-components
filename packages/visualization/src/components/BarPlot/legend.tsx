@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useState, useEffect } from "react";
+import React, { useRef } from "react";
 import { LollipopLegendProps } from "./types";
 import { getTextHeight } from "./barplot";
 
@@ -8,7 +8,8 @@ const Legend: React.FC<LollipopLegendProps> = ({
     height,
     width,
     legendValues,
-    spaceForCategory
+    spaceForCategory,
+    axisCenter
 }) => {
     const gap = 30;
     const labelRef = useRef<SVGTextElement>(null);
@@ -23,18 +24,13 @@ const Legend: React.FC<LollipopLegendProps> = ({
 
     const totalWidth = labelWidth + dividerGap * 2 + totalItemsWidth;
 
+    console.log(axisCenter)
+
     return (
-        <div
-            style={{
-                width: `calc(100% - ${spaceForCategory}px)`,
-                justifyContent: "center",
-                display: "flex",
-                marginBottom: 10
-            }}
-        >
-            <svg height={height} width={width + labelWidth} id="legend">
-                <rect height={height} width={width + labelWidth} stroke="black" fill="none" />
-                <g transform={`translate(${width / 2 - totalWidth / 2}, ${height / 2})`}>
+        <div style={{ marginBottom: 10 }}>
+            <svg height={height + 4} width={width + labelWidth + 4} id="legend" transform={`translate(${spaceForCategory/1.2 + axisCenter - width / 2}, 0)`}>
+                <rect height={height} width={width + labelWidth} stroke="black" fill="none" transform={`translate(2, 2)`} />
+                <g transform={`translate(${(width / 2 - totalWidth / 2) + 2}, ${(height / 2) + 2})`}>
                     <text
                         ref={labelRef}
                         x={0}
@@ -46,10 +42,7 @@ const Legend: React.FC<LollipopLegendProps> = ({
                         {label}
                     </text>
                 </g>
-                <g
-                    transform={`translate(${width / 2 - totalWidth / 2 + labelWidth + dividerGap}, ${height / 2
-                        })`}
-                >
+                <g transform={`translate(${(width / 2 - totalWidth / 2 + labelWidth + dividerGap) + 2}, ${(height / 2) + 2})`}>
                     <line
                         x1={0}
                         y1={-height / 2}
@@ -66,7 +59,7 @@ const Legend: React.FC<LollipopLegendProps> = ({
                                 idx * gap;
 
                             return (
-                                <g key={idx} transform={`translate(${offsetX}, 0)`}>
+                                <g key={`legend${idx}`} transform={`translate(${offsetX}, 0)`}>
                                     <circle r={circleR} cx={0} cy={0} fill="black" />
                                     <text
                                         x={circleR + 12}
@@ -83,7 +76,6 @@ const Legend: React.FC<LollipopLegendProps> = ({
                     </g>
                 </g>
             </svg>
-
         </div>
     );
 };
