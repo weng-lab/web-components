@@ -16,7 +16,7 @@ import Legend from './legend';
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
 //helper function to get the approx length of the longest category in px
-const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
+export const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
     const el = document.createElement("g");
     el.style.position = "absolute";
     el.style.visibility = "hidden";
@@ -41,7 +41,7 @@ const BarPlot = <T,>({
     barSize = 15,
     barSpacing = 2,
     fill = false,
-    legnedTitle,
+    legendTitle = "FDR",
     legendValues = [1, 0.05, 0.01, 0.001]
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
@@ -83,8 +83,8 @@ const BarPlot = <T,>({
 
     const { parentRef, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
 
-    const lolipopValues = data
-        .map(d => d.lolipopValue)
+    const lollipopValues = data
+        .map(d => d.lollipopValue)
         .filter((v): v is number => v !== undefined);
 
     const rScaleAdjustment = 0.005
@@ -107,12 +107,12 @@ const BarPlot = <T,>({
      * @param x 
      * @returns rScale(Math.max(0.005, x)) to avoid the very large values near 0
      */
-    const getLolipopRadius = useCallback((x: number) => rScale(Math.max(rScaleAdjustment, x)), [rScale])
+    const getlollipopRadius = useCallback((x: number) => rScale(Math.max(rScaleAdjustment, x)), [rScale])
 
     // Y padding
     const spaceForTopAxis = 50
     const spaceOnBottom = 20
-    const legendHeight = lolipopValues.length > 0 ? 50 : 0
+    const legendHeight = lollipopValues.length > 0 ? 30 : 0
 
     // X padding
     const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial")))
@@ -147,7 +147,7 @@ const BarPlot = <T,>({
         scaleLinear<number>({
             domain: [
                 // If cutting off negative values, the lower bound is max(negativeCutoff, minValue).
-                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue),
+                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue - 0.07 * (maxValue - minValue)),
                 // Make some room past the last tick (7% of the range of the data)
                 Math.max(0, maxValue) + 0.07 * (maxValue - minValue)
             ], // always include 0 as anchor if values do not cross 0
@@ -203,8 +203,8 @@ const BarPlot = <T,>({
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
-            {lolipopValues.length > 0 && (
-                <Legend values={lolipopValues} label={legnedTitle ?? ""} getLolipopRadius={getLolipopRadius} height={legendHeight} width={250} legendValues={legendValues} />
+            {lollipopValues.length > 0 && (
+                <Legend values={lollipopValues} label={legendTitle} getlollipopRadius={getlollipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
             )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
@@ -218,7 +218,7 @@ const BarPlot = <T,>({
                         outerSvgRef.current = node;
                     }}
                     width={ParentWidth}
-                    height={fill ? ParentHeight - legendHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
+                    height={fill ? ParentHeight ? ParentHeight - legendHeight : ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
                     <Group left={spaceForCategory} top={spaceForTopAxis}>
@@ -263,7 +263,7 @@ const BarPlot = <T,>({
 
                             const categoryLabelY = (bandPos ?? 0) + bandSize / 2
 
-                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lolipopValue ? getLolipopRadius(d.lolipopValue) : 0)
+                            const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (d.lollipopValue && d.value >= 0 ? getlollipopRadius(d.lollipopValue) : 0)
 
                             const valueLabelY = barY + barHeight / 2
 
@@ -299,18 +299,18 @@ const BarPlot = <T,>({
                                             rx={3}
                                             stroke={hovered ? "black" : "none"}
                                         />
-                                        {d.lolipopValue && (
+                                        {d.lollipopValue && (
                                             <>
                                                 <Circle
-                                                    r={getLolipopRadius(d.lolipopValue) * 1.5}
-                                                    cx={barX + barWidth}
+                                                    r={getlollipopRadius(d.lollipopValue) * 1.5}
+                                                    cx={d.value < 0 ? barX : barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill={d.color}
                                                     stroke={hovered ? "black" : "none"}
                                                 />
                                                 <Circle
-                                                    r={getLolipopRadius(d.lolipopValue)}
-                                                    cx={barX + barWidth}
+                                                    r={getlollipopRadius(d.lollipopValue)}
+                                                    cx={d.value < 0 ? barX : barX + barWidth}
                                                     cy={barY + barHeight / 2}
                                                     fill='black'
                                                 />

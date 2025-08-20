@@ -7,7 +7,7 @@ export interface BarData<T> {
    */
   id: string;
   color?: string;
-  lolipopValue?: number
+  lollipopValue?: number
   metadata?: T;
 }
 
@@ -40,15 +40,16 @@ export interface BarPlotProps<T> {
    * will make barSpacing negligible 
    */
   fill?: boolean;
-  legnedTitle?: string;
+  legendTitle?: string;
   legendValues?: [number] | [number, number] | [number, number, number] | [number, number, number, number];
 }
 
 export type LollipopLegendProps = {
     values: number[];
     label: string;
-    getLolipopRadius: (x: number) => number;
+    getlollipopRadius: (x: number) => number;
     height: number;
     width: number;
     legendValues: number[];
+    spaceForCategory: number;
 }

@@ -1,57 +1,89 @@
-import React from "react";
+import React, { useRef, useLayoutEffect, useState, useEffect } from "react";
 import { LollipopLegendProps } from "./types";
+import { getTextHeight } from "./barplot";
 
 const Legend: React.FC<LollipopLegendProps> = ({
     label,
-    getLolipopRadius,
+    getlollipopRadius,
     height,
     width,
-    legendValues
+    legendValues,
+    spaceForCategory
 }) => {
-    const gap = 30; // horizontal gap between items
+    const gap = 30;
+    const labelRef = useRef<SVGTextElement>(null);
 
-    const itemWidths = legendValues.map(v => getLolipopRadius(v) * 2 + 12);
-    const totalWidth =
+    const labelWidth = getTextHeight(label, 12, "Times")
+
+    const itemWidths = legendValues.map(v => getlollipopRadius(v) * 2 + 12);
+    const totalItemsWidth =
         itemWidths.reduce((sum, w) => sum + w, 0) + gap * (legendValues.length - 1);
 
-    return (
-        <div style={{ width: "100%", justifyContent: "center", display: "flex" }}>
-            <svg height={height} width={width} id="legend">
-                <rect height={height} width={width} stroke="black" fill="none" />
-                <text
-                    x={width / 2}
-                    y={15}
-                    textAnchor="middle"
-                    fill="black"
-                    fontSize={12}
-                >
-                    {label}
-                </text>
-                <g transform={`translate(${(width - totalWidth) / 2}, ${height / 1.5})`}>
-                    {legendValues.map((value, idx) => {
-                        const circleR = getLolipopRadius(value);
-                        // X position relative to group start
-                        const offsetX =
-                            itemWidths.slice(0, idx).reduce((sum, w) => sum + w, 0) +
-                            idx * gap;
+    const dividerGap = 10;
 
-                        return (
-                            <g key={idx} transform={`translate(${offsetX}, 0)`}>
-                                <circle r={circleR} cx={0} cy={0} fill="black" />
-                                <text
-                                    x={circleR + 12}
-                                    y={3}
-                                    textAnchor="start"
-                                    fill="black"
-                                    fontSize={10}
-                                >
-                                    {value}
-                                </text>
-                            </g>
-                        );
-                    })}
+    const totalWidth = labelWidth + dividerGap * 2 + totalItemsWidth;
+
+    return (
+        <div
+            style={{
+                width: `calc(100% - ${spaceForCategory}px)`,
+                justifyContent: "center",
+                display: "flex",
+                marginBottom: 10
+            }}
+        >
+            <svg height={height} width={width + labelWidth} id="legend">
+                <rect height={height} width={width + labelWidth} stroke="black" fill="none" />
+                <g transform={`translate(${width / 2 - totalWidth / 2}, ${height / 2})`}>
+                    <text
+                        ref={labelRef}
+                        x={0}
+                        y={3}
+                        textAnchor="start"
+                        fill="black"
+                        fontSize={12}
+                    >
+                        {label}
+                    </text>
+                </g>
+                <g
+                    transform={`translate(${width / 2 - totalWidth / 2 + labelWidth + dividerGap}, ${height / 2
+                        })`}
+                >
+                    <line
+                        x1={0}
+                        y1={-height / 2}
+                        x2={0}
+                        y2={height / 2}
+                        stroke="black"
+                        strokeWidth={1}
+                    />
+                    <g transform={`translate(${dividerGap + labelWidth / 2}, 0)`}>
+                        {legendValues.map((value, idx) => {
+                            const circleR = getlollipopRadius(value);
+                            const offsetX =
+                                itemWidths.slice(0, idx).reduce((sum, w) => sum + w, 0) +
+                                idx * gap;
+
+                            return (
+                                <g key={idx} transform={`translate(${offsetX}, 0)`}>
+                                    <circle r={circleR} cx={0} cy={0} fill="black" />
+                                    <text
+                                        x={circleR + 12}
+                                        y={3}
+                                        textAnchor="start"
+                                        fill="black"
+                                        fontSize={10}
+                                    >
+                                        {value}
+                                    </text>
+                                </g>
+                            );
+                        })}
+                    </g>
                 </g>
             </svg>
+
         </div>
     );
 };

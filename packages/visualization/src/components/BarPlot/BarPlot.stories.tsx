@@ -55,14 +55,14 @@ const sampleData: BarData<MyMetadata>[] = [
     },
 ]
 
-const lolipopData: BarData<MyMetadata>[] = [
+const lollipopData: BarData<MyMetadata>[] = [
     {
         category: "Group A",
         label: "Apples",
         value: 30,
         id: "apples-a1",
         color: "#FF6384",
-        lolipopValue: .05,
+        lollipopValue: .05,
         metadata: { description: "Red apples from Group A", source: "Orchard 1" }
     },
     {
@@ -71,7 +71,7 @@ const lolipopData: BarData<MyMetadata>[] = [
         value: 50,
         id: "grapes-b1",
         color: "#4BC0C0",
-        lolipopValue: .01,
+        lollipopValue: .01,
         metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
     },
     {
@@ -80,7 +80,7 @@ const lolipopData: BarData<MyMetadata>[] = [
         value: 27,
         id: "bananas-c1",
         color: "#FFCD56",
-        lolipopValue: .001,
+        lollipopValue: .001,
         metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
     },
 ]
@@ -127,9 +127,9 @@ export const Tooltip: Story = {
     },
 };
 
-export const Lolipop: Story = {
+export const lollipop: Story = {
     args: {
-        data: lolipopData,
+        data: lollipopData,
         barSize: 5,
         barSpacing: 30
     },
