@@ -4,6 +4,7 @@ import { BarData } from './packages/visualization/src/components/BarPlot/types.t
 import BarPlot from './packages/visualization/src/components/BarPlot/barplot'
 import Box from '@mui/material/Box';
 import { scaleLog } from '@visx/scale';
+import ViolinPlot from './packages/visualization/src/components/ViolinPlot/violinPlot';
 
 //Testing page for looking at components outside of storybook if needed (pnpm dev)
 
@@ -102,10 +103,9 @@ function TestingPage() {
     {
       category: "Group C",
       label: "Kiwis",
-      value: -22,
+      value: 22,
       id: "kiwis-c1",
       color: "#8BC34A",
-      lolipopValue: .05,
       metadata: { description: "Tangy kiwis from Group C", source: "Farm 5" }
     },
     {
@@ -148,13 +148,12 @@ function TestingPage() {
       value: 33,
       id: "plums-d1",
       color: "#AB47BC",
-      lolipopValue: .05,
       metadata: { description: "Juicy plums from Group D", source: "Orchard 5" }
     },
     {
       category: "Group D",
       label: "Raspberries",
-      value: -40,
+      value: 40,
       id: "raspberries-d1",
       color: "#E91E63",
       lolipopValue: .01,
@@ -175,15 +174,36 @@ function TestingPage() {
     </div>
   );
 
+  const testData = [
+    {"label": "adipose", "data": [4.68, 5.72, 4.81, 10.12, 5.07, 18.83].map(value => ({ value })), violinColor: "blue"},
+    {"label": "adrenal gland", "data": [19.86, 23.6, 5.04, 4.09, 23.08, 8.15, 15.44].map(value => ({ value })), violinColor: "red"},
+    {"label": "blood", "data": [5.12, 7.42, 18.52, 23.46, 15.41, 47.5, 32.01, 22.78, 12.06, 27.06, 44.23, 39.24, 29.05, 32.5, 68.4, 28.81, 37.65, 32.54, 9.04, 30.29, 31.45, 43.16, 15.51, 27.6, 37.81, 12.44, 39.48, 35.06, 35.31, 39.83, 20.37, 28.68, 18.33, 27.99, 28.04, 53.1, 37.66, 48.59, 35.95, 38.29, 34.55, 28.91, 49.37].map(value => ({ value })), violinColor: "orange"},
+    {"label": "testis", "data": [13.88, 9.57].map(value => ({ value })), violinColor: "green"},
+  ]
+
   return (
     <Box height={"70vh"} overflow={"auto"} width={"auto"} padding={1} sx={{ border: '2px solid', borderColor: 'grey.400', borderRadius: '8px'}}>
-      <BarPlot
+      {/* <BarPlot
         data={sampleData}
         TooltipContents={TooltipContents}
         fill
         topAxisLabel='TPM'
-        legnedTitle='FDR'
-      />
+      /> */}
+      <ViolinPlot
+          
+          distributions={testData}
+          loading={false}
+          axisLabel="SCREEN Gene Expression (SP1)"
+          labelOrientation="leftDiagonal"
+          violinProps={{
+            bandwidth: "scott",
+            showAllPoints: true,
+            jitter: 10,
+          }}
+          crossProps={{
+            outliers: "all"
+          }}
+        />
     </Box>
   );
 }

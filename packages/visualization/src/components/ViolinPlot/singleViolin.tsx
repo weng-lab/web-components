@@ -145,7 +145,7 @@ const SingleViolin = <T,>({
                 <g
                     key={`group-${distIndex}`}
                     onMouseLeave={hideTooltip}
-                    transform={horizontal ? `translate(${offset}, 0)` : undefined}
+                    transform={horizontal ? `translate(${offset}, 0)` : `translate(0, 0)`}
                 >
                     {distribution.data.length >= (violinProps?.pointDisplayThreshold ?? 3) && !disableViolinPlot && violinPath && (
                         <>
