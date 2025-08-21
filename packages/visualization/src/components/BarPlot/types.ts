@@ -52,4 +52,5 @@ export type LollipopLegendProps = {
     width: number;
     legendValues: number[];
     spaceForCategory: number;
+    axisCenter: number;
 }

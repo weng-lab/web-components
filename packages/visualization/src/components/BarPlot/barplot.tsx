@@ -147,9 +147,9 @@ const BarPlot = <T,>({
         scaleLinear<number>({
             domain: [
                 // If cutting off negative values, the lower bound is max(negativeCutoff, minValue).
-                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue - 0.07 * (maxValue - minValue)),
+                cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue - 0.07 * (0 - minValue)),
                 // Make some room past the last tick (7% of the range of the data)
-                Math.max(0, maxValue) + 0.07 * (maxValue - minValue)
+                Math.max(0, maxValue) + 0.07 * (maxValue)
             ], // always include 0 as anchor if values do not cross 0
             range: [0, Math.max(ParentWidth - spaceForCategory - spaceForLabel, 0)],
         }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentWidth, spaceForLabel])
@@ -200,11 +200,22 @@ const BarPlot = <T,>({
 
     }, [data, xScale, spaceForLabel, labelSpaceDecided, SVGref, ParentWidth, topAxisLabel, uniqueID]);
 
+    const axisCenter = (xScale.range()[0] + xScale.range()[1]) / 2;
+
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
         <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
             {lollipopValues.length > 0 && (
-                <Legend values={lollipopValues} label={legendTitle} getlollipopRadius={getlollipopRadius} height={legendHeight} width={300} legendValues={legendValues} spaceForCategory={spaceForCategory} />
+                <Legend
+                    values={lollipopValues}
+                    label={legendTitle}
+                    getlollipopRadius={getlollipopRadius}
+                    height={legendHeight}
+                    width={300}
+                    legendValues={legendValues}
+                    spaceForCategory={spaceForCategory}
+                    axisCenter={axisCenter}
+                />
             )}
             {data.length === 0 ?
                 <p>No Data To Display</p>
