@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { getCCREs, getGenes, getICREs, getSNPs } from "./queries";
-import { ccreResultList, geneResultList, getCoordinates, icreResultList, isDomain, snpResultList } from "./utils";
+import { getCCREs, getGenes, getICREs, getSNPs, getStudys } from "./queries";
+import { ccreResultList, geneResultList, getCoordinates, icreResultList, isDomain, snpResultList, studyResultList } from "./utils";
 import { AutocompleteProps, Box, Button, ButtonProps, TextField, TextFieldProps, Typography } from "@mui/material";
 import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
@@ -24,6 +24,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   snpLimit,
   icreLimit,
   ccreLimit,
+  studyLimit,
   onSearchSubmit,
   defaultResults,
   style,
@@ -43,6 +44,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   const searchICRE = queries.includes("iCRE");
   const searchCCRE = queries.includes("cCRE");
   const searchCoordinate = queries.includes("Coordinate");
+  const searchStudy = queries.includes("Study");
 
   const {
     data: icreData,
@@ -83,6 +85,16 @@ const Search: React.FC<GenomeSearchProps> = ({
     enabled: false,
   });
 
+  const {
+    data: studyData,
+    refetch: refetchStudies,
+    isFetching: studyFetching,
+  } = useQuery({
+    queryKey: ["study", inputValue],
+    queryFn: () => getStudys(inputValue, studyLimit || 3),
+    enabled: false,
+  });
+
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -104,6 +116,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         if (searchICRE && inputValue.toLowerCase().startsWith("eh")) refetchICREs();
         if (searchCCRE && inputValue.toLowerCase().startsWith("eh")) refetchCCREs();
         if (searchSnp && inputValue.toLowerCase().startsWith("rs")) refetchSNPs();
+        if (searchStudy && !isDomain(inputValue) && inputValue !== "") refetchStudies();
       } else {
         if (searchCCRE && inputValue.toLowerCase().startsWith("em")) refetchCCREs();
       }
@@ -118,8 +131,8 @@ const Search: React.FC<GenomeSearchProps> = ({
   }, [inputValue]);
 
   useEffect(() => {
-    setIsLoading(icreFetching || ccreFetching || geneFetching || snpFetching);
-  }, [icreFetching, ccreFetching, geneFetching, snpFetching]);
+    setIsLoading(icreFetching || ccreFetching || geneFetching || snpFetching || studyFetching);
+  }, [icreFetching, ccreFetching, geneFetching, snpFetching, studyFetching]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -137,6 +150,9 @@ const Search: React.FC<GenomeSearchProps> = ({
       if (snpData && searchSnp && inputValue.toLowerCase().startsWith("rs")) {
         resultsList.push(...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit || 3));
       }
+      if (studyData && searchStudy) {
+      resultsList.push(...studyResultList(studyData.data.getAllGwasStudies, geneLimit || 3));
+    }
     } else {
       if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {
         resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
@@ -155,17 +171,20 @@ const Search: React.FC<GenomeSearchProps> = ({
     ccreData,
     geneData,
     snpData,
+    studyData,
     searchGene,
     searchICRE,
     searchCCRE,
     searchSnp,
     searchCoordinate,
+    searchStudy,
     inputValue,
     assembly,
     geneLimit,
     icreLimit,
     ccreLimit,
     snpLimit,
+    studyLimit
   ]);
 
   //Clear input on assembly change

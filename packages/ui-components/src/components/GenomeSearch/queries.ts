@@ -109,6 +109,19 @@ export const CCRE_AUTOCOMPLETE_QUERY = `
   }
 `;
 
+export const GWAS_AUTOCOMPLETE_QUERY = `
+query getGWASStudies($studyname_prefix: [String]){  
+  getAllGwasStudies(studyname_prefix: $studyname_prefix)  
+  {    
+    study
+    studyname
+    totalldblocks
+    pubmedid
+    author
+  }
+}
+`
+
 export const getICREs = async (value: string, limit: number) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
@@ -211,5 +224,23 @@ export const getSNPs = async (
     }),
     headers: { "Content-Type": "application/json" },
   });
+  return response.json();
+};
+
+export const getStudys = async (
+  value: string,
+  limit: number
+) => {
+  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+    method: "POST",
+    body: JSON.stringify({
+      query: GWAS_AUTOCOMPLETE_QUERY,
+      variables: {
+        studyname_prefix: [value],
+      },
+    }),
+    headers: { "Content-Type": "application/json" },
+  });
+
   return response.json();
 };

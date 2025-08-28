@@ -5,6 +5,7 @@ import {
   Result,
   ResultType,
   SnpResponse,
+  StudyResponse,
 } from "./types";
 
 /**
@@ -103,6 +104,18 @@ export function geneResultList(
     },
     type: "Gene",
   });
+}
+
+export function studyResultList(
+  results: StudyResponse[],
+  limit: number
+): Result[] {
+  return results.slice(0, limit).map((result) => ({
+    title: result.studyname,
+    description: `${result.author}\n${result.pubmedid}`,
+    domain: undefined,
+    type: "Study",
+  }));
 }
 
 export function icreResultList(

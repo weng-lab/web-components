@@ -19,7 +19,7 @@ export const Default: Story = {
   args: {
     assembly: "GRCh38",
     onSearchSubmit: (r: Result) => console.log("Going to", r),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate"],
+    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study"],
     ccreLimit: 3,
     geneLimit: 3,
     icreLimit: 3,

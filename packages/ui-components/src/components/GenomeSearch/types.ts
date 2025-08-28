@@ -20,6 +20,7 @@ export type GenomeSearchProps = Partial<
   snpLimit?: number;
   icreLimit?: number;
   ccreLimit?: number;
+  studyLimit?: number;
 
   // slot props for internal MUI components
   slotProps?: {
@@ -43,7 +44,7 @@ export type Domain = {
 };
 
 // Result types used to distinguish between different types of results
-export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE";
+export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Study";
 
 // Result object used to display in the autocomplete dropdown
 export type Result = {
@@ -52,7 +53,7 @@ export type Result = {
   type?: ResultType;
   id?: string;
   name?: string;
-  domain: Domain;
+  domain?: Domain;
 };
 
 // Response from the SNP GraphQL query
@@ -91,4 +92,13 @@ export interface CCREResponse {
   coordinates: Domain;
   celltypes: string[];
   isiCRE: boolean;
+}
+
+// Response from the GWAS GraphQL query
+export interface StudyResponse {
+  study: string
+  studyname: string
+  author: string
+  pubmedid: string
+  totalldblocks: number
 }
