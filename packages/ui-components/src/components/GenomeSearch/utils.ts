@@ -112,8 +112,9 @@ export function studyResultList(
 ): Result[] {
   return results.slice(0, limit).map((result) => ({
     title: result.studyname,
-    description: `${result.author}\n${result.pubmedid}`,
+    description: `${result.author.replace("_", " ")}.\n${result.pubmedid}`,
     domain: undefined,
+    id: result.study,
     type: "Study",
   }));
 }
