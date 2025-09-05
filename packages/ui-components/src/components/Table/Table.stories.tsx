@@ -193,3 +193,12 @@ export const LabelTooltipCustomElement: Story = {
     ),
   },
 };
+
+export const OverrideToolbarProps: Story = {
+  args: {
+    columns,
+    rows,
+    label: "Table Title",
+    slotProps: {toolbar: {csvOptions: {fileName: 'overrideFilename'}}}
+  },
+};

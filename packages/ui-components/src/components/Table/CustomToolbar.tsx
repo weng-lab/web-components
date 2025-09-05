@@ -12,6 +12,8 @@ import {
   QuickFilterClear,
   QuickFilterTrigger,
   DataGridProProps,
+  GridToolbarProps,
+  ToolbarPropsOverrides,
 } from "@mui/x-data-grid-pro";
 import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
@@ -62,9 +64,9 @@ type CustomToolbarProps = {
   label: DataGridProProps["label"];
   labelTooltip: TableProps["labelTooltip"];
   toolbarSlot?: React.ReactNode;
-};
+ } & GridToolbarProps & ToolbarPropsOverrides;
 
-export function CustomToolbar({ label, labelTooltip, toolbarSlot }: CustomToolbarProps) {
+export function CustomToolbar({ label, labelTooltip, toolbarSlot, ...restToolbarProps }: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
@@ -106,9 +108,7 @@ export function CustomToolbar({ label, labelTooltip, toolbarSlot }: CustomToolba
           )}
         />
       </Tooltip>
-
       <Divider orientation="vertical" variant="middle" flexItem sx={{ mx: 0.5 }} />
-
       <Tooltip title="Export">
         <ToolbarButton
           ref={exportMenuTriggerRef}
@@ -135,10 +135,10 @@ export function CustomToolbar({ label, labelTooltip, toolbarSlot }: CustomToolba
           },
         }}
       >
-        <ExportPrint render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
+        <ExportPrint options={{...restToolbarProps.printOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
           Print
         </ExportPrint>
-        <ExportCsv render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
+        <ExportCsv options={{fileName: label, ...restToolbarProps.csvOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
           Download as CSV
         </ExportCsv>
       </Menu>

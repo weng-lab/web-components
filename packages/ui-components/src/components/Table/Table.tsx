@@ -1,6 +1,8 @@
 import {
   DataGridPro,
   GridAutosizeOptions,
+  GridToolbarProps,
+  ToolbarPropsOverrides,
   useGridApiRef,
 } from "@mui/x-data-grid-pro";
 import { useMemo, useEffect, useCallback } from "react";
@@ -33,7 +35,7 @@ const Table = (props: TableProps) => {
     ...restDataGridProps
   } = props;
 
-  const toolbarProps = { label, labelTooltip, toolbarSlot };
+  const customToolbarProps = { label, labelTooltip, toolbarSlot };
 
   //Assign default ID if no ID is provided in the row data
   const rowsWithIds = useMemo(
@@ -114,7 +116,7 @@ const Table = (props: TableProps) => {
           ...sx,
         }}
         slots={{
-          toolbar: () => <CustomToolbar {...toolbarProps} />,
+          toolbar: (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />,
           ...slots
         }}
         {...restDataGridProps}
