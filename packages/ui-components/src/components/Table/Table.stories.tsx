@@ -73,6 +73,7 @@ export const Default: Story = {
     columns,
     rows,
     label: "Table Title",
+    divHeight: {height: '300px'}
   },
 };
 

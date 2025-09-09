@@ -178,6 +178,12 @@ const DataTable = <T extends object>(
     showAddColumnsModal: false,
   });
 
+  // This is needed to ensure that the most recent columns definition from props is used
+  // useReducer is not reinitialized on columns changing via props
+  useEffect(() => {
+    dispatch({ type: "columnsChanged", columns: props.columns });
+  }, [props.columns]);
+
   const search = useCallback(
     (row: T, value: string): boolean => {
       /* look for any matching searchable column */

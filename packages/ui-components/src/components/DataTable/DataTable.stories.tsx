@@ -668,3 +668,62 @@ export const TitleRender: Story = {
     )
   }
 }
+
+export const ExternalColumnChange: Story = {
+  args: {
+    rows: ROWS,
+    columns: COLUMNS,
+    searchable: true,
+    tableTitle: "Table title"
+  },
+  render: (args) => {
+    const {columns, rows, ...rest} = args
+
+    const [selected, setSelected] = useState<Row[]>([])
+
+    const handleRowClick: DataTableProps<Row>["onRowClick"] = (row) => {
+      if (selected.some(x => x.text === row.text)) {
+        setSelected(selected.filter((x) => x.text !== row.text));
+      } else {
+        setSelected([...selected, row]);
+      }
+    }
+
+    const cols = [...columns]
+
+    const allSelected = rows.every(x => selected.some(y => y.text === x.text))
+
+    cols.unshift({
+      header: "Select All",
+      HeaderRender: () => (
+        <Checkbox
+          id={"Select All "}
+          checked={allSelected}
+          indeterminate={selected.length > 0 && !allSelected}
+          onClick={(e) => {
+            e.stopPropagation();
+            allSelected ? setSelected([]) : setSelected(rows);
+          }}
+        />
+      ),
+      value: (row) => +selected.some((x) => x.text === row.text),
+      render: (row) => (
+        <Checkbox
+          checked={selected.some((x) => x.text === row.text)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRowClick(row, rows.indexOf(row));
+          }}
+        />
+      ),
+    });
+
+    return (
+      <Stack>
+        <DataTable sortColumn={1} columns={cols} rows={rows} highlighted={selected} onRowClick={handleRowClick} {...rest} />
+        <Typography>Selected:</Typography>
+        {selected.map((x, i) => <Typography key={i}>{x.text}</Typography>)}
+      </Stack>
+    );
+  }
+}
