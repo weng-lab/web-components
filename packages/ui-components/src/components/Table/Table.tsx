@@ -35,7 +35,14 @@ const Table = (props: TableProps) => {
     ...restDataGridProps
   } = props;
 
-  const customToolbarProps = { label, labelTooltip, toolbarSlot };
+  const CustomToolbarWrapper = useMemo(() => {
+    const customToolbarProps = {
+      label,
+      labelTooltip,
+      toolbarSlot,
+    };
+    return (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />;
+  }, [label, labelTooltip, toolbarSlot]);
 
   //Assign default ID if no ID is provided in the row data
   const rowsWithIds = useMemo(
@@ -116,7 +123,7 @@ const Table = (props: TableProps) => {
           ...sx,
         }}
         slots={{
-          toolbar: (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />,
+          toolbar: CustomToolbarWrapper,
           ...slots
         }}
         {...restDataGridProps}
