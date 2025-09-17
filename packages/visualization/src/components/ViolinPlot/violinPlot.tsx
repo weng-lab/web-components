@@ -145,10 +145,19 @@ const ViolinPlot = <T extends object>(
                                     fontSize: fontSize,
                                 })}
                                 tickComponent={({ x, y, formattedValue, ...tickProps }) => {
+                                    const handleClick = () => {
+                                        if (!props.onViolinClicked) return;
+
+                                        const distribution = props.distributions.find(d => d.label === formattedValue)!;
+                                        props.onViolinClicked(distribution);
+                                    };
+
                                     if (labelOrientation !== "horizontal") {
                                         return (
                                             <text
                                                 {...tickProps}
+                                                onClick={handleClick}
+                                                cursor={props.onViolinClicked ? "pointer" : "text"}
                                                 x={x}
                                                 y={y}
                                                 dx={labelOrientation === "vertical" ? 0 : "-0.25em"}
@@ -166,7 +175,7 @@ const ViolinPlot = <T extends object>(
                                         );
                                     }
                                     return (
-                                        <text {...tickProps} x={x} y={y} textAnchor="end" dominantBaseline="middle" dx="-0.50em">
+                                        <text {...tickProps} x={x} y={y} textAnchor="end" dominantBaseline="middle" dx="-0.50em" onClick={handleClick} cursor={props.onViolinClicked ? "pointer" : "text"}>
                                             {formattedValue}
                                         </text>
                                     );
@@ -203,9 +212,18 @@ const ViolinPlot = <T extends object>(
                                     textAnchor: labelOrientation === "vertical" || labelOrientation === "leftDiagonal" ? "end" : labelOrientation === "rightDiagonal" ? "start" : "middle",
                                 })}
                                 tickComponent={({ x, y, formattedValue, ...tickProps }) => {
+                                    const handleClick = () => {
+                                        if (!props.onViolinClicked) return;
+
+                                        const distribution = props.distributions.find(d => d.label === formattedValue)!;
+                                        props.onViolinClicked(distribution);
+                                    };
+
                                     if (labelOrientation !== "horizontal") {
                                         return (
                                             <text
+                                                onClick={handleClick}
+                                                cursor={props.onViolinClicked ? "pointer" : "text"}
                                                 {...tickProps}
                                                 x={x}
                                                 y={y}
@@ -221,7 +239,7 @@ const ViolinPlot = <T extends object>(
                                         );
                                     }
                                     return (
-                                        <text {...tickProps} x={x} y={y} textAnchor="middle">
+                                        <text {...tickProps} x={x} y={y} textAnchor="middle" onClick={handleClick} cursor={props.onViolinClicked ? "pointer" : "text"}>
                                             {formattedValue}
                                         </text>
                                     );
