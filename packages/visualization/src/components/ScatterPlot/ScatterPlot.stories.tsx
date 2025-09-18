@@ -24,7 +24,7 @@ type Point = {
     x: number;
     y: number;
     color: string;
-    shape: "circle" | "triangle";
+    shape?: "circle" | "triangle";
 };
 
 export default meta;
@@ -32,24 +32,24 @@ type Story = StoryObj<typeof meta>;
 
 // Example data for the scatter plot
 const scatterData: Point[] = [
-    { x: 1, y: 2, color: 'red', shape: "circle" },
-    { x: 3, y: 4, color: 'blue', shape: "circle" },
-    { x: 5, y: 6, color: 'green', shape: "circle" },
+    { x: 1, y: 2, color: 'red' },
+    { x: 3, y: 4, color: 'blue' },
+    { x: 5, y: 6, color: 'green' },
 ];
 
 const moreScatterData: Point[] = [
-    { x: 1, y: 2, color: 'red', shape: "circle" },
-    { x: 3, y: 4, color: 'blue', shape: "circle" },
-    { x: 5, y: 6, color: 'green', shape: "circle" },
-    { x: 2, y: 2, color: 'red', shape: "circle" },
-    { x: 4, y: 4, color: 'blue', shape: "circle" },
-    { x: 6, y: 6, color: 'green', shape: "circle" },
+    { x: 1, y: 2, color: 'red' },
+    { x: 3, y: 4, color: 'blue' },
+    { x: 5, y: 6, color: 'green' },
+    { x: 2, y: 2, color: 'red' },
+    { x: 4, y: 4, color: 'blue' },
+    { x: 6, y: 6, color: 'green' },
 ];
 
 const shapeData: Point[] = [
-    { x: 1, y: 2, color: 'red', shape: "circle" },
+    { x: 1, y: 2, color: 'red' },
     { x: 3, y: 4, color: 'blue', shape: "triangle" },
-    { x: 5, y: 6, color: 'green', shape: "circle" },
+    { x: 5, y: 6, color: 'green' },
 ];
 
 // Mock for the map prop
