@@ -215,6 +215,7 @@ const BarPlot = <T,>({
                     legendValues={legendValues}
                     spaceForCategory={spaceForCategory}
                     axisCenter={axisCenter}
+                    loading={!labelSpaceDecided || ParentWidth < 0}
                 />
             )}
             {data.length === 0 ?

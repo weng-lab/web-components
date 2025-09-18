@@ -9,7 +9,8 @@ const Legend: React.FC<LollipopLegendProps> = ({
     width,
     legendValues,
     spaceForCategory,
-    axisCenter
+    axisCenter,
+    loading
 }) => {
     const gap = 30;
     const labelRef = useRef<SVGTextElement>(null);
@@ -24,57 +25,71 @@ const Legend: React.FC<LollipopLegendProps> = ({
 
     const totalWidth = labelWidth + dividerGap * 2 + totalItemsWidth;
 
-    console.log(axisCenter)
-
     return (
-        <div style={{ marginBottom: 10 }}>
-            <svg height={height + 4} width={width + labelWidth + 4} id="legend" transform={`translate(${spaceForCategory/1.2 + axisCenter - width / 2}, 0)`}>
+        <div style={{ marginBottom: 10, opacity: loading ? 0.3 : 1 }}>
+            <svg height={height + 4} width={width + labelWidth + 4} id="legend" transform={`translate(${spaceForCategory / 1.2 + axisCenter - width / 2}, 0)`}>
                 <rect height={height} width={width + labelWidth} stroke="black" fill="none" transform={`translate(2, 2)`} />
-                <g transform={`translate(${(width / 2 - totalWidth / 2) + 2}, ${(height / 2) + 2})`}>
+                {loading ? (
                     <text
-                        ref={labelRef}
-                        x={0}
-                        y={3}
-                        textAnchor="start"
-                        fill="black"
+                        x={(width + labelWidth) / 2}
+                        y={height / 2}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
                         fontSize={12}
+                        fill="black"
                     >
-                        {label}
+                        Loading...
                     </text>
-                </g>
-                <g transform={`translate(${(width / 2 - totalWidth / 2 + labelWidth + dividerGap) + 2}, ${(height / 2) + 2})`}>
-                    <line
-                        x1={0}
-                        y1={-height / 2}
-                        x2={0}
-                        y2={height / 2}
-                        stroke="black"
-                        strokeWidth={1}
-                    />
-                    <g transform={`translate(${dividerGap + labelWidth / 2}, 0)`}>
-                        {legendValues.map((value, idx) => {
-                            const circleR = getlollipopRadius(value);
-                            const offsetX =
-                                itemWidths.slice(0, idx).reduce((sum, w) => sum + w, 0) +
-                                idx * gap;
+                ) : (
+                    <>
+                        <g transform={`translate(${(width / 2 - totalWidth / 2) + 2}, ${(height / 2) + 2})`}>
+                            <text
+                                ref={labelRef}
+                                x={0}
+                                y={3}
+                                textAnchor="start"
+                                fill="black"
+                                fontSize={12}
+                            >
+                                {label}
+                            </text>
+                        </g>
+                        <g transform={`translate(${(width / 2 - totalWidth / 2 + labelWidth + dividerGap) + 2}, ${(height / 2) + 2})`}>
+                            <line
+                                x1={0}
+                                y1={-height / 2}
+                                x2={0}
+                                y2={height / 2}
+                                stroke="black"
+                                strokeWidth={1}
+                            />
+                            <g transform={`translate(${dividerGap + labelWidth / 2}, 0)`}>
+                                {legendValues.map((value, idx) => {
+                                    const circleR = getlollipopRadius(value);
+                                    const offsetX =
+                                        itemWidths.slice(0, idx).reduce((sum, w) => sum + w, 0) +
+                                        idx * gap;
 
-                            return (
-                                <g key={`legend${idx}`} transform={`translate(${offsetX}, 0)`}>
-                                    <circle r={circleR} cx={0} cy={0} fill="black" />
-                                    <text
-                                        x={circleR + 12}
-                                        y={3}
-                                        textAnchor="start"
-                                        fill="black"
-                                        fontSize={10}
-                                    >
-                                        {value}
-                                    </text>
-                                </g>
-                            );
-                        })}
-                    </g>
-                </g>
+                                    return (
+                                        <g key={`legend${idx}`} transform={`translate(${offsetX}, 0)`}>
+                                            <circle r={circleR} cx={0} cy={0} fill="black" />
+                                            <text
+                                                x={circleR + 12}
+                                                y={3}
+                                                textAnchor="start"
+                                                fill="black"
+                                                fontSize={10}
+                                            >
+                                                {value}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+                            </g>
+                        </g>
+                    </>
+                )}
+
             </svg>
         </div>
     );
