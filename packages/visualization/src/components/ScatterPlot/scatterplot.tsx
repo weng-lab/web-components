@@ -379,7 +379,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
                         context.beginPath();
 
-                        if (point.shape === "circle") {
+                        if (!point.shape || point.shape === "circle") {
                             context.arc(transformedX, transformedY, size, 0, Math.PI * 2);
                         } else if (point.shape === "triangle") {
                             context.moveTo(transformedX, transformedY - size);
