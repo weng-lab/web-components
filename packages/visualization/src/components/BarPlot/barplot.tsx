@@ -148,8 +148,8 @@ const BarPlot = <T,>({
             domain: [
                 // If cutting off negative values, the lower bound is max(negativeCutoff, minValue).
                 cutoffNegativeValues ? Math.min(0, Math.max(minValue, negativeCutoff)) : Math.min(0, minValue - 0.07 * (0 - minValue)),
-                // Make some room past the last tick (7% of the range of the data)
-                Math.max(0, maxValue) + 0.07 * (maxValue)
+                // Make some room past the last tick (7% of the range of the data) if the data isnt all negative
+                 Math.max(maxValue, 0) + (maxValue > 0 ? 0.07 * maxValue : 0),
             ], // always include 0 as anchor if values do not cross 0
             range: [0, Math.max(ParentWidth - spaceForCategory - spaceForLabel, 0)],
         }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentWidth, spaceForLabel])
@@ -168,9 +168,11 @@ const BarPlot = <T,>({
 
             if (textElement) {
                 const textWidth = textElement.getBBox().width;
-                const barWidth = xScale(d.value);
 
-                const totalWidth = spaceForCategory + barWidth + gapBetweenTextAndBar + textWidth
+                const barStart = xScale(0);
+                const barEnd = xScale(d.value);
+
+                const totalWidth = spaceForCategory + Math.max(barStart, barEnd) + gapBetweenTextAndBar + textWidth;
                 const overflow = totalWidth - ParentWidth
 
                 maxOverflow = Math.max(overflow, maxOverflow)
