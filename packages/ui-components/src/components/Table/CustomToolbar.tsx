@@ -11,7 +11,6 @@ import {
   QuickFilterControl,
   QuickFilterClear,
   QuickFilterTrigger,
-  DataGridProProps,
   GridToolbarProps,
   ToolbarPropsOverrides,
 } from "@mui/x-data-grid-pro";
@@ -61,19 +60,21 @@ const StyledTextField = styled(TextField)<{
 }));
 
 type CustomToolbarProps = {
-  label: DataGridProProps["label"];
+  label: TableProps["label"];
+  downloadFileName: TableProps["downloadFileName"]
   labelTooltip: TableProps["labelTooltip"];
   toolbarSlot?: React.ReactNode;
  } & GridToolbarProps & ToolbarPropsOverrides;
 
-export function CustomToolbar({ label, labelTooltip, toolbarSlot, ...restToolbarProps }: CustomToolbarProps) {
+export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSlot, ...restToolbarProps }: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
   return (
     <Toolbar>
+      {typeof label !== "string" && label }
       <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
-        {label}
+        {typeof label === "string" && label}
         {/* ReactNode can be more than just an element, string, or number but not accounting for that for simplicity */}
         {labelTooltip && (typeof labelTooltip === "string" || typeof labelTooltip === "number") ? (
           <Tooltip title={labelTooltip}>
@@ -83,7 +84,6 @@ export function CustomToolbar({ label, labelTooltip, toolbarSlot, ...restToolbar
           labelTooltip
         )}
       </Typography>
-
       {toolbarSlot && (
         <>
           {toolbarSlot}
@@ -138,7 +138,7 @@ export function CustomToolbar({ label, labelTooltip, toolbarSlot, ...restToolbar
         <ExportPrint options={{...restToolbarProps.printOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
           Print
         </ExportPrint>
-        <ExportCsv options={{fileName: label, ...restToolbarProps.csvOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
+        <ExportCsv options={{fileName: typeof label === "string" ? label : downloadFileName, ...restToolbarProps.csvOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
           Download as CSV
         </ExportCsv>
       </Menu>

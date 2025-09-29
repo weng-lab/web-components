@@ -3,14 +3,13 @@ import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-pro";
-import { Box, Button, Popper, PopperProps, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, FormControl, InputLabel, MenuItem, Popper, PopperProps, Select, Stack, Tooltip, Typography } from "@mui/material";
 import { QuestionMark } from "@mui/icons-material";
 
 const meta = {
   title: "ui-components/Table",
   component: Table,
   tags: ["autodocs"],
-  argTypes: {},
   parameters: {
     controls: { expanded: true },
   },
@@ -23,7 +22,7 @@ const meta = {
 } satisfies Meta<typeof Table>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof Table>
 
 const columns: GridColDef<(typeof rows)[number]>[] = [
   { field: "id", headerName: "ID", width: 90 },
@@ -154,6 +153,7 @@ export const UseToolbarSlot: Story = {
         <Typography>Age increased by {count}</Typography>
         <Table
           {...args}
+          columns={columns}
           rows={modifiedRows}
           toolbarSlot={
             <Button variant="contained" size="small" onClick={handleTogglePopper}>
@@ -202,4 +202,24 @@ export const OverrideToolbarProps: Story = {
     label: "Table Title",
     slotProps: {toolbar: {csvOptions: {fileName: 'overrideFilename'}}}
   },
+};
+
+export const ReactElementLabel: Story = {
+  args: {
+    columns,
+    rows,
+    slotProps: { toolbar: { csvOptions: { fileName: "overrideFilename" } } },
+  },
+  render: (args) => {
+  const CustomLabelEl = (
+    <Stack direction={"row"} alignItems={"center"} spacing={1}>
+      <Typography>Expression at</Typography>
+      <Select label="Peak" defaultValue={1} variant="standard">
+        <MenuItem value={1}>ZH38T0025301</MenuItem>
+        <MenuItem value={2}>ZH38T0025302</MenuItem>
+        <MenuItem value={3}>ZH38T0025303</MenuItem>
+      </Select>
+    </Stack>
+  );
+  return <Table {...args} label={CustomLabelEl} downloadFileName="needWithCustomElementLabel" />},
 };

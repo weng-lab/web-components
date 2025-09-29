@@ -1,9 +1,9 @@
-import { DataGridProProps, GridColDef } from "@mui/x-data-grid-pro";
+import { DataGridProProps } from "@mui/x-data-grid-pro";
 import { ReactElement, ReactNode } from "react"; 
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
-export interface TableProps extends DataGridProProps {
+interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
   /**
    * Rows to be consumed in the table.
    * 
@@ -71,3 +71,10 @@ export interface TableProps extends DataGridProProps {
    */
   labelTooltip?: ReactNode
 }
+
+//This enforces that a downloadFileName is specified if a ReactElement is used as the label (no default )
+export type TableProps = BaseTableProps & (
+  | { label?: string; downloadFileName?: string }
+  | { label: ReactElement; downloadFileName: string }
+  | { label?: undefined; downloadFileName?: string }
+);

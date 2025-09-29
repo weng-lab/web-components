@@ -31,6 +31,7 @@ const Table = (props: TableProps) => {
     slots = {},
     label,
     labelTooltip,
+    downloadFileName,
     toolbarSlot,
     ...restDataGridProps
   } = props;
@@ -38,6 +39,7 @@ const Table = (props: TableProps) => {
   const CustomToolbarWrapper = useMemo(() => {
     const customToolbarProps = {
       label,
+      downloadFileName,
       labelTooltip,
       toolbarSlot,
     };
