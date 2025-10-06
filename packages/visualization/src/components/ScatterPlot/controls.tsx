@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ControlButtonsProps } from "./types";
 import { IconButton, Stack, Tooltip } from "@mui/material";
-import { ZoomIn, ZoomOut, PanTool, Edit, SettingsBackupRestore, Download } from "@mui/icons-material"
+import { ZoomIn, ZoomOut, BackHand, Edit, SettingsBackupRestore, Download } from "@mui/icons-material"
 
 const ControlButtons = ({
     selectable,
@@ -46,6 +46,23 @@ const ControlButtons = ({
         };
     }, [handleSelectionModeChange, selectMode, selectable]);
 
+    const toTransparent = (color: string, alpha = 0.15): string => {
+        const temp = document.createElement("div");
+        temp.style.color = color;
+        document.body.appendChild(temp);
+
+        // Let the browser resolve the color into RGB form
+        const computed = getComputedStyle(temp).color;
+        document.body.removeChild(temp);
+
+        // computed should now be in "rgb(r, g, b)" or "rgba(r, g, b, a)" format
+        const rgbMatch = computed.match(/\d+(\.\d+)?/g);
+        if (!rgbMatch) return color;
+
+        const [r, g, b] = rgbMatch.map(Number);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
     return (
         <>
             {selectMode !== "none" && (
@@ -53,8 +70,22 @@ const ControlButtons = ({
                     {
                         selectable && (
                             <Tooltip title="Drag to pan, or hold Shift and drag">
-                                <IconButton aria-label="pan" onClick={() => handleSelectionModeChange('pan')} sx={{ color: selectMode === "pan" ? highlight ? highlight : "primary.main" : "default" }}>
-                                    <PanTool />
+                                <IconButton
+                                    aria-label="pan" 
+                                    onClick={() => handleSelectionModeChange('pan')} 
+                                    sx={{
+                                        color: selectMode === "pan" ? highlight || "primary.main" : "default",
+                                        backgroundColor: selectMode === "pan"
+                                            ? theme => toTransparent(highlight || theme.palette.primary.main, 0.15)
+                                            : "transparent",
+                                        '&:hover': {
+                                            backgroundColor: selectMode === "pan"
+                                                ? theme => toTransparent(highlight || theme.palette.primary.main, 0.25)
+                                                : theme => theme.palette.action.hover,
+                                        },
+                                    }}
+                                >
+                                    <BackHand />
                                 </IconButton>
                             </Tooltip>
                         )
@@ -62,7 +93,21 @@ const ControlButtons = ({
                     {
                         selectable && (
                             <Tooltip title="Drag to select">
-                                <IconButton aria-label="edit" onClick={() => handleSelectionModeChange('select')} sx={{ color: selectMode === "select" ? highlight ? highlight : "primary.main" : "default" }}>
+                                <IconButton 
+                                    aria-label="edit" 
+                                    onClick={() => handleSelectionModeChange('select')}
+                                    sx={{
+                                        color: selectMode === "select" ? highlight || "primary.main" : "default",
+                                        backgroundColor: selectMode === "select"
+                                            ? theme => toTransparent(highlight || theme.palette.primary.main, 0.15)
+                                            : "transparent",
+                                        '&:hover': {
+                                            backgroundColor: selectMode === "select"
+                                                ? theme => toTransparent(highlight || theme.palette.primary.main, 0.25)
+                                                : theme => theme.palette.action.hover,
+                                        },
+                                    }}
+                                >
                                     <Edit />
                                 </IconButton>
                             </Tooltip>
