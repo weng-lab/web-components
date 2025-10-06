@@ -175,7 +175,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                 Math.max(...props.pointData.map(d => d.x)) + 1,
             ],
             range: [0, boundedWidth],
-            nice: true,
         });
     }, [props.pointData, boundedWidth]);
 
@@ -187,7 +186,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                 Math.max(...props.pointData.map(d => d.y)) + 1,
             ],
             range: [boundedHeight, 0], // Y-axis is inverted
-            nice: true,
         });
     }, [props.pointData, boundedHeight]);
 
@@ -463,6 +461,17 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         </Text>
     );
 
+    const getTicks = (
+        scale: ScaleLinear<number, number, never>,
+        total = 5 // total ticks including endpoints
+    ) => {
+        const [min, max] = scale.domain();
+        if (total < 2) return [min, max];
+
+        const step = (max - min) / (total - 1);
+        return Array.from({ length: total }, (_, i) => min + i * step);
+    };
+
     return (
         <div ref={parentRef} style={{ width: "100%", height: "100%", position: "relative" }}>
             <Zoom width={boundedWidth} height={boundedHeight} scaleXMin={1 / 2} scaleXMax={10} scaleYMin={1 / 2} scaleYMax={10} initialTransformMatrix={initialTransformMatrix}>
@@ -664,7 +673,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                                 {/* Static Axes Group */}
                                                 <Group top={margin.top} left={margin.left}>
                                                     <AxisLeft
-                                                        numTicks={4}
                                                         scale={yScaleTransformed}
                                                         tickLabelProps={() => ({
                                                             fill: '#1c1917',
@@ -672,17 +680,18 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                                             textAnchor: 'end',
                                                             verticalAnchor: 'middle',
                                                             x: -10,
-                                                        })}
-                                                    />
+                                                            })}
+                                                            tickValues={getTicks(yScaleTransformed, 5)}
+                                                        />
                                                     <AxisBottom
-                                                        numTicks={4}
                                                         top={boundedHeight}
                                                         scale={xScaleTransformed}
                                                         tickLabelProps={() => ({
                                                             fill: '#1c1917',
                                                             fontSize: 11,
                                                             textAnchor: 'middle',
-                                                        })}
+                                                            })}
+                                                            tickValues={getTicks(xScaleTransformed, 5)}
                                                     />
                                                     {axisLeftLabel}
                                                     {axisBottomLabel}

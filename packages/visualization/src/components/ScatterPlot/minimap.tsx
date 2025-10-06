@@ -78,8 +78,8 @@ const MiniMap = <T,>({
                                 zoom.setTransformMatrix({
                                     scaleX: zoom.transformMatrix.scaleX,
                                     scaleY: zoom.transformMatrix.scaleY,
-                                    translateX: zoom.transformMatrix.translateX - event.movementX / .25,
-                                    translateY: zoom.transformMatrix.translateY - event.movementY / .25,
+                                    translateX: zoom.transformMatrix.translateX - event.movementX / .25 * zoom.transformMatrix.scaleX,
+                                    translateY: zoom.transformMatrix.translateY - event.movementY / .25 * zoom.transformMatrix.scaleY,
                                     skewX: zoom.transformMatrix.skewX,
                                     skewY: zoom.transformMatrix.skewY
                                 });
