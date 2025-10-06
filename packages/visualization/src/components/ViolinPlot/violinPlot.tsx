@@ -114,7 +114,7 @@ const ViolinPlot = <T extends object>(
 
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
-            <svg width={parentWidth} height={parentHeight} ref={props.svgRef ?? undefined}>
+            <svg width={parentWidth ?? 0} height={parentHeight?? 0} ref={props.svgRef ?? undefined}>
                 <Group top={baseOffset} left={offset}>
                     {props.horizontal ? (
                         <>
