@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ControlButtonsProps } from "./types";
 import { IconButton, Stack, Tooltip } from "@mui/material";
 import { ZoomIn, ZoomOut, BackHand, Edit, SettingsBackupRestore, Download } from "@mui/icons-material"
+import { useTheme } from "@mui/material/styles";
 
 const ControlButtons = ({
     selectable,
@@ -46,22 +47,8 @@ const ControlButtons = ({
         };
     }, [handleSelectionModeChange, selectMode, selectable]);
 
-    const toTransparent = (color: string, alpha = 0.15): string => {
-        const temp = document.createElement("div");
-        temp.style.color = color;
-        document.body.appendChild(temp);
-
-        // Let the browser resolve the color into RGB form
-        const computed = getComputedStyle(temp).color;
-        document.body.removeChild(temp);
-
-        // computed should now be in "rgb(r, g, b)" or "rgba(r, g, b, a)" format
-        const rgbMatch = computed.match(/\d+(\.\d+)?/g);
-        if (!rgbMatch) return color;
-
-        const [r, g, b] = rgbMatch.map(Number);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
+    const theme = useTheme();
+    const color = highlight ?? theme.palette.primary.main;
 
     return (
         <>
@@ -71,16 +58,16 @@ const ControlButtons = ({
                         selectable && (
                             <Tooltip title="Drag to pan, or hold Shift and drag">
                                 <IconButton
-                                    aria-label="pan" 
-                                    onClick={() => handleSelectionModeChange('pan')} 
+                                    aria-label="pan"
+                                    onClick={() => handleSelectionModeChange('pan')}
                                     sx={{
                                         color: selectMode === "pan" ? highlight || "primary.main" : "default",
                                         backgroundColor: selectMode === "pan"
-                                            ? theme => toTransparent(highlight || theme.palette.primary.main, 0.15)
+                                            ? `color-mix(in srgb, ${color} 15%, transparent)`
                                             : "transparent",
                                         '&:hover': {
                                             backgroundColor: selectMode === "pan"
-                                                ? theme => toTransparent(highlight || theme.palette.primary.main, 0.25)
+                                                ? `color-mix(in srgb, ${color} 25%, transparent)`
                                                 : theme => theme.palette.action.hover,
                                         },
                                     }}
@@ -93,17 +80,17 @@ const ControlButtons = ({
                     {
                         selectable && (
                             <Tooltip title="Drag to select">
-                                <IconButton 
-                                    aria-label="edit" 
+                                <IconButton
+                                    aria-label="edit"
                                     onClick={() => handleSelectionModeChange('select')}
                                     sx={{
                                         color: selectMode === "select" ? highlight || "primary.main" : "default",
                                         backgroundColor: selectMode === "select"
-                                            ? theme => toTransparent(highlight || theme.palette.primary.main, 0.15)
+                                            ? `color-mix(in srgb, ${color} 15%, transparent)`
                                             : "transparent",
                                         '&:hover': {
                                             backgroundColor: selectMode === "select"
-                                                ? theme => toTransparent(highlight || theme.palette.primary.main, 0.25)
+                                                ? `color-mix(in srgb, ${color} 25%, transparent)`
                                                 : theme => theme.palette.action.hover,
                                         },
                                     }}
