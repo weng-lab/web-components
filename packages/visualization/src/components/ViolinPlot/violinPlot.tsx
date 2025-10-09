@@ -3,15 +3,17 @@ import { useParentSize } from '@visx/responsive';
 import { Group } from "@visx/group";
 import { scaleBand, scaleLinear } from "@visx/scale";
 import { AxisLeft, AxisBottom } from '@visx/axis';
-import { useMemo } from "react";
+import { useImperativeHandle, useMemo, useRef } from "react";
 import { Text } from '@visx/text';
 import { getTextHeight } from "./helpers";
 import SingleViolin from "./singleViolin";
+import { downloadAsSVG, downloadSVGAsPNG } from "../../downloads";
 
 const ViolinPlot = <T extends object>(
     props: ViolinPlotProps<T>
 ) => {
     const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+    const svgRef = useRef<SVGSVGElement | null>(null);
 
     //Array of labels fo xDomain
     const labels = useMemo(() => {
@@ -112,9 +114,19 @@ const ViolinPlot = <T extends object>(
         </Text>
     );
 
+    //Download the plot as svg or png using the passed ref from the parent
+    useImperativeHandle(props.plotRef, () => ({
+        downloadSVG: () => {
+            if (svgRef.current) downloadAsSVG(svgRef.current, props.downloadFileName ?? "violin_plot.svg");
+        },
+        downloadPNG: () => {
+            if (svgRef.current) downloadSVGAsPNG(svgRef.current, props.downloadFileName ?? "violin_plot.png");
+        },
+    }));
+
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
-            <svg width={parentWidth ?? 0} height={parentHeight?? 0} ref={props.svgRef ?? undefined}>
+            <svg width={parentWidth ?? 0} height={parentHeight?? 0} ref={svgRef}>
                 <Group top={baseOffset} left={offset}>
                     {props.horizontal ? (
                         <>

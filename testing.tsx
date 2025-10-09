@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BarData } from './packages/visualization/src/components/BarPlot/types.ts'
 import BarPlot from './packages/visualization/src/components/BarPlot/barplot'
 import Box from '@mui/material/Box';
 import { scaleLog } from '@visx/scale';
 import ViolinPlot from './packages/visualization/src/components/ViolinPlot/violinPlot';
+import { ViolinPlotHandle } from './packages/visualization/src/components/ViolinPlot/types.ts';
+import { Button } from '@mui/material';
 
 //Testing page for looking at components outside of storybook if needed (pnpm dev)
 
@@ -168,18 +170,23 @@ function TestingPage() {
     {"label": "testis", "data": [13.88, 9.57].map(value => ({ value })), violinColor: "green"},
   ]
 
+  const violinRef = useRef<ViolinPlotHandle>(null);
+
   return (
     <Box height={"700px"} overflow={"auto"} width={"auto"} padding={2} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, position: "relative" }}>
-      <BarPlot
+      {/* <BarPlot
         data={sampleData}
         topAxisLabel='log2(Fold Enrichment)'
         legendTitle='FDR'
         barSize={3}
         barSpacing={20}
         cutoffNegativeValues
-      />
-      {/* <ViolinPlot
-          
+      /> */}
+      <Button onClick={() => violinRef.current?.downloadPNG()} variant="contained">
+        Download SVG
+      </Button>
+      <ViolinPlot
+          plotRef={violinRef}
           distributions={testData}
           loading={false}
           axisLabel="SCREEN Gene Expression (SP1)"
@@ -192,7 +199,7 @@ function TestingPage() {
           crossProps={{
             outliers: "all"
           }}
-        /> */}
+        />
     </Box>
   );
 }
