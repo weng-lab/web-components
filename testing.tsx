@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BarData } from './packages/visualization/src/components/BarPlot/types.ts'
+import { BarData, BarPlotHandle } from './packages/visualization/src/components/BarPlot/types.ts'
 import BarPlot from './packages/visualization/src/components/BarPlot/barplot'
 import Box from '@mui/material/Box';
 import { scaleLog } from '@visx/scale';
@@ -170,22 +170,24 @@ function TestingPage() {
     {"label": "testis", "data": [13.88, 9.57].map(value => ({ value })), violinColor: "green"},
   ]
 
-  const violinRef = useRef<ViolinPlotHandle>(null);
+  const violinRef = useRef<BarPlotHandle>(null);
 
   return (
     <Box height={"700px"} overflow={"auto"} width={"auto"} padding={2} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, position: "relative" }}>
-      {/* <BarPlot
+      <Button onClick={() => violinRef.current?.downloadSVG()} variant="contained">
+        Download SVG
+      </Button>
+      <BarPlot
         data={sampleData}
         topAxisLabel='log2(Fold Enrichment)'
         legendTitle='FDR'
         barSize={3}
         barSpacing={20}
         cutoffNegativeValues
-      /> */}
-      <Button onClick={() => violinRef.current?.downloadPNG()} variant="contained">
-        Download SVG
-      </Button>
-      <ViolinPlot
+        plotRef={violinRef}
+      />
+      
+      {/* <ViolinPlot
           plotRef={violinRef}
           distributions={testData}
           loading={false}
@@ -199,7 +201,7 @@ function TestingPage() {
           crossProps={{
             outliers: "all"
           }}
-        />
+        /> */}
     </Box>
   );
 }

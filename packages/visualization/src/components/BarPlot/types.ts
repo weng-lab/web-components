@@ -11,9 +11,14 @@ export interface BarData<T> {
   metadata?: T;
 }
 
+export interface BarPlotHandle {
+  downloadSVG: () => void;
+  downloadPNG: () => void;
+}
+
 export interface BarPlotProps<T> {
   data: BarData<T>[];
-  SVGref?: React.RefObject<SVGSVGElement>
+  plotRef?: React.Ref<BarPlotHandle>
   topAxisLabel?: string;
   onBarClicked?: (bar: BarData<T>) => void;
   TooltipContents?: (bar: BarData<T>) => React.ReactNode
@@ -42,6 +47,7 @@ export interface BarPlotProps<T> {
   fill?: boolean;
   legendTitle?: string;
   legendValues?: [number] | [number, number] | [number, number, number] | [number, number, number, number];
+  downloadFileName?: string;
 }
 
 export type LollipopLegendProps = {
