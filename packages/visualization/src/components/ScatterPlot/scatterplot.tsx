@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Zoom as VisxZoom } from '@visx/zoom'
 import { ZoomProps } from '@visx/zoom/lib/Zoom'
@@ -21,7 +21,7 @@ import { HighlightAlt, Download } from "@mui/icons-material"
 import MiniMap from './minimap';
 import { HandlerArgs } from '@visx/drag/lib/useDrag';
 import { useParentSize } from '@visx/responsive';
-import { handleDownload } from './helpers';
+import { downloadDivAsPNG, downloadDivAsSVG } from '../../downloads';
 
 const initialTransformMatrix = {
     scaleX: 1,
@@ -75,36 +75,27 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const [previousDisplayedPoints, setPreviousDisplayedPoints] = useState<Point<T>[]>([])
     const downloadButton = props.downloadButton ?? "none"
 
-    // taken from chat strugled to figure out how to download canvas and svg together
-    useEffect(() => {
-        if (!props.registerDownload) return;
-
-        props.registerDownload((filename = 'scatterPlot.png') => {
-            handleDownload(divRef.current, filename);
-        });
-    }, [props, props.registerDownload]);
-
     useEffect(() => {
         const graphElement = graphRef.current;
-    
+
         const handleWheel = (event: WheelEvent) => {
             event.preventDefault(); //prevent scrolling using wheel
         };
-    
+
         const handleTouchMove = (event: TouchEvent) => {
             event.preventDefault(); // Prevent scrolling during any touch movement
         };
-    
+
         const handleTouchStart = (event: TouchEvent) => {
             event.preventDefault(); // Prevent scrolling on touch start
         };
-    
+
         if (graphElement) {
             graphElement.addEventListener('wheel', handleWheel, { passive: false });
             graphElement.addEventListener('touchstart', handleTouchStart, { passive: false });
             graphElement.addEventListener('touchmove', handleTouchMove, { passive: false });
         }
-    
+
         return () => {
             if (graphElement) {
                 graphElement.removeEventListener('wheel', handleWheel);
@@ -112,7 +103,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                 graphElement.removeEventListener('touchmove', handleTouchMove);
             }
         };
-    }, [graphRef]);    
+    }, [graphRef]);
 
     const handleSelectionModeChange = (mode: "select" | "pan" | "none") => {
         setSelectMode(mode);
@@ -429,10 +420,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         }
     }, [boundedWidth, boundedHeight, groupedPoints, props, previousDisplayedPoints])
 
-    const downloadPlot = () => {
-        handleDownload(divRef.current);
-    };
-
     //Axis styling
     const axisLeftLabel = (
         <Text
@@ -470,6 +457,21 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
         const step = (max - min) / (total - 1);
         return Array.from({ length: total }, (_, i) => min + i * step);
+    };
+
+    //Download the plot as svg or png using the passed ref from the parent
+    useImperativeHandle(props.plotRef, () => ({
+        downloadSVG: () => {
+            if (divRef.current) downloadDivAsSVG(divRef.current, props.downloadFileName ?? "scatter_plot.svg");
+        },
+        downloadPNG: () => {
+            if (divRef.current) downloadDivAsPNG(divRef.current, props.downloadFileName ?? "scatter_plot.png");
+        },
+    }));
+
+    //internal download if user wants to use hardcoded button
+    const handleDownload = () => {
+        if (divRef.current) downloadDivAsSVG(divRef.current, props.downloadFileName ?? "scatter_plot.svg");
     };
 
     return (
@@ -523,7 +525,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                         position={props.controlsPosition}
                                         highlight={props.controlsHighlight}
                                         downloadButton={downloadButton}
-                                        downloadPlot={downloadPlot}
+                                        downloadPlot={handleDownload}
                                     />
                                 </Stack>
                             )}
@@ -532,7 +534,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                 <Tooltip title="Download Plot as PNG">
                                     <IconButton
                                         aria-label="download"
-                                        onClick={() => downloadPlot()}
+                                        onClick={() => handleDownload()}
                                         sx={{
                                             position: "absolute",
                                             zIndex: 10,
@@ -680,9 +682,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                                             textAnchor: 'end',
                                                             verticalAnchor: 'middle',
                                                             x: -10,
-                                                            })}
-                                                            tickValues={getTicks(yScaleTransformed, 5)}
-                                                        />
+                                                        })}
+                                                        tickValues={getTicks(yScaleTransformed, 5)}
+                                                    />
                                                     <AxisBottom
                                                         top={boundedHeight}
                                                         scale={xScaleTransformed}
@@ -690,8 +692,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                                             fill: '#1c1917',
                                                             fontSize: 11,
                                                             textAnchor: 'middle',
-                                                            })}
-                                                            tickValues={getTicks(xScaleTransformed, 5)}
+                                                        })}
+                                                        tickValues={getTicks(xScaleTransformed, 5)}
                                                     />
                                                     {axisLeftLabel}
                                                     {axisBottomLabel}

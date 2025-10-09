@@ -1,5 +1,5 @@
 export { ScatterPlot } from './components/ScatterPlot';
-export type { MiniMapProps, ChartProps, Point } from './components/ScatterPlot';
+export type { MiniMapProps, ChartProps, Point, ScatterPlotHandle } from './components/ScatterPlot';
 
 export { Graph } from './components/Graph';
 export type { GraphProps } from './components/Graph';

@@ -1,3 +1,45 @@
+import downloadjs from 'downloadjs';
+import domtoimage from 'dom-to-image';
+
+/**
+ * Used to combine canvas and svg elements in scatterplot
+ */
+export function downloadDivAsPNG(
+    target: HTMLElement | null,
+    filename: string = 'scatterPlot.png'
+) {
+    if (!target) return;
+
+    domtoimage
+        .toPng(target)
+        .then((dataUrl) => {
+            downloadjs(dataUrl, filename, 'image/png');
+        })
+        .catch((error) => {
+            console.error('Download failed:', error);
+        });
+}
+
+/**
+ * Used to combine canvas and svg elements in scatterplot
+ */
+export function downloadDivAsSVG(
+    target: HTMLElement | null,
+    filename: string = 'scatterPlot.svg'
+) {
+    if (!target) return;
+
+    domtoimage
+        .toSvg(target)
+        .then((dataUrl) => {
+            // Convert the returned SVG data URL into a downloadable file
+            downloadjs(dataUrl, filename, 'image/svg+xml');
+        })
+        .catch((error) => {
+            console.error('SVG download failed:', error);
+        });
+}
+
 /**
  * Downloads an SVG element as an .svg file
  */

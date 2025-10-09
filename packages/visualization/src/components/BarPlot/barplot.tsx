@@ -210,10 +210,10 @@ const BarPlot = <T,>({
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(plotRef, () => ({
         downloadSVG: () => {
-            if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? "violin_plot.svg");
+            if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? "bar_plot.svg");
         },
         downloadPNG: () => {
-            if (svgRef.current) downloadSVGAsPNG(svgRef.current, downloadFileName ?? "violin_plot.png");
+            if (svgRef.current) downloadSVGAsPNG(svgRef.current, downloadFileName ?? "bar_plot.png");
         },
     }));
 

@@ -7,6 +7,8 @@ import { scaleLog } from '@visx/scale';
 import ViolinPlot from './packages/visualization/src/components/ViolinPlot/violinPlot';
 import { ViolinPlotHandle } from './packages/visualization/src/components/ViolinPlot/types.ts';
 import { Button } from '@mui/material';
+import { Point, ScatterPlotHandle } from './packages/visualization/src/components/ScatterPlot/types.ts';
+import ScatterPlot from './packages/visualization/src/components/ScatterPlot/scatterplot.tsx';
 
 //Testing page for looking at components outside of storybook if needed (pnpm dev)
 
@@ -170,14 +172,19 @@ function TestingPage() {
     {"label": "testis", "data": [13.88, 9.57].map(value => ({ value })), violinColor: "green"},
   ]
 
-  const violinRef = useRef<BarPlotHandle>(null);
+  const violinRef = useRef<ScatterPlotHandle>(null);
+  const scatterData: Point<MyMetadata>[] = [
+    { x: 1, y: 2, color: 'red' },
+    { x: 3, y: 4, color: 'blue' },
+    { x: 5, y: 6, color: 'green' },
+];
 
   return (
     <Box height={"700px"} overflow={"auto"} width={"auto"} padding={2} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, position: "relative" }}>
       <Button onClick={() => violinRef.current?.downloadSVG()} variant="contained">
         Download SVG
       </Button>
-      <BarPlot
+      {/* <BarPlot
         data={sampleData}
         topAxisLabel='log2(Fold Enrichment)'
         legendTitle='FDR'
@@ -185,7 +192,15 @@ function TestingPage() {
         barSpacing={20}
         cutoffNegativeValues
         plotRef={violinRef}
+      /> */}
+      <ScatterPlot
+        pointData={scatterData}
+        loading={false}
+        leftAxisLabel='UMAP1'
+        bottomAxisLabel='UMAP2'
+        plotRef={violinRef}
       />
+
       
       {/* <ViolinPlot
           plotRef={violinRef}
