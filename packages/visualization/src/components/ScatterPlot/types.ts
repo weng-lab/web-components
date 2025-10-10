@@ -210,7 +210,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
     initialState?: InitialState<S, Z>;
-    plotRef?: React.Ref<ScatterPlotHandle>;
+    ref?: React.Ref<ScatterPlotHandle>;
     downloadFileName?: string;
     /**
      * Download Button positioning to internally download component

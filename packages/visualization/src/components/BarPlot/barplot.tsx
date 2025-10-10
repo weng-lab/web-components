@@ -33,7 +33,7 @@ export const getTextHeight = (text: string, fontSize: number, fontFamily: string
 
 const BarPlot = <T,>({
     data,
-    plotRef,
+    ref,
     topAxisLabel,
     onBarClicked,
     TooltipContents,
@@ -208,7 +208,7 @@ const BarPlot = <T,>({
     const axisCenter = (xScale.range()[0] + xScale.range()[1]) / 2;
 
     //Download the plot as svg or png using the passed ref from the parent
-    useImperativeHandle(plotRef, () => ({
+    useImperativeHandle(ref, () => ({
         downloadSVG: () => {
             if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? "bar_plot.svg");
         },

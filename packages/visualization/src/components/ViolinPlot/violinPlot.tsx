@@ -10,7 +10,7 @@ import SingleViolin from "./singleViolin";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../downloads";
 
 const ViolinPlot = <T extends object>(
-    props: ViolinPlotProps<T>
+    props: ViolinPlotProps<T>,
 ) => {
     const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -115,7 +115,7 @@ const ViolinPlot = <T extends object>(
     );
 
     //Download the plot as svg or png using the passed ref from the parent
-    useImperativeHandle(props.plotRef, () => ({
+    useImperativeHandle(props.ref, () => ({
         downloadSVG: () => {
             if (svgRef.current) downloadAsSVG(svgRef.current, props.downloadFileName ?? "violin_plot.svg");
         },

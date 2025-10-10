@@ -460,7 +460,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     };
 
     //Download the plot as svg or png using the passed ref from the parent
-    useImperativeHandle(props.plotRef, () => ({
+    useImperativeHandle(props.ref, () => ({
         downloadSVG: () => {
             if (divRef.current) downloadDivAsSVG(divRef.current, props.downloadFileName ?? "scatter_plot.svg");
         },

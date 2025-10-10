@@ -18,7 +18,7 @@ export interface BarPlotHandle {
 
 export interface BarPlotProps<T> {
   data: BarData<T>[];
-  plotRef?: React.Ref<BarPlotHandle>
+  ref?: React.Ref<BarPlotHandle>
   topAxisLabel?: string;
   onBarClicked?: (bar: BarData<T>) => void;
   TooltipContents?: (bar: BarData<T>) => React.ReactNode

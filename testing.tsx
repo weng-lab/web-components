@@ -198,7 +198,7 @@ function TestingPage() {
         loading={false}
         leftAxisLabel='UMAP1'
         bottomAxisLabel='UMAP2'
-        plotRef={violinRef}
+        ref={violinRef}
       />
 
       
