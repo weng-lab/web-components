@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Bar, Circle } from '@visx/shape';
 import { scaleBand, scaleLinear, scaleLog } from '@visx/scale';
 import { AxisTop } from '@visx/axis';
@@ -12,6 +12,7 @@ import { CircularProgress } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
+import { downloadAsSVG, downloadSVGAsPNG } from '../../downloads';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
@@ -32,7 +33,7 @@ export const getTextHeight = (text: string, fontSize: number, fontFamily: string
 
 const BarPlot = <T,>({
     data,
-    SVGref,
+    ref,
     topAxisLabel,
     onBarClicked,
     TooltipContents,
@@ -42,7 +43,8 @@ const BarPlot = <T,>({
     barSpacing = 2,
     fill = false,
     legendTitle = "FDR",
-    legendValues = [1, 0.05, 0.01, 0.001]
+    legendValues = [1, 0.05, 0.01, 0.001],
+    downloadFileName
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
@@ -51,6 +53,7 @@ const BarPlot = <T,>({
     const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } = useTooltip<BarData<T>>({});
     const requestRef = useRef<number | null>(null);
     const tooltipDataRef = useRef<{ top: number; left: number; data: BarData<T> } | null>(null);
+    const svgRef = useRef<SVGSVGElement | null>(null);
 
     /**
      * Hacky workaround for complex type compatability issues. Hopefully this will fix itself when ugrading to React 19 - Jonathan 12/11/24
@@ -200,9 +203,19 @@ const BarPlot = <T,>({
             setLabelSpaceDecided(true)
         }
 
-    }, [data, xScale, spaceForLabel, labelSpaceDecided, SVGref, ParentWidth, topAxisLabel, uniqueID]);
+    }, [data, xScale, spaceForLabel, labelSpaceDecided, svgRef, ParentWidth, topAxisLabel, uniqueID]);
 
     const axisCenter = (xScale.range()[0] + xScale.range()[1]) / 2;
+
+    //Download the plot as svg or png using the passed ref from the parent
+    useImperativeHandle(ref, () => ({
+        downloadSVG: () => {
+            if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? "bar_plot.svg");
+        },
+        downloadPNG: () => {
+            if (svgRef.current) downloadSVGAsPNG(svgRef.current, downloadFileName ?? "bar_plot.png");
+        },
+    }));
 
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
@@ -226,8 +239,8 @@ const BarPlot = <T,>({
                 <svg
                     //define fallback ref if not passed through props
                     ref={(node) => {
-                        if (SVGref && node) {
-                            SVGref.current = node;
+                        if (svgRef && node) {
+                            svgRef.current = node;
                         }
                         outerSvgRef.current = node;
                     }}

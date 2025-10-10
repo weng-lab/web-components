@@ -7,13 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      dom-to-image:
-        specifier: ^2.6.0
-        version: 2.6.0
-      downloadjs:
-        specifier: ^1.4.7
-        version: 1.4.7
     devDependencies:
       '@chromatic-com/storybook':
         specifier: ^4
@@ -202,6 +195,12 @@ importers:
       cytoscape-popper:
         specifier: ^4.0.1
         version: 4.0.1(cytoscape@3.32.1)
+      dom-to-image:
+        specifier: ^2.6.0
+        version: 2.6.0
+      downloadjs:
+        specifier: ^1.4.7
+        version: 1.4.7
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1

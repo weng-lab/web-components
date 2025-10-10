@@ -8,6 +8,11 @@ export type Datum = {
     count: number
 }[]
 
+export interface ViolinPlotHandle {
+  downloadSVG: () => void;
+  downloadPNG: () => void;
+}
+
 export type ViolinPoint<T> = {
     value: number;
     outlier?: boolean;
@@ -43,7 +48,7 @@ export type CrossProps = {
 export type ViolinPlotProps<T> = {
     distributions: Distribution<T>[];
     loading: boolean;
-    svgRef?: React.RefObject<SVGSVGElement>;
+    ref?: React.Ref<ViolinPlotHandle>;
     axisLabel?: string;
     disableCrossPlot?: boolean;
     disableViolinPlot?: boolean;
@@ -54,6 +59,7 @@ export type ViolinPlotProps<T> = {
     onViolinClicked?: (distribution: Distribution<T>) => void;
     onPointClicked?: (point: ViolinPoint<T>) => void;
     pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
+    downloadFileName?: string;
 }
 
 export interface CrossPlotProps<T> {

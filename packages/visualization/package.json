@@ -1,6 +1,6 @@
 {
   "name": "@weng-lab/visualization",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Visualization components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "clean": "rimraf dist",
@@ -27,7 +27,9 @@
     "cytoscape-popper": "^4.0.1",
     "html2canvas": "^1.4.1",
     "tippy.js": "^6.3.7",
-    "use-react-screenshot": "^4.0.0"
+    "use-react-screenshot": "^4.0.0",
+    "dom-to-image": "^2.6.0",
+    "downloadjs": "^1.4.7"
   },
   "peerDependencies": {
     "@emotion/react": "^11.14.0",

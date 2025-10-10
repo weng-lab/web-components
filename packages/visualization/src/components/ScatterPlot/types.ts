@@ -4,6 +4,11 @@ import { ReactElement } from "react";
 
 type Download = "none" | "inline" | "topRight" | "topLeft" | "bottomRight" | "bottomLeft"
 
+export interface ScatterPlotHandle {
+  downloadPNG: () => void;
+  downloadSVG: () => void;
+}
+
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
     which can be any amount of strings used to display in the tooltip
@@ -205,19 +210,8 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
     initialState?: InitialState<S, Z>;
-    /**
-     * example usage in parent to externally download component
-     * 
-     *  const downloadFnRef = useRef<(filename?: string) => void>(() => {});
-
-        const handleDownloadClick = () => {
-            downloadFnRef.current?.('custom-name.png');
-        };
-
-        <ScatterPlot registerDownload={(fn) => (downloadFnRef.current = fn)} />
-        <button onClick={handleDownloadClick}>Download</button>
-     */
-    registerDownload?: (downloadFn: (filename?: string) => void) => void;
+    ref?: React.Ref<ScatterPlotHandle>;
+    downloadFileName?: string;
     /**
      * Download Button positioning to internally download component
      * Default none
