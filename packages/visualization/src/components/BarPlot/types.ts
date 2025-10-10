@@ -1,3 +1,5 @@
+import { DownloadPlotHandle } from "../../utility";
+
 export interface BarData<T> {
   category?: string;
   label?: string;
@@ -11,14 +13,9 @@ export interface BarData<T> {
   metadata?: T;
 }
 
-export interface BarPlotHandle {
-  downloadSVG: () => void;
-  downloadPNG: () => void;
-}
-
 export interface BarPlotProps<T> {
   data: BarData<T>[];
-  ref?: React.Ref<BarPlotHandle>
+  ref?: React.Ref<DownloadPlotHandle>
   topAxisLabel?: string;
   onBarClicked?: (bar: BarData<T>) => void;
   TooltipContents?: (bar: BarData<T>) => React.ReactNode

@@ -21,7 +21,7 @@ import { HighlightAlt, Download } from "@mui/icons-material"
 import MiniMap from './minimap';
 import { HandlerArgs } from '@visx/drag/lib/useDrag';
 import { useParentSize } from '@visx/responsive';
-import { downloadDivAsPNG, downloadDivAsSVG } from '../../downloads';
+import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 
 const initialTransformMatrix = {
     scaleX: 1,

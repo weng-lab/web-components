@@ -1,5 +1,6 @@
 import { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale';
 import { ReactElement } from "react";
+import { DownloadPlotHandle } from '../../utility';
 
 type Outliers = "all" | "top" | "bottom" | "none"
 
@@ -7,11 +8,6 @@ export type Datum = {
     value: number;
     count: number
 }[]
-
-export interface ViolinPlotHandle {
-  downloadSVG: () => void;
-  downloadPNG: () => void;
-}
 
 export type ViolinPoint<T> = {
     value: number;
@@ -48,7 +44,7 @@ export type CrossProps = {
 export type ViolinPlotProps<T> = {
     distributions: Distribution<T>[];
     loading: boolean;
-    ref?: React.Ref<ViolinPlotHandle>;
+    ref?: React.Ref<DownloadPlotHandle>;
     axisLabel?: string;
     disableCrossPlot?: boolean;
     disableViolinPlot?: boolean;

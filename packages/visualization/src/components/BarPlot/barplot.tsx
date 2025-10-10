@@ -12,7 +12,7 @@ import { CircularProgress } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
-import { downloadAsSVG, downloadSVGAsPNG } from '../../downloads';
+import { downloadAsSVG, downloadSVGAsPNG } from '../../utility';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 

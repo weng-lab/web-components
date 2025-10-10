@@ -7,7 +7,7 @@ import { useImperativeHandle, useMemo, useRef } from "react";
 import { Text } from '@visx/text';
 import { getTextHeight } from "./helpers";
 import SingleViolin from "./singleViolin";
-import { downloadAsSVG, downloadSVGAsPNG } from "../../downloads";
+import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 
 const ViolinPlot = <T extends object>(
     props: ViolinPlotProps<T>,

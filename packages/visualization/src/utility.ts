@@ -1,6 +1,11 @@
 import downloadjs from 'downloadjs';
 import domtoimage from 'dom-to-image';
 
+export interface DownloadPlotHandle {
+  downloadSVG: () => void;
+  downloadPNG: () => void;
+}
+
 /**
  * Used to combine canvas and svg elements in scatterplot
  */

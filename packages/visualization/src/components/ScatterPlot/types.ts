@@ -1,13 +1,9 @@
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ReactElement } from "react";
+import { DownloadPlotHandle } from '../../utility';
 
 type Download = "none" | "inline" | "topRight" | "topLeft" | "bottomRight" | "bottomLeft"
-
-export interface ScatterPlotHandle {
-  downloadPNG: () => void;
-  downloadSVG: () => void;
-}
 
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
@@ -210,7 +206,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
     initialState?: InitialState<S, Z>;
-    ref?: React.Ref<ScatterPlotHandle>;
+    ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
     /**
      * Download Button positioning to internally download component
