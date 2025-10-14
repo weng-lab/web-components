@@ -25,13 +25,30 @@ const Treemap: React.FC<TreemapProps> = (
         treemapSliceDice,
     };
 
+    const sx = props.sx ?? {};
+
+    const paddingInner =
+        sx.paddingInner !== undefined
+            ? sx.paddingInner
+            : sx.padding !== undefined
+                ? sx.padding
+                : 0;
+
+    const paddingOuter =
+        sx.paddingOuter !== undefined
+            ? sx.paddingOuter
+            : sx.padding !== undefined
+                ? sx.padding
+                : 0;
+
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth} height={parentHeight}>
                 <VisxTreemap<TreemapNode>
                     root={root}
                     size={[parentWidth, parentHeight]}
-                    padding={props.sx?.padding ?? 0}
+                    paddingInner={paddingInner}
+                    paddingOuter={paddingOuter}
                     tile={tileMethods[props.tileMethod ?? "treemapResquarify"]}
                 >
                     {(treemap) =>

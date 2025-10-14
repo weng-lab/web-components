@@ -13,6 +13,8 @@ export type TreemapProps = {
     data: TreemapNode[];
     sx?: {
       padding?: number;
+      paddingInner?: number;
+      paddingOuter?: number;
       borderRadius?: number;
       strokeWidth?: number;
     }

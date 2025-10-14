@@ -29,10 +29,10 @@ function TestingPage() {
 ];
 
   return (
-    <Box height={"700px"} width={"auto"} padding={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, position: "relative" }}>
+    <Box height={"700px"} width={"auto"} padding={0} sx={{position: "relative" }}>
       <Treemap 
         data={data}
-        sx={{padding: 5, borderRadius: 5, strokeWidth: 0}}
+        sx={{padding: 5, borderRadius: 5, strokeWidth: 0, paddingOuter: 0}}
       />
     </Box>
   );
