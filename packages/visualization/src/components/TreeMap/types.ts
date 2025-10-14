@@ -1,4 +1,6 @@
-import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
+import { HierarchyRectangularNode, TileMethod } from "@visx/hierarchy/lib/types";
+
+export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 
 export type TreemapNode = {
   label: string;
@@ -14,6 +16,7 @@ export type TreemapProps = {
       borderRadius?: number;
       strokeWidth?: number;
     }
+    tileMethod?: Methods;
 }
 
 export type SingleNodeProps = {

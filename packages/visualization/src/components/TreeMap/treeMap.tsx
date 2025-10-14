@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Treemap as VisxTreemap, hierarchy, treemapResquarify } from "@visx/hierarchy";
+import { Treemap as VisxTreemap, hierarchy, treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
 import { useParentSize } from "@visx/responsive";
 import SingleNode from "./singleNode";
+import { TileMethod } from "@visx/hierarchy/lib/types";
 
 const Treemap: React.FC<TreemapProps> = (
     props: TreemapProps,
@@ -15,14 +16,23 @@ const Treemap: React.FC<TreemapProps> = (
         .sum((d) => d.value)
         .sort((a, b) => (b.value || 0) - (a.value || 0));
 
+    const tileMethods: { [tile: string]: TileMethod<TreemapNode> } = {
+        treemapSquarify,
+        treemapBinary,
+        treemapDice,
+        treemapResquarify,
+        treemapSlice,
+        treemapSliceDice,
+    };
+
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth} height={parentHeight}>
                 <VisxTreemap<TreemapNode>
                     root={root}
                     size={[parentWidth, parentHeight]}
-                    tile={treemapResquarify}
                     padding={props.sx?.padding ?? 0}
+                    tile={tileMethods[props.tileMethod ?? "treemapResquarify"]}
                 >
                     {(treemap) =>
                         treemap
@@ -48,13 +58,5 @@ const Treemap: React.FC<TreemapProps> = (
         </div>
     );
 };
-
-function measureTextWidth(text: string, fontSize: number, fontFamily: string) {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return 0;
-  ctx.font = `${fontSize}px ${fontFamily}`;
-  return ctx.measureText(text).width;
-}
 
 export default Treemap;

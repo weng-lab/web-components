@@ -17,7 +17,7 @@ const SingleNode: React.FC<SingleNodeProps> = ({
     const cx = (node.x0 + node.x1) / 2;
     const cy = (node.y0 + node.y1) / 2;
 
-    const showText = width > 40 && height > 20;
+    const showText = width > 40 && height > 40;
 
     return (
         <g
