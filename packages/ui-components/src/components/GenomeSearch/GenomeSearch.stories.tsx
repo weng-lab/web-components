@@ -147,3 +147,26 @@ export const ClearOnAssemblyChange: Story = {
     );
   },
 }
+
+export const GencodeVersions: Story = {
+ args: {
+    assembly: "GRCh38",
+    onSearchSubmit: (r: Result) => console.log("Going to", r),
+    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study"],
+    ccreLimit: 3,
+    geneLimit: 3,
+    icreLimit: 3,
+    snpLimit: 3,
+    sx: { width: 300 },
+  },
+  render: (args) => {
+    return (
+      <Stack spacing={1}>
+        <Typography>V29</Typography>
+        <GenomeSearch {...args} geneVersion={29} />
+        <Typography>V40</Typography>
+        <GenomeSearch {...args} geneVersion={40} />
+      </Stack>
+    )
+  }
+}

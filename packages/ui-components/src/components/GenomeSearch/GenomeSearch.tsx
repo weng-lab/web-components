@@ -71,7 +71,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     isFetching: geneFetching,
   } = useQuery({
     queryKey: ["genes", inputValue, assembly],
-    queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion || assembly === "GRCh38" ? 29 : 25),
+    queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion || (assembly === "GRCh38" ? 29 : 25)),
     enabled: false,
   });
 
