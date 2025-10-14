@@ -186,6 +186,9 @@ importers:
 
   packages/visualization:
     dependencies:
+      '@visx/hierarchy':
+        specifier: ^3.12.0
+        version: 3.12.0(react@19.1.0)
       cytoscape:
         specifier: ^3.32.0
         version: 3.32.1
