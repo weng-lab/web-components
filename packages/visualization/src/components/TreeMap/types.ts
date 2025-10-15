@@ -11,13 +11,21 @@ export type TreemapNode = {
 
 export type TreemapProps = {
     data: TreemapNode[];
-    sx?: {
+    //styling types
+    style?: {
+      /**
+       * padding will apply to both inner and outer but
+       * specifying inner/outer will override that specific padding
+       */
       padding?: number;
       paddingInner?: number;
       paddingOuter?: number;
       borderRadius?: number;
       strokeWidth?: number;
     }
+    /**
+     * Visx has a few built in tiling methods that can be changed here
+     */
     tileMethod?: Methods;
 }
 

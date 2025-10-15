@@ -32,7 +32,7 @@ function TestingPage() {
     <Box height={"700px"} width={"auto"} padding={0} sx={{position: "relative" }}>
       <Treemap 
         data={data}
-        sx={{padding: 5, borderRadius: 5, strokeWidth: 0, paddingOuter: 0}}
+        style={{padding: 5, borderRadius: 5, paddingOuter: 1}}
       />
     </Box>
   );

@@ -25,20 +25,20 @@ const Treemap: React.FC<TreemapProps> = (
         treemapSliceDice,
     };
 
-    const sx = props.sx ?? {};
+    const style = props.style ?? {};
 
     const paddingInner =
-        sx.paddingInner !== undefined
-            ? sx.paddingInner
-            : sx.padding !== undefined
-                ? sx.padding
+        style.paddingInner !== undefined
+            ? style.paddingInner
+            : style.padding !== undefined
+                ? style.padding
                 : 0;
 
     const paddingOuter =
-        sx.paddingOuter !== undefined
-            ? sx.paddingOuter
-            : sx.padding !== undefined
-                ? sx.padding
+        style.paddingOuter !== undefined
+            ? style.paddingOuter
+            : style.padding !== undefined
+                ? style.padding
                 : 0;
 
     return (
@@ -64,8 +64,8 @@ const Treemap: React.FC<TreemapProps> = (
                                         node={node}
                                         isHovered={hovered === nodeId}
                                         onHover={(hover) => setHovered(hover ? nodeId : null)}
-                                        strokeWidth={props.sx?.strokeWidth ?? 0}
-                                        borderRadius={props.sx?.borderRadius}
+                                        strokeWidth={style.strokeWidth ?? 0}
+                                        borderRadius={style.borderRadius}
                                     />
                                 );
                             })
