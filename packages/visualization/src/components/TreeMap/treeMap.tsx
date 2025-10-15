@@ -69,6 +69,7 @@ const Treemap = <T extends object>(
                                         fontSize={style.fontSize ?? 16}
                                         labelPlacement={props.labelPlacement ?? "middle"}
                                         tooltipBody={props.tooltipBody}
+                                        onNodeClicked={props.onNodeClicked}
                                     />
                                 );
                             })

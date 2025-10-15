@@ -49,8 +49,13 @@ const SingleNode = <T,>(
         [props.tooltipBody, props.node.data, showTooltip]
     );
 
+    const handleNodeClick = () => {
+        if (!props.onNodeClicked) return;
+        props.onNodeClicked(props.node.data);
+    };
+
     return (
-        <React.Fragment key={`frag-${props.node.id}`}>
+        <React.Fragment key={`frag-${props.node.data.label}`}>
             <g
                 onMouseEnter={() => props.onHover(true)}
                 onMouseLeave={() => {
@@ -58,6 +63,7 @@ const SingleNode = <T,>(
                     hideTooltip?.();
                 }}
                 onMouseMove={handleMouseMove}
+                onClick={handleNodeClick}
                 style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
             >
                 <rect

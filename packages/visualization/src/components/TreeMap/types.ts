@@ -1,4 +1,4 @@
-import { HierarchyRectangularNode, TileMethod } from "@visx/hierarchy/lib/types";
+import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
 import { ReactElement } from "react";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
@@ -32,6 +32,7 @@ export type TreemapProps<T> = {
     tileMethod?: Methods;
     labelPlacement?: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
     tooltipBody?: (node: TreemapNode<T>) => ReactElement;
+    onNodeClicked?: (point: TreemapNode<T>) => void;
 }
 
 export type SingleNodeProps<T> = {
@@ -43,6 +44,7 @@ export type SingleNodeProps<T> = {
     fontSize: number;
     labelPlacement: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
     tooltipBody?: (node: TreemapNode<T>) => ReactElement
+    onNodeClicked?: (point: TreemapNode<T>) => void;
 }
 
 export type ValueOvalProps = {

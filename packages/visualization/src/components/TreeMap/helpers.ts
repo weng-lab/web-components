@@ -13,32 +13,32 @@ export function getLabelPlacement(
         case "topLeft":
             return {
                 textX: node.x0 + padding,
-                textY: node.y0 + 14,
-                valueY: node.y0 + 44,
+                textY: node.y0 + 10,
+                valueY: node.y0 + 40,
                 anchor: "start",
                 baseline: "hanging",
             };
         case "topRight":
             return {
                 textX: node.x1 - padding,
-                textY: node.y0 + 14,
-                valueY: node.y0 + 44,
+                textY: node.y0 + 10,
+                valueY: node.y0 + 40,
                 anchor: "end",
                 baseline: "hanging",
             };
         case "bottomLeft":
             return {
                 textX: node.x0 + padding,
-                textY: node.y1 - 34,
-                valueY: node.y1 - 14,
+                textY: node.y1 - 30,
+                valueY: node.y1 - 10,
                 anchor: "start",
                 baseline: "baseline",
             };
         case "bottomRight":
             return {
                 textX: node.x1 - padding,
-                textY: node.y1 - 34,
-                valueY: node.y1 - 14,
+                textY: node.y1 - 30,
+                valueY: node.y1 - 10,
                 anchor: "end",
                 baseline: "baseline",
             };
