@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Treemap as VisxTreemap, hierarchy, treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
 import { useParentSize } from "@visx/responsive";
 import SingleNode from "./singleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
 
-const Treemap: React.FC<TreemapProps> = (
-    props: TreemapProps,
+const Treemap = <T extends object>(
+    props: TreemapProps<T>,
 ) => {
     const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
     const [hovered, setHovered] = useState<string | null>(null);
@@ -16,7 +16,7 @@ const Treemap: React.FC<TreemapProps> = (
         .sum((d) => d.value)
         .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-    const tileMethods: { [tile: string]: TileMethod<TreemapNode> } = {
+    const tileMethods: { [tile: string]: TileMethod<TreemapNode<T>> } = {
         treemapSquarify,
         treemapBinary,
         treemapDice,
@@ -44,7 +44,7 @@ const Treemap: React.FC<TreemapProps> = (
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth} height={parentHeight}>
-                <VisxTreemap<TreemapNode>
+                <VisxTreemap<TreemapNode<T>>
                     root={root}
                     size={[parentWidth, parentHeight]}
                     paddingInner={paddingInner}
@@ -65,8 +65,10 @@ const Treemap: React.FC<TreemapProps> = (
                                         isHovered={hovered === nodeId}
                                         onHover={(hover) => setHovered(hover ? nodeId : null)}
                                         strokeWidth={style.strokeWidth ?? 0}
-                                        borderRadius={style.borderRadius}
+                                        borderRadius={style.borderRadius ?? 0}
+                                        fontSize={style.fontSize ?? 16}
                                         labelPlacement={props.labelPlacement ?? "middle"}
+                                        tooltipBody={props.tooltipBody}
                                     />
                                 );
                             })

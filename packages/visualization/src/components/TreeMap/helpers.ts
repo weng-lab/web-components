@@ -2,7 +2,7 @@ import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
 import { TreemapNode } from "./types";
 
 export function getLabelPlacement(
-    node: HierarchyRectangularNode<TreemapNode>,
+    node: HierarchyRectangularNode<TreemapNode<any>>,
     placement: string,
 ) {
     const padding = 6;

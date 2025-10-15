@@ -1,16 +1,18 @@
 import { HierarchyRectangularNode, TileMethod } from "@visx/hierarchy/lib/types";
+import { ReactElement } from "react";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 
-export type TreemapNode = {
+export type TreemapNode<T> = {
   label: string;
   value: number;
   color?: string;
-  children?: TreemapNode[];
+  children?: TreemapNode<T>[];
+  metaData?: T;
 }
 
-export type TreemapProps = {
-    data: TreemapNode[];
+export type TreemapProps<T> = {
+    data: TreemapNode<T>[];
     //styling types
     style?: {
       /**
@@ -22,21 +24,25 @@ export type TreemapProps = {
       paddingOuter?: number;
       borderRadius?: number;
       strokeWidth?: number;
+      fontSize?: number;
     }
     /**
      * Visx has a few built in tiling methods that can be changed here
      */
     tileMethod?: Methods;
-    labelPlacement?: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight"
+    labelPlacement?: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
+    tooltipBody?: (node: TreemapNode<T>) => ReactElement;
 }
 
-export type SingleNodeProps = {
-    node: HierarchyRectangularNode<TreemapNode>;
+export type SingleNodeProps<T> = {
+    node: HierarchyRectangularNode<TreemapNode<T>>;
     isHovered: boolean;
     onHover: (hovered: boolean) => void;
     strokeWidth: number;
-    borderRadius?: number;
+    borderRadius: number;
+    fontSize: number;
     labelPlacement: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
+    tooltipBody?: (node: TreemapNode<T>) => ReactElement
 }
 
 export type ValueOvalProps = {

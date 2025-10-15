@@ -1,5 +1,5 @@
 import { ValueOvalProps } from "./types";
-import { measureTextWidth } from "./utility";
+import { measureTextWidth } from "./helpers";
 
 const ValueOval: React.FC<ValueOvalProps> = ({ cx, cy, value, color, align }) => {
     const fontSize = 12;

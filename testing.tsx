@@ -12,7 +12,7 @@ function TestingPage() {
     source: string;
   };
 
-  const data: TreemapNode[] = [
+  const data: TreemapNode<MyMetadata>[] = [
   { label: "Other Measurment", value: 2764, color: "#046798" },
   { label: "Hematological measurement", value: 11555, color: "#398e80" },
   { label: "lipid or lipoprotein measurement", value: 4772, color: "#699123" },
@@ -36,8 +36,13 @@ function TestingPage() {
       <Treemap 
         data={data}
         style={{padding: 8, borderRadius: 5, paddingOuter: 1}}
-        tileMethod='treemapBinary'
         labelPlacement='topLeft'
+        tooltipBody={(node) => (
+          <Box maxWidth={300}>
+            <div><strong>Label:</strong> {node.label}</div>
+            <div><strong>Value:</strong> {node.value}</div>
+          </Box>
+        )}
       />
     </Box>
   );
