@@ -13,7 +13,7 @@ export type GenomeSearchProps = Partial<
   onSearchSubmit: (result: Result) => void;
   defaultResults?: Result[];
   showiCREFlag?: boolean;
-  geneVersion?: number;
+  geneVersion?: number | number[];
   // queries
   queries: ResultType[];
   geneLimit?: number;
@@ -76,6 +76,7 @@ export interface GeneResponse {
     end: number;
   };
   description: string;
+  versions: number[];
 }
 
 // Response from the ICRE GraphQL query

@@ -152,7 +152,7 @@ export const GencodeVersions: Story = {
  args: {
     assembly: "GRCh38",
     onSearchSubmit: (r: Result) => console.log("Going to", r),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study"],
+    queries: ["Gene"],
     ccreLimit: 3,
     geneLimit: 3,
     icreLimit: 3,
@@ -166,6 +166,8 @@ export const GencodeVersions: Story = {
         <GenomeSearch {...args} geneVersion={29} />
         <Typography>V40</Typography>
         <GenomeSearch {...args} geneVersion={40} />
+        <Typography>V29, V40</Typography>
+        <GenomeSearch {...args} geneVersion={[29, 40]} />
       </Stack>
     )
   }

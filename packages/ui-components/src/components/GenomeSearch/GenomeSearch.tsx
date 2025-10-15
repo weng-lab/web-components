@@ -70,8 +70,8 @@ const Search: React.FC<GenomeSearchProps> = ({
     refetch: refetchGenes,
     isFetching: geneFetching,
   } = useQuery({
-    queryKey: ["genes", inputValue, assembly],
-    queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion || (assembly === "GRCh38" ? 29 : 25)),
+    queryKey: ["genes", inputValue, assembly, geneVersion],
+    queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion),
     enabled: false,
   });
 
@@ -138,7 +138,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     if (isLoading) return;
     const resultsList = [];
     if (geneData && searchGene) {
-      resultsList.push(...geneResultList(geneData, geneLimit || 3));
+      resultsList.push(...geneResultList(geneData, geneLimit || 3, typeof geneVersion === "object"));
     }
     if (assembly === "GRCh38") {
       if (icreData && searchICRE && inputValue.toLowerCase().startsWith("eh")) {

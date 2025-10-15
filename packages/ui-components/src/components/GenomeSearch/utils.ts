@@ -95,12 +95,16 @@ export function snpResultList(results: SnpResponse[], limit: number): Result[] {
 
 export function geneResultList(
   results: GeneResponse[],
-  limit: number
+  limit: number,
+  showVersions: boolean
 ): Result[] {
   return formatResults(results, limit, {
     getTitle: (result) => result.name,
     getDescription: (result) => {
-      return `${result.description}\n${result.id}\n${result.coordinates.chromosome}:${result.coordinates.start}-${result.coordinates.end}`;
+      return (
+        `${result.description}\n${result.id}\n${result.coordinates.chromosome}:${result.coordinates.start}-${result.coordinates.end}` +
+        (showVersions ? ` (${result.versions.map((x) => "V" + x).join(", ")})` : "")
+      );
     },
     type: "Gene",
   });

@@ -1,4 +1,4 @@
-import { GeneResponse } from "./types";
+import { GeneResponse, GenomeSearchProps } from "./types";
 
 export const SNP_AUTOCOMPLETE_QUERY = `
   query suggestions($assembly: String!, $snpid: String!) { 
@@ -165,31 +165,64 @@ export const getGenes = async (
   value: string,
   assembly: string,
   limit: number,
-  geneVersion: number
+  geneVersions: GenomeSearchProps["geneVersion"]
 ) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
-    method: "POST",
-    body: JSON.stringify({
-      query: GENE_AUTOCOMPLETE_QUERY,
-      variables: {
-        assembly: assembly.toLowerCase(),
-        name_prefix: value,
-        version: geneVersion,
-        limit: limit,
-      },
-    }),
-    headers: { "Content-Type": "application/json" },
+  const versions = geneVersions
+    ? typeof geneVersions === "number"
+      ? [geneVersions]
+      : geneVersions
+    : [assembly === "GRCh38" ? 40 : 25];
+  
+  // Fetch genes for all versions
+  const versionResults = await Promise.all(
+    versions.map(version => 
+      fetch("https://screen.api.wenglab.org/graphql", {
+        method: "POST",
+        body: JSON.stringify({
+          query: GENE_AUTOCOMPLETE_QUERY,
+          variables: {
+            assembly: assembly.toLowerCase(),
+            name_prefix: value,
+            version: version,
+            limit: limit,
+          },
+        }),
+        headers: { "Content-Type": "application/json" },
+      }).then(res => res.json())
+    )
+  );
+
+  // Combine and deduplicate results
+  const geneMap = new Map<string, { gene: any, versions: number[] }>();
+  
+  versionResults.forEach((result, idx) => {
+    const genes = result.data.gene || [];
+    genes.forEach((gene: any) => {
+      if (!geneMap.has(gene.name)) {
+        geneMap.set(gene.name, { gene, versions: [versions[idx]] });
+      } else {
+        const existing = geneMap.get(gene.name)!;
+        // Keep coordinates from highest version
+        if (versions[idx] > Math.max(...existing.versions)) {
+          existing.gene.coordinates = gene.coordinates;
+        }
+        existing.versions.push(versions[idx]);
+      }
+    });
   });
-  const genes = (await response.json()).data.gene;
+
+  // Convert map to array and fetch descriptions
   const out = await Promise.all(
-    genes.map(async (gene: GeneResponse) => {
+    Array.from(geneMap.values()).map(async ({ gene, versions }) => {
       const description = await getDescription(gene.name);
       return {
         ...gene,
-        description: toTitleCase(description || gene.name),
+        description: `${toTitleCase(description || gene.name)}`,
+        versions,
       };
     })
   );
+
   return out;
 };
 const toTitleCase = (str: string) =>
