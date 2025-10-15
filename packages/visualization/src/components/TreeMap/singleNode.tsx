@@ -1,6 +1,7 @@
 import React from "react";
 import { SingleNodeProps } from "./types";
 import ValueOval from "./valueOval";
+import { getLabelPlacement, measureTextWidth, truncateTextToWidth } from "./utility";
 
 const SingleNode: React.FC<SingleNodeProps> = ({
     node,
@@ -8,16 +9,24 @@ const SingleNode: React.FC<SingleNodeProps> = ({
     onHover,
     strokeWidth,
     borderRadius = 0,
+    labelPlacement
 }) => {
+    const fontSize = 16
     const nodeColor = node.data.color || "black";
     const stroke = isHovered ? strokeWidth + 2 : strokeWidth;
 
+
     const width = node.x1 - node.x0;
     const height = node.y1 - node.y0;
-    const cx = (node.x0 + node.x1) / 2;
-    const cy = (node.y0 + node.y1) / 2;
 
-    const showText = width > 40 && height > 40;
+    const fullLabel = node.data.label;
+    const truncatedLabel = truncateTextToWidth(fullLabel, width - 8, fontSize, "sans-serif");
+    const showText = height > 55;
+
+    const { textX, textY, anchor, baseline, valueY } = getLabelPlacement(
+        node,
+        labelPlacement,
+    );
 
     return (
         <g
@@ -39,16 +48,22 @@ const SingleNode: React.FC<SingleNodeProps> = ({
             {showText && (
                 <>
                     <text
-                        x={cx}
-                        y={cy - 5}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
+                        x={textX}
+                        y={textY}
+                        textAnchor={anchor}
+                        dominantBaseline={baseline}
                         fill={nodeColor}
                         fontWeight={500}
                     >
-                        {node.data.label}
+                        {truncatedLabel}
                     </text>
-                    <ValueOval cx={cx} cy={cy + 15} color={nodeColor} value={node.data.value} />
+                    <ValueOval
+                        cx={textX}
+                        cy={valueY}
+                        color={nodeColor}
+                        value={node.data.value}
+                        align={anchor}
+                    />
                 </>
             )}
         </g>

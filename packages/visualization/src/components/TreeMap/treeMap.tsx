@@ -66,6 +66,7 @@ const Treemap: React.FC<TreemapProps> = (
                                         onHover={(hover) => setHovered(hover ? nodeId : null)}
                                         strokeWidth={style.strokeWidth ?? 0}
                                         borderRadius={style.borderRadius}
+                                        labelPlacement={props.labelPlacement ?? "middle"}
                                     />
                                 );
                             })

@@ -13,26 +13,31 @@ function TestingPage() {
   };
 
   const data: TreemapNode[] = [
-  { label: "A", value: 50, color: "#5B8FF9" },
-  { label: "B", value: 100 },
-  { label: "D1", value: 10 },
-  { label: "D2", value: 70, color: "#2bb665ff" },
-  { label: "D3", value: 40, color: "#bb1ad1ff" },
-  {
-    label: "C",
-    value: 0,
-    children: [
-      { label: "C1", value: 20 },
-      { label: "C2", value: 40, color: "#FF7875" },
-    ],
-  },
+  { label: "Other Measurment", value: 2764, color: "#046798" },
+  { label: "Hematological measurement", value: 11555, color: "#398e80" },
+  { label: "lipid or lipoprotein measurement", value: 4772, color: "#699123" },
+  { label: "Body weights and measures", value: 3984, color: "#0288c9" },
+  { label: "Other diseases", value: 3004, color: "#7f79b4" },
+  { label: "Other traits", value: 2822, color: "#f75745" },
+  { label: "Other traits", value: 2822, color: "#f75745" },
+  { label: "Cancer", value: 2713, color: "#a760aa" },
+  { label: "Biological process", value: 2523, color: "#7f79b4" },
+  { label: "Cardiovascular disease", value: 1607, color: "#b13434" },
+  { label: "Imuune system disease", value: 2380, color: "#a79100" },
+  { label: "Biological process", value: 2523, color: "#7f79b4" },
+  { label: "Biological process", value: 2523, color: "#7f79b4" },
+  { label: "Biological process", value: 2523, color: "#7f79b4" },
+  { label: "Lorem ipsum", value: 2523, color: "#7f79b4" },
+  { label: "Respitory", value: 446, color: "#7f79b4" },
 ];
 
   return (
     <Box height={"700px"} width={"auto"} padding={0} sx={{position: "relative" }}>
       <Treemap 
         data={data}
-        style={{padding: 5, borderRadius: 5, paddingOuter: 1}}
+        style={{padding: 8, borderRadius: 5, paddingOuter: 1}}
+        tileMethod='treemapBinary'
+        labelPlacement='topLeft'
       />
     </Box>
   );

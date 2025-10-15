@@ -1,6 +1,7 @@
 import { ValueOvalProps } from "./types";
+import { measureTextWidth } from "./utility";
 
-const ValueOval: React.FC<ValueOvalProps> = ({ cx, cy, value, color }) => {
+const ValueOval: React.FC<ValueOvalProps> = ({ cx, cy, value, color, align }) => {
     const fontSize = 12;
     const text = `${value}`;
     const textWidth = measureTextWidth(text, fontSize, "sans-serif");
@@ -8,10 +9,14 @@ const ValueOval: React.FC<ValueOvalProps> = ({ cx, cy, value, color }) => {
     const ovalWidth = textWidth + padding * 2;
     const ovalHeight = fontSize * 1.8;
 
+    let xPos = cx;
+    if (align === "start") xPos += ovalWidth / 2;
+    if (align === "end") xPos -= ovalWidth / 2;
+
     return (
         <>
             <rect
-                x={cx - ovalWidth / 2}
+                x={xPos - ovalWidth / 2}
                 y={cy - ovalHeight / 2}
                 width={ovalWidth}
                 height={ovalHeight}
@@ -19,7 +24,7 @@ const ValueOval: React.FC<ValueOvalProps> = ({ cx, cy, value, color }) => {
                 fill={color}
             />
             <text
-                x={cx}
+                x={xPos}
                 y={cy + 1}
                 textAnchor="middle"
                 dominantBaseline="middle"
@@ -34,11 +39,3 @@ const ValueOval: React.FC<ValueOvalProps> = ({ cx, cy, value, color }) => {
 };
 
 export default ValueOval;
-
-function measureTextWidth(text: string, fontSize: number, fontFamily: string) {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return 0;
-    ctx.font = `${fontSize}px ${fontFamily}`;
-    return ctx.measureText(text).width;
-}

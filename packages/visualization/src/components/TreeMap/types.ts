@@ -27,6 +27,7 @@ export type TreemapProps = {
      * Visx has a few built in tiling methods that can be changed here
      */
     tileMethod?: Methods;
+    labelPlacement?: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight"
 }
 
 export type SingleNodeProps = {
@@ -35,6 +36,7 @@ export type SingleNodeProps = {
     onHover: (hovered: boolean) => void;
     strokeWidth: number;
     borderRadius?: number;
+    labelPlacement: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
 }
 
 export type ValueOvalProps = {
@@ -42,4 +44,5 @@ export type ValueOvalProps = {
     cy: number;
     value: number | string;
     color: string;
+    align: string;
 }
