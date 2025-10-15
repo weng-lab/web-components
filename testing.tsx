@@ -37,7 +37,12 @@ function TestingPage() {
         data={data}
         style={{padding: 8, borderRadius: 5, paddingOuter: 1}}
         labelPlacement='topLeft'
-        onNodeClicked={(node) => console.log(node)}
+        tooltipBody={(node) => (
+          <Box maxWidth={300}>
+            <div><strong>Label:</strong> {node.label}</div>
+            <div><strong>Value:</strong> {node.value}</div>
+          </Box>
+        )}
       />
     </Box>
   );

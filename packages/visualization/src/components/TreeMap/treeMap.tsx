@@ -4,6 +4,7 @@ import { TreemapNode, TreemapProps } from "./types";
 import { useParentSize } from "@visx/responsive";
 import SingleNode from "./singleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
+import { motion } from "framer-motion";
 
 const Treemap = <T extends object>(
     props: TreemapProps<T>,
@@ -42,6 +43,7 @@ const Treemap = <T extends object>(
                 : 0;
 
     return (
+
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth} height={parentHeight}>
                 <VisxTreemap<TreemapNode<T>>
@@ -56,27 +58,34 @@ const Treemap = <T extends object>(
                             .descendants()
                             .filter((n) => n.depth > 0) // skip the artificial root
                             .map((node, i) => {
-                                const nodeId = node.ancestors().map(a => a.data.label).join("/");
+                                const nodeId = node.ancestors().map((a) => a.data.label).join("/");
 
                                 return (
-                                    <SingleNode
+                                    <motion.g
                                         key={`node-${i}`}
-                                        node={node}
-                                        isHovered={hovered === nodeId}
-                                        onHover={(hover) => setHovered(hover ? nodeId : null)}
-                                        strokeWidth={style.strokeWidth ?? 0}
-                                        borderRadius={style.borderRadius ?? 0}
-                                        fontSize={style.fontSize ?? 16}
-                                        labelPlacement={props.labelPlacement ?? "middle"}
-                                        tooltipBody={props.tooltipBody}
-                                        onNodeClicked={props.onNodeClicked}
-                                    />
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.4, delay: i * 0.03, ease: "easeOut" }}
+                                    >
+                                        <SingleNode
+                                            node={node}
+                                            isHovered={hovered === nodeId}
+                                            onHover={(hover) => setHovered(hover ? nodeId : null)}
+                                            strokeWidth={style.strokeWidth ?? 0}
+                                            borderRadius={style.borderRadius ?? 0}
+                                            fontSize={style.fontSize ?? 16}
+                                            labelPlacement={props.labelPlacement ?? "middle"}
+                                            tooltipBody={props.tooltipBody}
+                                            onNodeClicked={props.onNodeClicked}
+                                        />
+                                    </motion.g>
                                 );
                             })
                     }
                 </VisxTreemap>
             </svg>
         </div>
+
     );
 };
 
