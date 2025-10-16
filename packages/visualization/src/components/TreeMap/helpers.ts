@@ -84,7 +84,9 @@ export function truncateTextToWidth(
     truncated = truncated.slice(0, -1);
   }
 
-  return truncated + "…";
+  const result = truncated === "" ? "" : truncated + "..."
+
+  return result;
 }
 
 export const getAnimationProps = (type: AnimationType | undefined, index: number) => {

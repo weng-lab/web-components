@@ -43,6 +43,7 @@ function TestingPage() {
             <div><strong>Value:</strong> {node.value}</div>
           </Box>
         )}
+        tileMethod='treemapDice'
       />
     </Box>
   );

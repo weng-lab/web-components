@@ -17,7 +17,7 @@ const SingleNode = <T,>(
 
     const fullLabel = props.node.data.label;
     const truncatedLabel = truncateTextToWidth(fullLabel, width - 8, fontSize, "sans-serif");
-    const showValue = height > 55;
+    const showValue = height > 55 && width > 50;
     const showText = height > 20;
 
     const { textX, textY, anchor, baseline, valueY } = getLabelPlacement(
