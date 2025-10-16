@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useImperativeHandle, useRef, useState } from "react";
 import { Treemap as VisxTreemap, hierarchy, treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
 import { useParentSize } from "@visx/responsive";
@@ -6,12 +6,14 @@ import SingleNode from "./singleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
 import { motion } from "framer-motion";
 import { getAnimationProps } from "./helpers";
+import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 
 const Treemap = <T extends object>(
     props: TreemapProps<T>,
 ) => {
     const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
     const [hovered, setHovered] = useState<string | null>(null);
+    const svgRef = useRef<SVGSVGElement | null>(null);
 
     // wrap the array in a root node
     const root = hierarchy({ label: "root", value: 0, children: props.data })
@@ -43,9 +45,19 @@ const Treemap = <T extends object>(
                 ? style.padding
                 : 0;
 
+    //Download the plot as svg or png using the passed ref from the parent
+    useImperativeHandle(props.ref, () => ({
+        downloadSVG: () => {
+            if (svgRef.current) downloadAsSVG(svgRef.current, props.downloadFileName ?? "tree_map.svg");
+        },
+        downloadPNG: () => {
+            if (svgRef.current) downloadSVGAsPNG(svgRef.current, props.downloadFileName ?? "tree_map.png");
+        },
+    }));
+
     return (
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
-            <svg width={parentWidth} height={parentHeight}>
+            <svg width={parentWidth} height={parentHeight} ref={svgRef}>
                 <VisxTreemap<TreemapNode<T>>
                     root={root}
                     size={[parentWidth, parentHeight]}

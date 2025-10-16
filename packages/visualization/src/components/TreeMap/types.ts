@@ -1,5 +1,6 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
 import { ReactElement } from "react";
+import { DownloadPlotHandle } from "../../utility";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 
@@ -36,6 +37,8 @@ export type TreemapProps<T> = {
     tooltipBody?: (node: TreemapNode<T>) => ReactElement;
     onNodeClicked?: (point: TreemapNode<T>) => void;
     animation?: AnimationType;
+    ref?: React.Ref<DownloadPlotHandle>
+    downloadFileName?: string;
 }
 
 export type SingleNodeProps<T> = {

@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import Box from '@mui/material/Box';
 import { Treemap } from './packages/visualization/src/components/TreeMap'
 import { TreemapNode } from './packages/visualization/src/components/TreeMap'
+import { Button } from '@mui/material';
+import { DownloadPlotHandle } from './packages/visualization/src/utility';
 
 //Testing page for looking at components outside of storybook if needed (pnpm dev)
 
@@ -31,6 +33,8 @@ function TestingPage() {
   { label: "Respitory", value: 446, color: "#7f79b4" },
 ];
 
+  const ref = useRef<DownloadPlotHandle>(null)
+
   return (
     <Box height={"700px"} width={"auto"} padding={0} sx={{position: "relative" }}>
       <Treemap 
@@ -44,7 +48,9 @@ function TestingPage() {
           </Box>
         )}
         tileMethod='treemapDice'
+        ref={ref}
       />
+      <Button onClick={() => ref.current?.downloadSVG()}>Download</Button>
     </Box>
   );
 }
