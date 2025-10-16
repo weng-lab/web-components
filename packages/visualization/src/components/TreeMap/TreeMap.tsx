@@ -2,7 +2,7 @@ import { useImperativeHandle, useRef, useState } from "react";
 import { Treemap as VisxTreemap, hierarchy, treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
 import { useParentSize } from "@visx/responsive";
-import SingleNode from "./tempSingleNode";
+import SingleNode from "./SingleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
 import { motion } from "framer-motion";
 import { getAnimationProps } from "./helpers";

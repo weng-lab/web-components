@@ -1,5 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import Treemap from './tempTreeMap';
+import Treemap from './TreeMap';
 import { TreemapNode } from './types';
 import { Box } from '@mui/material';
 

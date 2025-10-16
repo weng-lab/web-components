@@ -65,6 +65,9 @@ importers:
       '@visx/group':
         specifier: ^3.12.0
         version: 3.12.0(react@19.1.0)
+      '@visx/hierarchy':
+        specifier: ^3.12.0
+        version: 3.12.0(react@19.1.0)
       '@visx/responsive':
         specifier: ^3.12.0
         version: 3.12.0(react@19.1.0)
@@ -186,9 +189,6 @@ importers:
 
   packages/visualization:
     dependencies:
-      '@visx/hierarchy':
-        specifier: ^3.12.0
-        version: 3.12.0(react@19.1.0)
       cytoscape:
         specifier: ^3.32.0
         version: 3.32.1

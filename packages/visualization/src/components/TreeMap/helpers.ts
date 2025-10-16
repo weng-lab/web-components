@@ -1,11 +1,11 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
-import { AnimationType, TreemapNode } from "./types";
+import { AnimationType, TreemapNode, TreemapProps } from "./types";
 import { easeOut, Transition } from "framer-motion";
 
 //get coords for label placement based on user input
 export function getLabelPlacement(
     node: HierarchyRectangularNode<TreemapNode<any>>,
-    placement: string,
+    placement: TreemapProps<any>["labelPlacement"],
     showValue?: boolean
 ) {
     const padding = 6;
