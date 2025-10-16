@@ -6,6 +6,7 @@ import { easeOut, Transition } from "framer-motion";
 export function getLabelPlacement(
     node: HierarchyRectangularNode<TreemapNode<any>>,
     placement: string,
+    showValue?: boolean
 ) {
     const padding = 6;
     const cx = (node.x0 + node.x1) / 2;
@@ -31,16 +32,16 @@ export function getLabelPlacement(
         case "bottomLeft":
             return {
                 textX: node.x0 + padding,
-                textY: node.y1 - 30,
-                valueY: node.y1 - 10,
+                textY: showValue ? node.y1 - 35 : node.y1 - 15 ,
+                valueY: node.y1 - 15,
                 anchor: "start",
                 baseline: "baseline",
             };
         case "bottomRight":
             return {
                 textX: node.x1 - padding,
-                textY: node.y1 - 30,
-                valueY: node.y1 - 10,
+                textY: showValue ? node.y1 - 35 : node.y1 - 15,
+                valueY: node.y1 - 15,
                 anchor: "end",
                 baseline: "baseline",
             };
@@ -48,7 +49,7 @@ export function getLabelPlacement(
         default:
             return {
                 textX: cx,
-                textY: cy - 5,
+                textY: showValue ? cy - 5 : cy + 5,
                 valueY: cy + 15,
                 anchor: "middle",
                 baseline: "middle",

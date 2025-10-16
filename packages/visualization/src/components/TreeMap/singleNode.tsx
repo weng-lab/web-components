@@ -23,6 +23,7 @@ const SingleNode = <T,>(
     const { textX, textY, anchor, baseline, valueY } = getLabelPlacement(
         props.node,
         props.labelPlacement,
+        showValue
     );
 
     const {
