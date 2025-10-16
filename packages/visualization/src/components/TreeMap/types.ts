@@ -3,6 +3,8 @@ import { ReactElement } from "react";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 
+export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
+
 export type TreemapNode<T> = {
   label: string;
   value: number;
@@ -33,6 +35,7 @@ export type TreemapProps<T> = {
     labelPlacement?: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
     tooltipBody?: (node: TreemapNode<T>) => ReactElement;
     onNodeClicked?: (point: TreemapNode<T>) => void;
+    animation?: AnimationType;
 }
 
 export type SingleNodeProps<T> = {

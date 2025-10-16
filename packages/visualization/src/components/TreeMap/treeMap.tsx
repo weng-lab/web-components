@@ -5,6 +5,7 @@ import { useParentSize } from "@visx/responsive";
 import SingleNode from "./singleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
 import { motion } from "framer-motion";
+import { getAnimationProps } from "./helpers";
 
 const Treemap = <T extends object>(
     props: TreemapProps<T>,
@@ -43,7 +44,6 @@ const Treemap = <T extends object>(
                 : 0;
 
     return (
-
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth} height={parentHeight}>
                 <VisxTreemap<TreemapNode<T>>
@@ -56,17 +56,14 @@ const Treemap = <T extends object>(
                     {(treemap) =>
                         treemap
                             .descendants()
-                            .filter((n) => n.depth > 0) // skip the artificial root
+                            .filter((n) => n.depth > 0)
                             .map((node, i) => {
                                 const nodeId = node.ancestors().map((a) => a.data.label).join("/");
+                                const Wrapper = props.animation ? motion.g : "g";
+                                const animProps = getAnimationProps(props.animation, i);
 
                                 return (
-                                    <motion.g
-                                        key={`node-${i}`}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ duration: 0.4, delay: i * 0.03, ease: "easeOut" }}
-                                    >
+                                    <Wrapper key={`node-${i}`} {...animProps}>
                                         <SingleNode
                                             node={node}
                                             isHovered={hovered === nodeId}
@@ -78,7 +75,7 @@ const Treemap = <T extends object>(
                                             tooltipBody={props.tooltipBody}
                                             onNodeClicked={props.onNodeClicked}
                                         />
-                                    </motion.g>
+                                    </Wrapper>
                                 );
                             })
                     }

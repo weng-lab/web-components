@@ -1,6 +1,8 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
-import { TreemapNode } from "./types";
+import { AnimationType, TreemapNode } from "./types";
+import { easeOut, Transition } from "framer-motion";
 
+//get coords for label placement based on user input
 export function getLabelPlacement(
     node: HierarchyRectangularNode<TreemapNode<any>>,
     placement: string,
@@ -54,6 +56,7 @@ export function getLabelPlacement(
     }
 }
 
+//Check if text exceeds box
 export function measureTextWidth(text: string, fontSize: number, fontFamily: string) {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -62,6 +65,7 @@ export function measureTextWidth(text: string, fontSize: number, fontFamily: str
     return ctx.measureText(text).width;
 }
 
+//truncate text with ... to fit in box
 export function truncateTextToWidth(
   text: string,
   maxWidth: number,
@@ -82,3 +86,39 @@ export function truncateTextToWidth(
 
   return truncated + "…";
 }
+
+export const getAnimationProps = (type: AnimationType | undefined, index: number) => {
+    if (!type) return {};
+
+    const delay = index * 0.03;
+
+    // Reusable transition object, typed properly
+    const common: { transition: Transition } = {
+        transition: { duration: 0.4, delay, ease: easeOut },
+    };
+
+    switch (type) {
+        case "fade":
+            return { initial: { opacity: 0 }, animate: { opacity: 1 }, ...common };
+        case "scale":
+            return { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 }, ...common };
+        case "slideUp":
+            return { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, ...common };
+        case "slideRight":
+            return { initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, ...common };
+        case "pop":
+            const spring: Transition = {
+                type: "spring" as const,
+                stiffness: 150,
+                damping: 12,
+                delay,
+            };
+            return {
+                initial: { scale: 0 },
+                animate: { scale: 1 },
+                transition: spring,
+            };
+        default:
+            return {};
+    }
+};
