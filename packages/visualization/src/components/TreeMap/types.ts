@@ -17,7 +17,7 @@ export type TreemapNode<T> = {
 export type TreemapProps<T> = {
     data: TreemapNode<T>[];
     //styling types
-    style?: {
+    treemapStyle?: {
       /**
        * padding will apply to both inner and outer but
        * specifying inner/outer will override that specific padding

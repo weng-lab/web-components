@@ -39,7 +39,7 @@ function TestingPage() {
     <Box height={"700px"} width={"auto"} padding={0} sx={{position: "relative" }}>
       <Treemap 
         data={data}
-        style={{padding: 8, borderRadius: 5, paddingOuter: 1}}
+        treemapStyle={{padding: 8, borderRadius: 5, paddingOuter: 1}}
         labelPlacement='topLeft'
         tooltipBody={(node) => (
           <Box maxWidth={300}>

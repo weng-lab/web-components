@@ -1,5 +1,5 @@
 import { SingleNodeProps } from "./types";
-import ValueOval from "./valueOval";
+import ValueOval from "./tempValueOval";
 import { getLabelPlacement, truncateTextToWidth } from "./helpers";
 import { ReactNode, useCallback } from "react";
 import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";

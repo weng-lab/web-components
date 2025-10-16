@@ -2,7 +2,7 @@ import { useImperativeHandle, useRef, useState } from "react";
 import { Treemap as VisxTreemap, hierarchy, treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
 import { useParentSize } from "@visx/responsive";
-import SingleNode from "./singleNode";
+import SingleNode from "./tempSingleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
 import { motion } from "framer-motion";
 import { getAnimationProps } from "./helpers";
@@ -29,7 +29,7 @@ const Treemap = <T extends object>(
         treemapSliceDice,
     };
 
-    const style = props.style ?? {};
+    const style = props.treemapStyle ?? {};
 
     const paddingInner =
         style.paddingInner !== undefined

@@ -1,5 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import Treemap from './treeMap';
+import Treemap from './tempTreeMap';
 import { TreemapNode } from './types';
 import { Box } from '@mui/material';
 
@@ -59,7 +59,7 @@ export const Style: Story = {
     args: {
         data: data,
         labelPlacement: 'topLeft',
-        style: { padding: 8, borderRadius: 5, paddingOuter: 1 }
+        treemapStyle: { padding: 8, borderRadius: 5, paddingOuter: 1 }
     },
 };
 
@@ -67,7 +67,7 @@ export const TileMethod: Story = {
     args: {
         data: data,
         labelPlacement: 'topLeft',
-        style: { padding: 8, borderRadius: 5, paddingOuter: 1 },
+        treemapStyle: { padding: 8, borderRadius: 5, paddingOuter: 1 },
         tileMethod: "treemapSlice"
     },
 };
@@ -76,7 +76,7 @@ export const Tooltip: Story = {
     args: {
         data: data,
         labelPlacement: 'topLeft',
-        style: { padding: 8, borderRadius: 5, paddingOuter: 1 },
+        treemapStyle: { padding: 8, borderRadius: 5, paddingOuter: 1 },
         tooltipBody: (node) => (
             <Box maxWidth={300}>
                 <div><strong>Label:</strong> {node.label}</div>
@@ -90,7 +90,7 @@ export const Animation: Story = {
     args: {
         data: data,
         labelPlacement: 'topLeft',
-        style: { padding: 8, borderRadius: 5, paddingOuter: 1 },
+        treemapStyle: { padding: 8, borderRadius: 5, paddingOuter: 1 },
         animation: 'scale'
     },
 };

@@ -1,3 +1,3 @@
-import Treemap from "./treeMap"
+import Treemap from "./tempTreeMap"
 export { Treemap }
-export type { TreemapNode } from "./types"
+export type { TreemapNode, TreemapProps } from "./types"
