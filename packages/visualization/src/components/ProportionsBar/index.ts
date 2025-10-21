@@ -1,3 +1,3 @@
 export { ProportionsBar } from "./ProportionsBar";
-export { ProportionsBarProps } from "./types";
+export type { ProportionsBarProps } from "./types";
 export { getProportionsFromArray } from "./helpers";
