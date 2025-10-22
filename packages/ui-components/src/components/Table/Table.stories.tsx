@@ -200,7 +200,9 @@ export const OverrideToolbarProps: Story = {
     columns,
     rows,
     label: "Table Title",
-    slotProps: {toolbar: {csvOptions: {fileName: 'overrideFilename'}}}
+    slotProps: {toolbar: {csvOptions: {fileName: 'overrideFilename'}}},
+    toolbarStyle: {backgroundColor: "#e7eef8", padding: "12px 24px", opacity: 0.9},
+    toolbarIconColor: "#444"
   },
 };
 
