@@ -1,6 +1,6 @@
 {
   "name": "@weng-lab/ui-components",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "React MUI components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "clean": "rimraf dist",

@@ -64,14 +64,15 @@ type CustomToolbarProps = {
   downloadFileName: TableProps["downloadFileName"]
   labelTooltip: TableProps["labelTooltip"];
   toolbarSlot?: React.ReactNode;
+  toolbarStyle?: React.CSSProperties;
  } & GridToolbarProps & ToolbarPropsOverrides;
 
-export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSlot, ...restToolbarProps }: CustomToolbarProps) {
+export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, ...restToolbarProps }: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
   return (
-    <Toolbar>
+    <Toolbar style={{...toolbarStyle}}>
       {typeof label !== "string" && label }
       <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
         {typeof label === "string" && label}

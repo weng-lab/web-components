@@ -70,6 +70,10 @@ interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
    * If an element, renders the element to the right of the table label.
    */
   labelTooltip?: ReactNode
+  /**
+   * Styling object for the toolbar
+   */
+  toolbarStyle?: React.CSSProperties;
 }
 
 //This enforces that a downloadFileName is specified if a ReactElement is used as the label (no default )
