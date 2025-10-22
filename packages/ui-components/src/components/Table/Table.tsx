@@ -34,6 +34,7 @@ const Table = (props: TableProps) => {
     downloadFileName,
     toolbarSlot,
     toolbarStyle,
+    toolbarIconColor,
     ...restDataGridProps
   } = props;
 
@@ -43,7 +44,8 @@ const Table = (props: TableProps) => {
       downloadFileName,
       labelTooltip,
       toolbarSlot,
-      toolbarStyle
+      toolbarStyle,
+      toolbarIconColor
     };
     return (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />;
   }, [label, labelTooltip, toolbarSlot]);

@@ -1,5 +1,6 @@
 import { DataGridProProps } from "@mui/x-data-grid-pro";
 import { ReactElement, ReactNode } from "react"; 
+import { SvgIconOwnProps } from "@mui/material";
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
@@ -74,6 +75,10 @@ interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
    * Styling object for the toolbar
    */
   toolbarStyle?: React.CSSProperties;
+  /**
+   * Color passed as `htmlColor` to columns, filter, download and search icons
+   */
+  toolbarIconColor?: SvgIconOwnProps["htmlColor"]
 }
 
 //This enforces that a downloadFileName is specified if a ReactElement is used as the label (no default )
