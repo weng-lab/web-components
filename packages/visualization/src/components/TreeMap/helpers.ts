@@ -6,7 +6,8 @@ import { easeOut, Transition } from "framer-motion";
 export function getLabelPlacement(
     node: HierarchyRectangularNode<TreemapNode<any>>,
     placement: TreemapProps<any>["labelPlacement"],
-    showValue?: boolean
+    showValue?: boolean,
+    hasChildren?: boolean
 ) {
     const padding = 6;
     const cx = (node.x0 + node.x1) / 2;
@@ -17,8 +18,10 @@ export function getLabelPlacement(
             return {
                 textX: node.x0 + padding,
                 textY: node.y0 + 10,
-                valueY: node.y0 + 40,
-                anchor: "start",
+                valueY: hasChildren ? node.y0 + 17 : node.y0 + 40,
+                valueX: hasChildren ? node.x1 - padding : node.x0 + padding,
+                textAnchor: "start",
+                valueAnchor: hasChildren ? "end" : "start",
                 baseline: "hanging",
             };
         case "topRight":
@@ -26,7 +29,9 @@ export function getLabelPlacement(
                 textX: node.x1 - padding,
                 textY: node.y0 + 10,
                 valueY: node.y0 + 40,
-                anchor: "end",
+                valueX: node.x1 - padding,
+                textAnchor: "end",
+                valueAnchor: "end",
                 baseline: "hanging",
             };
         case "bottomLeft":
@@ -34,7 +39,9 @@ export function getLabelPlacement(
                 textX: node.x0 + padding,
                 textY: showValue ? node.y1 - 35 : node.y1 - 15 ,
                 valueY: node.y1 - 15,
-                anchor: "start",
+                valueX: node.x0 + padding,
+                textAnchor: "start",
+                valueAnchor: "start",
                 baseline: "baseline",
             };
         case "bottomRight":
@@ -42,7 +49,9 @@ export function getLabelPlacement(
                 textX: node.x1 - padding,
                 textY: showValue ? node.y1 - 35 : node.y1 - 15,
                 valueY: node.y1 - 15,
-                anchor: "end",
+                valueX: node.x1 - padding,
+                textAnchor: "end",
+                valueAnchor: "end",
                 baseline: "baseline",
             };
         case "middle":
@@ -51,7 +60,9 @@ export function getLabelPlacement(
                 textX: cx,
                 textY: showValue ? cy - 5 : cy + 5,
                 valueY: cy + 15,
-                anchor: "middle",
+                valueX: cx,
+                textAnchor: "middle",
+                valueAnchor: "middle",
                 baseline: "middle",
             };
     }

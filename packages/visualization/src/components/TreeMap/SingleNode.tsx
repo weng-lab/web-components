@@ -8,9 +8,15 @@ import React from "react";
 const SingleNode = <T,>(
     props: SingleNodeProps<T>
 ) => {
+    const isChild = props.node.parent !== undefined && props.node.parent?.data.label !== "root";
+    const hasChildren = props.node.children !== undefined && props.node.children.length > 0;
+
     const fontSize = props.fontSize
-    const nodeColor = props.node.data.color || "black";
-    const stroke = props.isHovered ? props.strokeWidth + 2 : props.strokeWidth;
+    const nodeColor = isChild ? props.node.parent?.data.style?.color || "black" : props.node.data.style?.color || "black";
+    const labelColor = props.node.data.style?.labelColor || nodeColor;
+    const nodeStrokeColor = props.node.data.style?.strokeColor || nodeColor;
+    const nodeStroke = props.node.data.style?.strokeWidth === 0 ? 0 : props.node.data.style?.strokeWidth || props.strokeWidth;
+    const stroke = props.isHovered ? nodeStroke + 2 : nodeStroke;
 
     const width = props.node.x1 - props.node.x0;
     const height = props.node.y1 - props.node.y0;
@@ -20,10 +26,11 @@ const SingleNode = <T,>(
     const showValue = height > 55 && width > 50;
     const showText = height > 20;
 
-    const { textX, textY, anchor, baseline, valueY } = getLabelPlacement(
+    const { textX, textY, textAnchor, valueAnchor, baseline, valueY, valueX } = getLabelPlacement(
         props.node,
         props.labelPlacement,
-        showValue
+        showValue,
+        hasChildren
     );
 
     const {
@@ -74,7 +81,7 @@ const SingleNode = <T,>(
                     height={height}
                     fill={nodeColor}
                     fillOpacity={0.3}
-                    stroke={nodeColor}
+                    stroke={nodeStrokeColor}
                     strokeWidth={stroke}
                     rx={props.borderRadius}
                 />
@@ -82,9 +89,9 @@ const SingleNode = <T,>(
                     <text
                         x={textX}
                         y={textY}
-                        textAnchor={anchor}
+                        textAnchor={textAnchor}
                         dominantBaseline={baseline}
-                        fill={nodeColor}
+                        fill={labelColor}
                         fontSize={props.fontSize}
                         fontWeight={500}
                     >
@@ -93,11 +100,11 @@ const SingleNode = <T,>(
                 )}
                 {showValue && (
                     <ValueOval
-                        cx={textX}
+                        cx={valueX}
                         cy={valueY}
-                        color={nodeColor}
+                        color={labelColor}
                         value={props.node.data.value}
-                        align={anchor}
+                        align={valueAnchor}
                     />
                 )}
             </g>

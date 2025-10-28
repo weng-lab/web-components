@@ -30,22 +30,22 @@ type MyMetadata = {
 };
 
 const data: TreemapNode<MyMetadata>[] = [
-    { label: "Other Measurment", value: 2764, color: "#046798" },
-    { label: "Hematological measurement", value: 11555, color: "#398e80" },
-    { label: "lipid or lipoprotein measurement", value: 4772, color: "#699123" },
-    { label: "Body weights and measures", value: 3984, color: "#0288c9" },
-    { label: "Other diseases", value: 3004, color: "#7f79b4" },
-    { label: "Other traits", value: 2822, color: "#f75745" },
-    { label: "Other traits", value: 2822, color: "#f75745" },
-    { label: "Cancer", value: 2713, color: "#a760aa" },
-    { label: "Biological process", value: 2523, color: "#7f79b4" },
-    { label: "Cardiovascular disease", value: 1607, color: "#b13434" },
-    { label: "Imuune system disease", value: 2380, color: "#a79100" },
-    { label: "Biological process", value: 2523, color: "#7f79b4" },
-    { label: "Biological process", value: 2523, color: "#7f79b4" },
-    { label: "Biological process", value: 2523, color: "#7f79b4" },
-    { label: "Lorem ipsum", value: 2523, color: "#7f79b4" },
-    { label: "Respitory", value: 446, color: "#7f79b4" },
+    { label: "Other Measurment", value: 2764, style: {color: "#046798"} },
+    { label: "Hematological measurement", value: 11555, style: {color: "#398e80"} },
+    { label: "lipid or lipoprotein measurement", value: 4772, style: {color: "#699123"} },
+    { label: "Body weights and measures", value: 3984, style: {color: "#0288c9"} },
+    { label: "Other diseases", value: 3004, style: {color: "#7f79b4"} },
+    { label: "Other traits", value: 2822, style: {color: "#f75745"} },
+    { label: "Other traits", value: 2822, style: {color: "#f75745"} },
+    { label: "Cancer", value: 2713, style: {color: "#a760aa"} },
+    { label: "Biological process", value: 2523, style: {color: "#7f79b4"} },
+    { label: "Cardiovascular disease", value: 1607, style: {color: "#b13434"} },
+    { label: "Imuune system disease", value: 2380, style: {color: "#a79100"} },
+    { label: "Biological process", value: 2523, style: {color: "#7f79b4"} },
+    { label: "Biological process", value: 2523, style: {color: "#7f79b4"} },
+    { label: "Biological process", value: 2523, style: {color: "#7f79b4"} },
+    { label: "Lorem ipsum", value: 2523, style: {color: "#7f79b4"} },
+    { label: "Respitory", value: 446, style: {color: "#7f79b4"} },
 ];
 
 // Default story
