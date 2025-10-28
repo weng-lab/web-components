@@ -9,8 +9,11 @@ const SingleNode = <T,>(
     props: SingleNodeProps<T>
 ) => {
     const fontSize = props.fontSize
-    const nodeColor = props.node.data.color || "black";
-    const stroke = props.isHovered ? props.strokeWidth + 2 : props.strokeWidth;
+    const nodeColor = props.node.data.style?.color || "black";
+    const labelColor = props.node.data.style?.labelColor || nodeColor;
+    const nodeStrokeColor = props.node.data.style?.strokeColor || nodeColor;
+    const nodeStroke = props.node.data.style?.strokeWidth === 0 ? 0 : props.node.data.style?.strokeWidth || props.strokeWidth;
+    const stroke = props.isHovered ? nodeStroke + 2 : nodeStroke;
 
     const width = props.node.x1 - props.node.x0;
     const height = props.node.y1 - props.node.y0;
@@ -74,7 +77,7 @@ const SingleNode = <T,>(
                     height={height}
                     fill={nodeColor}
                     fillOpacity={0.3}
-                    stroke={nodeColor}
+                    stroke={nodeStrokeColor}
                     strokeWidth={stroke}
                     rx={props.borderRadius}
                 />
@@ -84,7 +87,7 @@ const SingleNode = <T,>(
                         y={textY}
                         textAnchor={anchor}
                         dominantBaseline={baseline}
-                        fill={nodeColor}
+                        fill={labelColor}
                         fontSize={props.fontSize}
                         fontWeight={500}
                     >
@@ -95,7 +98,7 @@ const SingleNode = <T,>(
                     <ValueOval
                         cx={textX}
                         cy={valueY}
-                        color={nodeColor}
+                        color={labelColor}
                         value={props.node.data.value}
                         align={anchor}
                     />

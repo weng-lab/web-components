@@ -9,14 +9,22 @@ export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
 export type TreemapNode<T> = {
   label: string;
   value: number;
-  color?: string;
   children?: TreemapNode<T>[];
+  // styling types applied only to this specific node
+  style?: {
+    color?: string;
+    // Defaults to color if not provided
+    labelColor?: string;
+    //defaults to treemapStyle stroke width if not provided
+    strokeWidth?: number;
+    strokeColor?: string;
+  }
   metaData?: T;
 }
 
 export type TreemapProps<T> = {
     data: TreemapNode<T>[];
-    //styling types
+    //styling types applied to all nodes in the treemap
     treemapStyle?: {
       /**
        * padding will apply to both inner and outer but
