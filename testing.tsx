@@ -15,23 +15,21 @@ function TestingPage() {
   };
 
   const data: TreemapNode<MyMetadata>[] = [
-  { label: "Other Measurment", value: 2764, style: { color: "#046798", strokeWidth: 0} },
-  { label: "Hematological measurement", value: 11555, style: { color: "#398e80"} },
-  { label: "lipid or lipoprotein measurement", value: 4772, style: { color: "#699123"} },
-  { label: "Body weights and measures", value: 3984, style: { color: "#0288c9"} },
-  { label: "Other diseases", value: 3004, style: { color: "#7f79b4"} },
-  { label: "Other traits", value: 2822, style: { color: "#f75745"} },
-  { label: "Other traits", value: 2822, style: { color: "#f75745"} },
-  { label: "Cancer", value: 2713, style: { color: "#a760aa"} },
-  { label: "Biological process", value: 2523, style: { color: "#7f79b4"} },
-  { label: "Cardiovascular disease", value: 1607, style: { color: "#b13434"} },
-  { label: "Imuune system disease", value: 2380, style: { color: "#a79100"} },
-  { label: "Biological process", value: 2523, style: { color: "#7f79b4"} },
-  { label: "Biological process", value: 2523, style: { color: "#7f79b4"} },
-  { label: "Biological process", value: 2523, style: { color: "#7f79b4"} },
-  { label: "Lorem ipsum", value: 2523, style: { color: "#7f79b4"} },
-  { label: "Respitory", value: 446, style: { color: "#7f79b4"} },
-];
+    {
+      label: "Cancer", value: 1000, style: { color: "#046798" },
+      children: [
+        { label: "Lung Cancer", value: 100,
+         },
+        { label: "Breast Cancer", value: 200},
+        { label: "Lung Cancer", value: 200 },
+        { label: "Breast Cancer", value: 300},
+        { label: "Lung Cancer", value: 200 },
+      ]
+    },
+    {
+      label: "Cardiovascular Disease", value: 200, style: { color: "#398e80" },
+    }
+  ];
 
   const ref = useRef<DownloadPlotHandle>(null)
 
@@ -40,13 +38,13 @@ function TestingPage() {
       <Treemap 
         data={data}
         treemapStyle={{padding: 8, borderRadius: 5, paddingOuter: 1, strokeWidth: 2}}
-        labelPlacement='topLeft'
         tooltipBody={(node) => (
           <Box maxWidth={300}>
             <div><strong>Label:</strong> {node.label}</div>
             <div><strong>Value:</strong> {node.value}</div>
           </Box>
         )}
+        animation='slideRight'
         ref={ref}
       />
       <Button onClick={() => ref.current?.downloadSVG()}>Download</Button>

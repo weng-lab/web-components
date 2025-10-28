@@ -8,8 +8,11 @@ import React from "react";
 const SingleNode = <T,>(
     props: SingleNodeProps<T>
 ) => {
+    const isChild = props.node.parent !== undefined && props.node.parent?.data.label !== "root";
+    const hasChildren = props.node.children !== undefined && props.node.children.length > 0;
+
     const fontSize = props.fontSize
-    const nodeColor = props.node.data.style?.color || "black";
+    const nodeColor = isChild ? props.node.parent?.data.style?.color || "black" : props.node.data.style?.color || "black";
     const labelColor = props.node.data.style?.labelColor || nodeColor;
     const nodeStrokeColor = props.node.data.style?.strokeColor || nodeColor;
     const nodeStroke = props.node.data.style?.strokeWidth === 0 ? 0 : props.node.data.style?.strokeWidth || props.strokeWidth;
@@ -23,10 +26,11 @@ const SingleNode = <T,>(
     const showValue = height > 55 && width > 50;
     const showText = height > 20;
 
-    const { textX, textY, anchor, baseline, valueY } = getLabelPlacement(
+    const { textX, textY, textAnchor, valueAnchor, baseline, valueY, valueX } = getLabelPlacement(
         props.node,
         props.labelPlacement,
-        showValue
+        showValue,
+        hasChildren
     );
 
     const {
@@ -85,7 +89,7 @@ const SingleNode = <T,>(
                     <text
                         x={textX}
                         y={textY}
-                        textAnchor={anchor}
+                        textAnchor={textAnchor}
                         dominantBaseline={baseline}
                         fill={labelColor}
                         fontSize={props.fontSize}
@@ -96,11 +100,11 @@ const SingleNode = <T,>(
                 )}
                 {showValue && (
                     <ValueOval
-                        cx={textX}
+                        cx={valueX}
                         cy={valueY}
                         color={labelColor}
                         value={props.node.data.value}
-                        align={anchor}
+                        align={valueAnchor}
                     />
                 )}
             </g>
