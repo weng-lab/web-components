@@ -112,15 +112,19 @@ export const CCRE_AUTOCOMPLETE_QUERY = `
 `;
 
 export const GWAS_AUTOCOMPLETE_QUERY = `
-query getGWASStudies($studyname_prefix: [String]){  
-  getAllGwasStudies(studyname_prefix: $studyname_prefix)  
-  {    
-    study
-    studyname
-    totalldblocks
-    pubmedid
-    author
-  }
+query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [String], $parent_terms: [String]){  
+    getGWASStudiesMetadata(studyid: $studyid, limit: $limit, parent_terms: $parent_terms, studyname_prefix: $studyname_prefix )  
+    {        
+        studyid
+        author
+        disease_trait
+        has_enrichment_info
+        population
+        parent_terms        
+        total_ld_blocks
+        ld_blocks_overlapping_ccres
+        overlapping_ccres
+    }
 }
 `
 
@@ -272,6 +276,7 @@ export const getStudys = async (
       query: GWAS_AUTOCOMPLETE_QUERY,
       variables: {
         studyname_prefix: [value],
+        limit
       },
     }),
     headers: { "Content-Type": "application/json" },
