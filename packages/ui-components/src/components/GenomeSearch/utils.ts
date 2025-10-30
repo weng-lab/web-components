@@ -115,10 +115,10 @@ export function studyResultList(
   limit: number
 ): Result[] {
   return results.slice(0, limit).map((result) => ({
-    title: result.studyname,
-    description: `${result.author.replace("_", " ")}.\n${result.pubmedid}`,
+    title: result.disease_trait,
+    description: `${result.author.replace("_", " ")} (${result.studyid.split("-")[1]})\n${result.parent_terms.join(",")}\n ${result.has_enrichment_info ?"Biosample Enrichment" : ""}`,
     domain: undefined,
-    id: result.study,
+    id: result.studyid,
     type: "Study",
   }));
 }

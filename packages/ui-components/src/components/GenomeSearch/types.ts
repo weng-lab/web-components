@@ -97,9 +97,12 @@ export interface CCREResponse {
 
 // Response from the GWAS GraphQL query
 export interface StudyResponse {
-  study: string
-  studyname: string
+  disease_trait: string
+  studyid: string
+  population: string
+  parent_terms: string[]
+  has_enrichment_info: boolean
   author: string
   pubmedid: string
-  totalldblocks: number
+  total_ld_blocks: number
 }
