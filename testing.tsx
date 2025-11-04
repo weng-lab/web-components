@@ -78,13 +78,19 @@ function TestingPage() {
   }));
 
   return (
-    <Box height={"500px"} width={"500px"} padding={0} sx={{position: "relative" }}>
+    <Box height={"700px"} width={"700px"} padding={0} sx={{position: "relative" }}>
       <Heatmap 
         data={heatmapData}
-        xLabel='really really really really really really long xlabel that needs to break properly'
-        yLabel='really really really really really really long ylabel that needs to break properly where its supposed to'
-        title='title'
+        onHover={(hovered) => console.log("hovered:", hovered)}
+        xLabel='xlabel'
+        yLabel='ylabel'
         isRect={true}
+        tooltipBody={(row, column, bin) => (
+        <Box maxWidth={300}>
+          <div><strong>Row:</strong> {row}</div>
+          <div><strong>Column:</strong> {column}</div>
+          <div><strong>Bin:</strong> {bin}</div>
+        </Box>)}
         onClick={(row, column, bin) => { alert(JSON.stringify({ row, column, bin })); }}
         color1="#122549"
         color2="#6daedb"

@@ -1,3 +1,6 @@
+import { ReactElement } from "react";
+import { DownloadPlotHandle } from "../../utility";
+
 /*
 Example data format:
 [
@@ -28,13 +31,16 @@ export type ColumnDatum = {
 
 export type HeatmapProps = {
     data: ColumnDatum[];
-    onClick: (row: number, column: number, count: string) => void;
+    onClick?: (row: number, column: number, count: string) => void;
+    onHover: (hovered: boolean) => void;
+    ref?: React.Ref<DownloadPlotHandle>;
+    downloadFileName?: string;
     color1: string; // start color for gradient
     color2: string; // end color for gradient
     xLabel?: string;
     yLabel?: string;
-    title?: string;
-    gap?: number; // gap between cells, defaults to 0
+    tooltipBody?: (row: number, column: number, count: string) => ReactElement;
+    gap?: number; // gap between cells
     isRect?: boolean; // controls whether to use rectangles or circles, defaults to rectangles
     margin?: { top: number; right: number; bottom: number; left: number };
     separation?: number;
