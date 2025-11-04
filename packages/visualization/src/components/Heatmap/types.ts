@@ -35,9 +35,21 @@ export type HeatmapProps = {
     onHover: (hovered: boolean) => void;
     ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
-    color1: string; // start color for gradient
-    color2: string; // end color for gradient
+    /**
+   * Start color for gradient
+   */
+    color1: string;
+    /**
+   * End color for gradient
+   */
+    color2: string; 
+    /**
+   * X-axis Title
+   */
     xLabel?: string;
+    /**
+   * Y-axis Title
+   */
     yLabel?: string;
     tooltipBody?: (row: number, column: number, count: string) => ReactElement;
     gap?: number; // gap between cells

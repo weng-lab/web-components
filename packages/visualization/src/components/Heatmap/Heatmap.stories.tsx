@@ -54,8 +54,10 @@ export const Default: Story = {
         <Box maxWidth={300}>
           <div><strong>Row:</strong> {row}</div>
           <div><strong>Column:</strong> {column}</div>
-          <div><strong>Bin:</strong> {bin}</div>
+          <div><strong>Value:</strong> {bin}</div>
         </Box>),
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
         color1: '#122549',
         color2: '#6daedb',
     },

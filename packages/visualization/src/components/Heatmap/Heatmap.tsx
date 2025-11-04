@@ -86,6 +86,7 @@ const Heatmap = (props: HeatmapProps) => {
     const maxRowNameLength = allRowNames.reduce((max, name) => Math.max(max, name.length), 0);
 
     // bounds for display
+    // the constants for the left and bottom margins really only work for font size of 12 to fit the axis labels in the svg....so maybe need to think of a more dynamic solution
     const defaultMargin = { top: 20, left: maxRowNameLength * 8 + 40, right: 10, bottom: maxColNameLength * 8 + 70};
     const defaultGap = 2;
     const margin = props.margin ?? defaultMargin;
@@ -143,8 +144,8 @@ const Heatmap = (props: HeatmapProps) => {
                                             setHoveredCell(null);
                                             hideTooltip?.();
                                         }}
-                                        onMouseMove={handleMouseMove(bin.row, bin.column, JSON.stringify(bin.bin))}
-                                        onClick={() => handleClick(bin.row, bin.column, JSON.stringify(bin.bin))}
+                                        onMouseMove={handleMouseMove(bin.row, bin.column,  bin.bin.count.toString())}
+                                        onClick={() => handleClick(bin.row, bin.column, bin.bin.count.toString())}
                                         style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
                                     >
                                         <rect
@@ -183,8 +184,8 @@ const Heatmap = (props: HeatmapProps) => {
                                                 props.onHover(false);
                                                 hideTooltip?.();
                                             }}
-                                            onMouseMove={handleMouseMove(bin.row, bin.column, JSON.stringify(bin.bin))}
-                                            onClick={() => handleClick(bin.row, bin.column, JSON.stringify(bin.bin))}
+                                            onMouseMove={handleMouseMove(bin.row, bin.column,  bin.bin.count.toString())}
+                                            onClick={() => handleClick(bin.row, bin.column,  bin.bin.count.toString())}
                                             style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
                                         >
                                             <circle
@@ -222,7 +223,7 @@ const Heatmap = (props: HeatmapProps) => {
                                 angle: -90,
                                 dy: "0.25em",
                             })}
-                            label={props.yLabel ?? ""}
+                            label={props.xLabel ?? ""}
                             labelOffset={maxColNameLength * 8}
                             labelProps={{
                                 fontSize: 14,
@@ -247,7 +248,7 @@ const Heatmap = (props: HeatmapProps) => {
                                 dx: "-0.25em",
                                 dy: "0.25em",
                             })}
-                            label={props.xLabel ?? ""}
+                            label={props.yLabel ?? ""}
                             labelOffset={maxRowNameLength * 8}
                             labelProps={{
                                 fontSize: 14,
@@ -261,7 +262,7 @@ const Heatmap = (props: HeatmapProps) => {
                             <TooltipWithBounds left={(tooltipLeft ?? 0) + 10} top={tooltipTop}>
                                 {tooltipData}
                             </TooltipWithBounds>
-                            </Portal>
+                        </Portal>
                     )}
                 </svg>
             </div>
