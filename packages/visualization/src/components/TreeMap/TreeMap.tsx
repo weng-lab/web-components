@@ -63,10 +63,37 @@ const Treemap = <T extends object>(
                     size={[parentWidth, parentHeight]}
                     paddingInner={paddingInner}
                     paddingOuter={paddingOuter}
-                    tile={tileMethods[props.tileMethod ?? "treemapResquarify"]}
+                    tile={tileMethods[props.tileMethod ?? "treemapBinary"]}
                 >
-                    {(treemap) =>
-                        treemap
+                    {(treemap) => {
+                        const spacerSize = style.fontSize ? style.fontSize * 2 : 32;
+
+                        // Helper: remap children Y coordinates so they occupy [parentY0+H, parentY1]
+                        const applyTopSpacer = (node: any) => {
+                            if (!node.children || node.children.length === 0) return;
+                            const parentY0 = node.y0;
+                            const parentY1 = node.y1;
+                            const parentHeight = parentY1 - parentY0;
+
+                            // If parent is too short, skip to avoid negative sizes
+                            if (parentHeight <= spacerSize + 1) return;
+
+                            const scale = (parentHeight - spacerSize) / parentHeight;
+
+                            node.children.forEach((child: any) => {
+                                // map child's Y range from [parentY0,parentY1] -> [parentY0+H, parentY1]
+                                child.y0 = parentY0 + spacerSize + (child.y0 - parentY0) * scale;
+                                child.y1 = parentY0 + spacerSize + (child.y1 - parentY0) * scale;
+                            });
+
+                            // Recurse to deeper levels
+                            node.children.forEach(applyTopSpacer);
+                        };
+
+                        // Apply spacer starting from root's children (skip artificial root if depth 0)
+                        if (treemap.children) treemap.children.forEach(applyTopSpacer);
+
+                        return treemap
                             .descendants()
                             .filter((n) => n.depth > 0)
                             .map((node, i) => {
@@ -81,16 +108,17 @@ const Treemap = <T extends object>(
                                             isHovered={hovered === nodeId}
                                             onHover={(hover) => setHovered(hover ? nodeId : null)}
                                             strokeWidth={style.strokeWidth ?? 0}
+                                            opacity={style.opacity ?? .3}
                                             borderRadius={style.borderRadius ?? 0}
                                             fontSize={style.fontSize ?? 16}
-                                            labelPlacement={props.labelPlacement ?? "middle"}
+                                            labelPlacement={props.labelPlacement ?? "topLeft"}
                                             tooltipBody={props.tooltipBody}
                                             onNodeClicked={props.onNodeClicked}
                                         />
                                     </Wrapper>
                                 );
-                            })
-                    }
+                            });
+                    }}
                 </VisxTreemap>
             </svg>
         </div>

@@ -151,7 +151,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         resultsList.push(...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit || 3));
       }
       if (studyData && searchStudy) {
-      resultsList.push(...studyResultList(studyData.data.getAllGwasStudies, geneLimit || 3));
+      resultsList.push(...studyResultList(studyData.data.getGWASStudiesMetadata, geneLimit || 3));
     }
     } else {
       if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {

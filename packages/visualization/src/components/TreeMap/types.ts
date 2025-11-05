@@ -9,14 +9,22 @@ export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
 export type TreemapNode<T> = {
   label: string;
   value: number;
-  color?: string;
   children?: TreemapNode<T>[];
+  // styling types applied only to this specific node
+  style?: {
+    color?: string;
+    // Defaults to color if not provided
+    labelColor?: string;
+    //defaults to treemapStyle stroke width if not provided
+    strokeWidth?: number;
+    strokeColor?: string;
+  }
   metaData?: T;
 }
 
 export type TreemapProps<T> = {
     data: TreemapNode<T>[];
-    //styling types
+    //styling types applied to all nodes in the treemap
     treemapStyle?: {
       /**
        * padding will apply to both inner and outer but
@@ -28,6 +36,7 @@ export type TreemapProps<T> = {
       borderRadius?: number;
       strokeWidth?: number;
       fontSize?: number;
+      opacity?: number;
     }
     /**
      * Visx has a few built in tiling methods that can be changed here
@@ -46,6 +55,7 @@ export type SingleNodeProps<T> = {
     isHovered: boolean;
     onHover: (hovered: boolean) => void;
     strokeWidth: number;
+    opacity: number;
     borderRadius: number;
     fontSize: number;
     labelPlacement: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";

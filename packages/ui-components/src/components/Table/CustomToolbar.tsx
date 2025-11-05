@@ -61,17 +61,22 @@ const StyledTextField = styled(TextField)<{
 
 type CustomToolbarProps = {
   label: TableProps["label"];
-  downloadFileName: TableProps["downloadFileName"]
+  downloadFileName: TableProps["downloadFileName"];
   labelTooltip: TableProps["labelTooltip"];
-  toolbarSlot?: React.ReactNode;
- } & GridToolbarProps & ToolbarPropsOverrides;
+  toolbarSlot?: TableProps["toolbarSlot"];
+  toolbarStyle?: TableProps["toolbarStyle"];
+  toolbarIconColor?: TableProps["toolbarIconColor"];
+} & GridToolbarProps &
+  ToolbarPropsOverrides;
 
-export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSlot, ...restToolbarProps }: CustomToolbarProps) {
+export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, toolbarIconColor, ...restToolbarProps }: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
+  const iconColor = toolbarIconColor ?? "inherit"
+
   return (
-    <Toolbar>
+    <Toolbar style={{...toolbarStyle}}>
       {typeof label !== "string" && label }
       <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
         {typeof label === "string" && label}
@@ -93,7 +98,7 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
 
       <Tooltip title="Columns">
         <ColumnsPanelTrigger render={<ToolbarButton />}>
-          <ViewColumnIcon fontSize="small" />
+          <ViewColumnIcon fontSize="small" htmlColor={iconColor} />
         </ColumnsPanelTrigger>
       </Tooltip>
 
@@ -102,7 +107,7 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
           render={(props, state) => (
             <ToolbarButton {...props} color="default">
               <Badge badgeContent={state.filterCount} color="primary" variant="dot">
-                <FilterListIcon fontSize="small" />
+                <FilterListIcon fontSize="small" htmlColor={iconColor} />
               </Badge>
             </ToolbarButton>
           )}
@@ -118,7 +123,7 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
           aria-expanded={exportMenuOpen ? "true" : undefined}
           onClick={() => setExportMenuOpen(true)}
         >
-          <FileDownloadIcon fontSize="small" />
+          <FileDownloadIcon fontSize="small" htmlColor={iconColor} />
         </ToolbarButton>
       </Tooltip>
 
@@ -153,7 +158,7 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
                 color="default"
                 aria-disabled={state.expanded}
               >
-                <SearchIcon fontSize="small" />
+                <SearchIcon fontSize="small" htmlColor={iconColor} />
               </StyledToolbarButton>
             </Tooltip>
           )}

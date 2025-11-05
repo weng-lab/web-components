@@ -14,3 +14,6 @@ export { Treemap } from './components/TreeMap'
 export type { TreemapNode, TreemapProps } from './components/TreeMap'
 
 export type { DownloadPlotHandle } from './utility'
+
+export { ProportionsBar, getProportionsFromArray } from './components/ProportionsBar';
+export type {ProportionsBarProps} from './components/ProportionsBar'
