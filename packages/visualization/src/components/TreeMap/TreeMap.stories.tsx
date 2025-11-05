@@ -85,3 +85,12 @@ export const Tooltip: Story = {
         ),
     },
 };
+
+export const Animation: Story = {
+    args: {
+        data: data,
+        labelPlacement: 'topLeft',
+        treemapStyle: { padding: 8, borderRadius: 5, paddingOuter: 1 },
+        animation: 'scale'
+    },
+};
