@@ -32,7 +32,6 @@ export type ColumnDatum = {
 export type HeatmapProps = {
     data: ColumnDatum[];
     onClick?: (row: number, column: number, count: string) => void;
-    onHover: (hovered: boolean) => void;
     ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
     /**
@@ -43,17 +42,10 @@ export type HeatmapProps = {
    * End color for gradient
    */
     color2: string; 
-    /**
-   * X-axis Title
-   */
     xLabel?: string;
-    /**
-   * Y-axis Title
-   */
     yLabel?: string;
     tooltipBody?: (row: number, column: number, count: string) => ReactElement;
-    gap?: number; // gap between cells
-    isRect?: boolean; // controls whether to use rectangles or circles, defaults to rectangles
+    gap?: number; 
+    isRect?: boolean;
     margin?: { top: number; right: number; bottom: number; left: number };
-    separation?: number;
 }

@@ -78,13 +78,11 @@ function TestingPage() {
   }));
 
   return (
-    <Box height={"700px"} width={"700px"} padding={0} sx={{position: "relative" }}>
+    <Box height={"800px"} width={"1400px"} padding={0} sx={{position: "relative" }}>
       <Heatmap 
         data={heatmapData}
-        onHover={(hovered) => console.log("hovered:", hovered)}
         xLabel='xlabel'
         yLabel='ylabel'
-        isRect={true}
         tooltipBody={(row, column, bin) => (
         <Box maxWidth={300}>
           <div><strong>Row:</strong> {row}</div>

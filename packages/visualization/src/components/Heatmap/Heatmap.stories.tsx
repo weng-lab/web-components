@@ -44,12 +44,10 @@ function randomString(maxLength: number) {
   })),
 }));
 
-// Default story
 export const Default: Story = {
     args: {
         data: heatmapData,
         onClick: (row, column, bin) => { alert(JSON.stringify({ row, column, bin })); },
-        onHover: (hovered) => 0,
         tooltipBody: (row, column, bin) => (
         <Box maxWidth={300}>
           <div><strong>Row:</strong> {row}</div>

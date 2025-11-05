@@ -33,8 +33,8 @@ const Heatmap = (props: HeatmapProps) => {
             const tooltipContent = props.tooltipBody(row, column, count);
             
             showTooltip({
-                tooltipLeft: event.clientX + 10,
-                tooltipTop: event.clientY + 10,
+                tooltipLeft: event.pageX + 10,
+                tooltipTop: event.pageY + 10,
                 tooltipData: tooltipContent,
             });
         },
@@ -119,11 +119,11 @@ const Heatmap = (props: HeatmapProps) => {
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth} height={parentHeight}>
                 <g transform={`translate(${margin.left},${margin.top})`}>
-                    {props.isRect ? (
+                    {(props.isRect ?? true) ? (
                         <HeatmapRect
                                 data={props.data}
-                                xScale={(d) => xScale(d) ?? 0}
-                                yScale={(d) => yScale(d) ?? 0}
+                                xScale={(d) => xScale(d)}
+                                yScale={(d) => yScale(d)}
                                 colorScale={colorScale}
                                 opacityScale={opacityScale}
                                 binWidth={binWidth}
@@ -136,11 +136,9 @@ const Heatmap = (props: HeatmapProps) => {
                                 heatmapBins.map((bin) => (
                                     <g 
                                         onMouseEnter={() => {
-                                            props.onHover(true);
                                             setHoveredCell({ row: bin.row, column: bin.column })
                                         }}
                                         onMouseLeave={() => {
-                                            props.onHover(false);
                                             setHoveredCell(null);
                                             hideTooltip?.();
                                         }}
@@ -167,8 +165,8 @@ const Heatmap = (props: HeatmapProps) => {
                             ) : (
                                 <HeatmapCircle
                                     data={props.data}
-                                    xScale={(d) => xScale(d) ?? 0}
-                                    yScale={(d) => yScale(d) ?? 0}
+                                    xScale={(d) => xScale(d)}
+                                    yScale={(d) => yScale(d)}
                                     colorScale={colorScale}
                                     opacityScale={opacityScale}
                                     radius={radius}
@@ -177,34 +175,36 @@ const Heatmap = (props: HeatmapProps) => {
                                 >
                                 {(heatmap) =>
                                     heatmap.map((heatmapBins) =>
-                                    heatmapBins.map((bin) => (
-                                        <g 
-                                            onMouseEnter={() => props.onHover(true)}
-                                            onMouseLeave={() => {
-                                                props.onHover(false);
-                                                hideTooltip?.();
-                                            }}
-                                            onMouseMove={handleMouseMove(bin.row, bin.column,  bin.bin.count.toString())}
-                                            onClick={() => handleClick(bin.row, bin.column,  bin.bin.count.toString())}
-                                            style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
-                                        >
-                                            <circle
-                                                key={`heatmap-circle-${bin.row}-${bin.column}`}
-                                                className="visx-heatmap-circle"
-                                                cx={bin.cx}
-                                                cy={bin.cy}
-                                                r={bin.r}
-                                                fill={bin.color}
-                                                fillOpacity={bin.opacity}
-                                                onClick={ () => handleClick(bin.row, bin.column, JSON.stringify(bin.bin)) }
-                                                stroke={hoveredCell?.row === bin.row && hoveredCell?.column === bin.column ? bin.color : "none"}
-                                                strokeWidth={hoveredCell?.row === bin.row && hoveredCell?.column === bin.column ? 2 : 0}
-                                                style={{ cursor: "pointer" }}
-                                            />
-                                        </g>
-                                    ))
-                                    )
-                                }
+                                        heatmapBins.map((bin) => {
+                                            const centerX = bin.column * binWidth + binWidth / 2;
+                                            return (
+                                                <g
+                                                    key={`heatmap-group-${bin.row}-${bin.column}`}
+                                                    onMouseEnter={() => setHoveredCell({ row: bin.row, column: bin.column })}
+                                                    onMouseLeave={() => {
+                                                        setHoveredCell(null);
+                                                        hideTooltip?.();
+                                                    }}
+                                                    onMouseMove={handleMouseMove(bin.row, bin.column, bin.bin.count.toString())}
+                                                    onClick={() => handleClick(bin.row, bin.column, bin.bin.count.toString())}
+                                                    style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
+                                                >
+                                                    <circle
+                                                        className="visx-heatmap-circle"
+                                                        cx={centerX}
+                                                        cy={bin.cy}
+                                                        r={bin.r}
+                                                        fill={bin.color}
+                                                        fillOpacity={bin.opacity}
+                                                        onClick={() => handleClick(bin.row, bin.column, bin.bin.count.toString())}
+                                                        stroke={hoveredCell?.row === bin.row && hoveredCell?.column === bin.column ? bin.color : "none"}
+                                                        strokeWidth={hoveredCell?.row === bin.row && hoveredCell?.column === bin.column ? 2 : 0}
+                                                        style={{ cursor: "pointer" }}
+                                                    />
+                                                </g>
+                                            );
+                                        })
+                                    )}
                                 </HeatmapCircle>
                             )}
                         <AxisBottom
