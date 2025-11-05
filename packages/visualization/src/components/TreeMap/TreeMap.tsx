@@ -108,6 +108,7 @@ const Treemap = <T extends object>(
                                             isHovered={hovered === nodeId}
                                             onHover={(hover) => setHovered(hover ? nodeId : null)}
                                             strokeWidth={style.strokeWidth ?? 0}
+                                            opacity={style.opacity ?? .3}
                                             borderRadius={style.borderRadius ?? 0}
                                             fontSize={style.fontSize ?? 16}
                                             labelPlacement={props.labelPlacement ?? "topLeft"}

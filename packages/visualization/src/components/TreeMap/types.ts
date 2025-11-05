@@ -36,6 +36,7 @@ export type TreemapProps<T> = {
       borderRadius?: number;
       strokeWidth?: number;
       fontSize?: number;
+      opacity?: number;
     }
     /**
      * Visx has a few built in tiling methods that can be changed here
@@ -54,6 +55,7 @@ export type SingleNodeProps<T> = {
     isHovered: boolean;
     onHover: (hovered: boolean) => void;
     strokeWidth: number;
+    opacity: number;
     borderRadius: number;
     fontSize: number;
     labelPlacement: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
