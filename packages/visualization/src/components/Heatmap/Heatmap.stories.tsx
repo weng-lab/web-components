@@ -24,17 +24,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function randomString(maxLength: number) {
-    const length = Math.floor(Math.random() * maxLength) + 1; // 1 to maxLength
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-      return result;
-  }
+type MyMetadata = {
+    description: string;
+    source: string;
+};
   
-  const heatmapData: ColumnDatum[] = Array.from({ length: 10 }, (_, colIndex) => ({
+const heatmapData: ColumnDatum<MyMetadata>[] = Array.from({ length: 10 }, (_, colIndex) => ({
   columnNum: colIndex + 1,
   columnName: `Group ${colIndex + 1}`, 
   rows: Array.from({ length: 16 }, (_, rowIndex) => ({
@@ -56,7 +51,8 @@ export const Default: Story = {
         </Box>),
         xLabel: 'X-Axis Label',
         yLabel: 'Y-Axis Label',
-        color1: '#122549',
-        color2: '#6daedb',
+        color1: '#20619e',
+        color2: '#fff36e',
+        color3: '#c92b16'
     },
 };

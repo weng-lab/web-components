@@ -9,28 +9,31 @@ Example data format:
     columnName: celltype_1
     rows: [
       {
-        count: 20,
+        rowNum: 1,
 	    rowName: celltype_a
+        count: 20,
+        metadata: { ... }
       },
     ],
   },
 ];
 */
 
-export type BinDatums = {
+export type BinDatums<T> = {
     rowName: string;
     rowNum: number;
     count: number;
+    metadata?: T;
 }
 
-export type ColumnDatum = {
+export type ColumnDatum<T> = {
     columnNum: number;
     columnName: string;
-    rows: BinDatums[];
+    rows: BinDatums<T>[];
 }
 
-export type HeatmapProps = {
-    data: ColumnDatum[];
+export type HeatmapProps<T> = {
+    data: ColumnDatum<T>[];
     onClick?: (row: number, column: number, count: string) => void;
     ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
@@ -39,9 +42,13 @@ export type HeatmapProps = {
    */
     color1: string;
     /**
-   * End color for gradient
+   * Mid color for gradient
    */
     color2: string; 
+    /**
+   * End color for gradient
+   */
+    color3: string;
     xLabel?: string;
     yLabel?: string;
     tooltipBody?: (row: number, column: number, count: string) => ReactElement;
