@@ -42,7 +42,6 @@ const heatmapData: ColumnDatum<MyMetadata>[] = Array.from({ length: 10 }, (_, co
 export const Default: Story = {
     args: {
         data: heatmapData,
-        onClick: (row, column, bin) => { alert(JSON.stringify({ row, column, bin })); },
         tooltipBody: (row, column, bin) => (
         <Box maxWidth={300}>
           <div><strong>Row:</strong> {row}</div>

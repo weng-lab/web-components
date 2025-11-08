@@ -34,7 +34,7 @@ export type ColumnDatum<T> = {
 
 export type HeatmapProps<T> = {
     data: ColumnDatum<T>[];
-    onClick?: (row: number, column: number, count: string) => void;
+    onClick?: (metadata: T) => void;
     ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
     /**

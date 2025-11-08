@@ -26,9 +26,9 @@ const Heatmap = <T extends object>({
     const [hoveredCell, setHoveredCell] = useState<{ row: number; column: number } | null>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
 
-    const handleClick = (row: number, column: number, count: string) => {
+    const handleClick = (metadata: T) => {
         if (!onClick) return;
-        onClick(row, column, count);
+        onClick(metadata);
     };
 
     const {
@@ -67,7 +67,7 @@ const Heatmap = <T extends object>({
                     hideTooltip?.();
                 }}
                 onMouseMove={handleMouseMove(bin.row, bin.column, bin.bin.count.toString())}
-                onClick={() => handleClick(bin.row, bin.column, bin.bin.count.toString())}
+                onClick={() => handleClick(bin.metadata)}
                 style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
             >
                 { renderShape(bin, bin.column * binWidth + binWidth / 2) }
