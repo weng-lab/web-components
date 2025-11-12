@@ -65,9 +65,15 @@ importers:
       '@visx/group':
         specifier: ^3.12.0
         version: 3.12.0(react@19.1.0)
+      '@visx/heatmap':
+        specifier: ^3.12.0
+        version: 3.12.0(react@19.1.0)
       '@visx/hierarchy':
         specifier: ^3.12.0
         version: 3.12.0(react@19.1.0)
+      '@visx/mock-data':
+        specifier: ^3.12.0
+        version: 3.12.0
       '@visx/responsive':
         specifier: ^3.12.0
         version: 3.12.0(react@19.1.0)
