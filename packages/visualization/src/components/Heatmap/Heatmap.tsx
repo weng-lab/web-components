@@ -1,44 +1,39 @@
 import { HeatmapRect, HeatmapCircle } from "@visx/heatmap";
 import { scaleLinear } from "@visx/scale";
-import { HeatmapProps, BinDatums, ColumnDatum } from "./types";
+import type { HeatmapProps, RowDatum, ColumnDatum } from "./types";
 import { useParentSize } from "@visx/responsive";
 import { useState, useImperativeHandle, useRef, ReactNode, useCallback } from "react";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";
+import { RectCell } from "@visx/heatmap/lib/heatmaps/HeatmapRect";
+import { CircleCell } from "@visx/heatmap/lib/heatmaps/HeatmapCircle";
 
-const Heatmap = <T extends object>({
+const Heatmap = ({
   data,
   onClick,
   ref,
   downloadFileName,
-  color1,
-  color2,
-  color3,
+  colors,
   xLabel,
   yLabel,
   tooltipBody,
   margin,
   gap = 2,
   isRect = true,
-}: HeatmapProps<T>) => {
+}: HeatmapProps) => {
   const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
   const [hoveredCell, setHoveredCell] = useState<{ row: number; column: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  const handleClick = (metadata: T) => {
-    if (!onClick) return;
-    onClick(metadata);
-  };
-
   const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<ReactNode>();
 
-  const handleMouseMove = (row: number, column: number, count: string) =>
+  const handleMouseMove = (bin: RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>) =>
     useCallback(
       (event: React.MouseEvent<SVGElement>) => {
         if (!tooltipBody) return;
 
-        const tooltipContent = tooltipBody(row, column, count);
+        const tooltipContent = tooltipBody(bin);
 
         showTooltip({
           tooltipLeft: event.pageX + 10,
@@ -49,26 +44,6 @@ const Heatmap = <T extends object>({
       [tooltipBody, data, showTooltip]
     );
 
-  type RenderShapeFn = (bin: any, centerX?: number) => React.ReactNode;
-  const renderCell = (bin: any, renderShape: RenderShapeFn) => {
-    const key = `heatmap-group-${bin.row}-${bin.column}`;
-    return (
-      <g
-        key={key}
-        onMouseEnter={() => setHoveredCell({ row: bin.row, column: bin.column })}
-        onMouseLeave={() => {
-          setHoveredCell(null);
-          hideTooltip?.();
-        }}
-        onMouseMove={handleMouseMove(bin.row, bin.column, bin.bin.count.toString())}
-        onClick={() => handleClick(bin.metadata)}
-        style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
-      >
-        {renderShape(bin, bin.column * binWidth + binWidth / 2)}
-      </g>
-    );
-  };
-
   function max<Datum>(data: Datum[], value: (d: Datum) => number): number {
     return Math.max(...data.map(value));
   }
@@ -77,37 +52,37 @@ const Heatmap = <T extends object>({
   }
 
   // accessors
-  const rows = (d: ColumnDatum<T>) => d.rows;
-  const count = (d: BinDatums<T>) => d.count;
+  const rows = (d: ColumnDatum) => d.rows;
+  const count = (d: RowDatum) => d.count;
 
-  const allColNames: string[] = data.reduce((acc: string[], curr: ColumnDatum<T>) => {
+  const allColNames: string[] = data.reduce((acc: string[], curr: ColumnDatum) => {
     acc.push(curr.columnName);
     return acc;
   }, []);
-  const allRowNames: string[] = data[0].rows.reduce((acc: string[], curr: BinDatums<T>) => {
+  const allRowNames: string[] = data[0].rows.reduce((acc: string[], curr: RowDatum) => {
     acc.push(curr.rowName);
     return acc;
   }, []);
 
-  const colorMax = max(data, (d) => max(rows(d), count));
-  const bucketSizeMax = max(data, (d) => rows(d).length);
+  const maxValue = max(data, (d) => max(rows(d), count));
+  const numRows = max(data, (d) => rows(d).length);
 
   const xScale = scaleLinear<number>({
     domain: [0, data.length],
   });
 
   const yScale = scaleLinear<number>({
-    domain: [0, bucketSizeMax],
+    domain: [0, numRows],
   });
 
   const colorScale = scaleLinear<string>({
-    range: [color1, color2, color3],
-    domain: [0, colorMax / 2, colorMax],
+    range: colors,
+    domain: colors.map((_, i) => (i * maxValue) / (colors.length - 1)),
   });
 
   const opacityScale = scaleLinear<number>({
     range: [0.5, 1],
-    domain: [0.5, colorMax],
+    domain: [0.5, maxValue],
   });
 
   const maxColNameLength = allColNames.reduce((max, name) => Math.max(max, name.length), 0);
@@ -121,7 +96,7 @@ const Heatmap = <T extends object>({
   const yMax = parentHeight - marg.bottom - marg.top;
 
   const binWidth = xMax / data.length;
-  const binHeight = yMax / bucketSizeMax;
+  const binHeight = yMax / numRows;
   const radius = min([binWidth, binHeight], (d) => d) / 2;
 
   xScale.range([0, xMax]);
@@ -154,96 +129,124 @@ const Heatmap = <T extends object>({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
-      <svg width={parentWidth} height={parentHeight} ref={svgRef}>
-        <g transform={`translate(${marg.left},${marg.top})`}>
-          <HeatmapComponent {...commonHeatmapProps} {...(isRect ? { binWidth, binHeight } : { radius })}>
-            {(heatmap) =>
-              heatmap.map((heatmapBins) =>
-                heatmapBins.map((bin) =>
-                  renderCell(bin, (b, centerX) => {
+      {/* Prevent undefined parent size from causing creation of elements with negatvie dimensions */}
+      {!parentWidth || !parentHeight ? null : (
+        <svg width={parentWidth} height={parentHeight} ref={svgRef}>
+          <g transform={`translate(${marg.left},${marg.top})`}>
+            <HeatmapComponent {...commonHeatmapProps} {...(isRect ? { binWidth, binHeight } : { radius })}>
+              {(heatmap) =>
+                heatmap.map((heatmapBins) =>
+                  heatmapBins.map((bin) => {
+                    const key = `heatmap-group-${bin.row}-${bin.column}`;
                     const sharedProps = {
-                      fill: b.color,
-                      fillOpacity: b.opacity,
-                      stroke: hoveredCell?.row === b.row && hoveredCell?.column === b.column ? b.color : "none",
-                      strokeWidth: hoveredCell?.row === b.row && hoveredCell?.column === b.column ? 2 : 0,
+                      fill: bin.color,
+                      fillOpacity: bin.opacity,
+                      stroke: hoveredCell?.row === bin.row && hoveredCell?.column === bin.column ? bin.color : "none",
+                      strokeWidth: hoveredCell?.row === bin.row && hoveredCell?.column === bin.column ? 2 : 0,
                       style: { cursor: "pointer" },
                     };
-
-                    return isRect ? (
-                      <rect
-                        className="visx-heatmap-rect"
-                        width={b.width}
-                        height={b.height}
-                        x={b.x}
-                        y={b.y}
-                        {...sharedProps}
-                      />
-                    ) : (
-                      <circle className="visx-heatmap-circle" cx={centerX} cy={b.cy} r={b.r} {...sharedProps} />
+                    // Type guards for rect/circle properties
+                    const isRectCell = isRect && "width" in bin && "height" in bin && "x" in bin && "y" in bin;
+                    const isCircleCell = !isRect && "cy" in bin && "r" in bin;
+                    return (
+                      <g
+                        key={key}
+                        onMouseEnter={() => setHoveredCell({ row: bin.row, column: bin.column })}
+                        onMouseLeave={() => {
+                          setHoveredCell(null);
+                          hideTooltip?.();
+                        }}
+                        onMouseMove={handleMouseMove(bin)}
+                        onClick={() => {
+                          if (typeof onClick === "function") {
+                            onClick(bin);
+                          }
+                        }}
+                        style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
+                      >
+                        {isRectCell ? (
+                          <rect
+                            className="visx-heatmap-rect"
+                            width={bin.width}
+                            height={bin.height}
+                            x={bin.x}
+                            y={bin.y}
+                            {...sharedProps}
+                          />
+                        ) : isCircleCell ? (
+                          <circle
+                            className="visx-heatmap-circle"
+                            cx={bin.column * binWidth + binWidth / 2}
+                            cy={bin.cy}
+                            r={bin.r}
+                            {...sharedProps}
+                          />
+                        ) : null}
+                      </g>
                     );
                   })
                 )
-              )
-            }
-          </HeatmapComponent>
-          <AxisBottom
-            top={yMax + binHeight}
-            scale={xScale}
-            numTicks={data.length}
-            tickFormat={(d) => allColNames[Math.floor(+d)] ?? ""}
-            tickValues={xTickValues}
-            stroke="#4d4f52"
-            tickStroke="#4d4f52"
-            tickLabelProps={() => ({
-              fontSize: 12,
-              fill: "#4d4f52",
-              fontFamily: "sans-serif",
-              textAnchor: "end",
-              angle: -90,
-              dy: "0.25em",
-            })}
-            label={xLabel ?? ""}
-            labelOffset={maxColNameLength * 8}
-            labelProps={{
-              fontSize: 14,
-              fontFamily: "sans-serif",
-              textAnchor: "middle",
-              dy: "-0.5em",
-            }}
-          />
-          <AxisLeft
-            top={binHeight}
-            scale={yScale}
-            numTicks={bucketSizeMax}
-            tickValues={yTickValues}
-            tickFormat={(d) => allRowNames[Math.floor(+d)] ?? ""}
-            stroke="#4d4f52"
-            tickStroke="#4d4f52"
-            tickLabelProps={() => ({
-              fontSize: 12,
-              fill: "#4d4f52",
-              fontFamily: "sans-serif",
-              textAnchor: "end",
-              dx: "-0.25em",
-              dy: "0.25em",
-            })}
-            label={yLabel ?? ""}
-            labelOffset={maxRowNameLength * 8}
-            labelProps={{
-              fontSize: 14,
-              fontFamily: "sans-serif",
-              textAnchor: "middle",
-            }}
-          />
-        </g>
-        {tooltipBody && tooltipOpen && tooltipData && (
-          <Portal>
-            <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
-              {tooltipData}
-            </TooltipWithBounds>
-          </Portal>
-        )}
-      </svg>
+              }
+            </HeatmapComponent>
+            <AxisBottom
+              top={yMax + binHeight}
+              scale={xScale}
+              numTicks={data.length}
+              tickFormat={(d) => allColNames[Math.floor(+d)] ?? ""}
+              tickValues={xTickValues}
+              stroke="#4d4f52"
+              tickStroke="#4d4f52"
+              tickLabelProps={() => ({
+                fontSize: 12,
+                fill: "#4d4f52",
+                fontFamily: "sans-serif",
+                textAnchor: "end",
+                angle: -90,
+                dy: "0.25em",
+              })}
+              label={xLabel ?? ""}
+              labelOffset={maxColNameLength * 8}
+              labelProps={{
+                fontSize: 14,
+                fontFamily: "sans-serif",
+                textAnchor: "middle",
+                dy: "-0.5em",
+              }}
+            />
+            <AxisLeft
+              top={binHeight}
+              scale={yScale}
+              numTicks={numRows}
+              tickValues={yTickValues}
+              tickFormat={(d) => allRowNames[Math.floor(+d)] ?? ""}
+              stroke="#4d4f52"
+              tickStroke="#4d4f52"
+              tickLabelProps={() => ({
+                fontSize: 12,
+                fill: "#4d4f52",
+                fontFamily: "sans-serif",
+                textAnchor: "end",
+                dx: "-0.25em",
+                dy: "0.25em",
+              })}
+              label={yLabel ?? ""}
+              labelOffset={maxRowNameLength * 8}
+              labelProps={{
+                fontSize: 14,
+                fontFamily: "sans-serif",
+                textAnchor: "middle",
+              }}
+            />
+          </g>
+          {tooltipBody && tooltipOpen && tooltipData && (
+            <Portal>
+              <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
+                {tooltipData}
+              </TooltipWithBounds>
+            </Portal>
+          )}
+        </svg>
+      )}
     </div>
   );
 };

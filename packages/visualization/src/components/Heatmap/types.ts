@@ -1,5 +1,7 @@
 import { ReactElement } from "react";
 import { DownloadPlotHandle } from "../../utility";
+import { RectCell } from "@visx/heatmap/lib/heatmaps/HeatmapRect";
+import { CircleCell } from "@visx/heatmap/lib/heatmaps/HeatmapCircle";
 
 /*
 Example data format:
@@ -10,7 +12,7 @@ Example data format:
     rows: [
       {
         rowNum: 1,
-	    rowName: celltype_a
+	      rowName: celltype_a
         count: 20,
         metadata: { ... }
       },
@@ -19,40 +21,32 @@ Example data format:
 ];
 */
 
-export type BinDatums<T> = {
+export type RowDatum<R extends object = Record<string, unknown>> = {
     rowName: string;
-    rowNum: number;
     count: number;
-    metadata?: T;
+    metadata?: R;
 }
 
-export type ColumnDatum<T> = {
-    columnNum: number;
+export type ColumnDatum<C extends object = Record<string, unknown>, R extends object = Record<string, unknown>> = {
     columnName: string;
-    rows: BinDatums<T>[];
+    rows: RowDatum<R>[];
+    metadata?: C
 }
 
-export type HeatmapProps<T> = {
-    data: ColumnDatum<T>[];
-    onClick?: (metadata: T) => void;
-    ref?: React.Ref<DownloadPlotHandle>;
-    downloadFileName?: string;
-    /**
-   * Start color for gradient
+export type HeatmapProps<C extends object = Record<string, unknown>, R extends object = Record<string, unknown>> = {
+  data: ColumnDatum<C, R>[];
+  //May need to pass in the optional type parameters here if the types are not properly inferred
+  onClick?: (bin:  RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>) => void;
+  ref?: React.Ref<DownloadPlotHandle>;
+  downloadFileName?: string;
+  /**
+   * Colors for the gradient. At least two required for the gradient, additional can be passed to define midpoints.
    */
-    color1: string;
-    /**
-   * Mid color for gradient
-   */
-    color2: string; 
-    /**
-   * End color for gradient
-   */
-    color3: string;
-    xLabel?: string;
-    yLabel?: string;
-    tooltipBody?: (row: number, column: number, count: string) => ReactElement;
-    gap?: number; 
-    isRect?: boolean;
-    margin?: { top: number; right: number; bottom: number; left: number };
-}
+  colors: [string, string, ...string[]]
+  xLabel?: string;
+  yLabel?: string;
+  tooltipBody?: (bin:  RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>) => ReactElement;
+  gap?: number;
+  isRect?: boolean;
+  margin?: { top: number; right: number; bottom: number; left: number };
+};
