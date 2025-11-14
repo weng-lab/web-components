@@ -56,6 +56,8 @@ export type ViolinPlotProps<T> = {
     onPointClicked?: (point: ViolinPoint<T>) => void;
     pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
     downloadFileName?: string;
+    cutoffValue?: number;
+    cutoffOpacity?: number;
 }
 
 export interface CrossPlotProps<T> {

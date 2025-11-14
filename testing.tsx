@@ -1,62 +1,28 @@
 import React, { useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import Box from '@mui/material/Box';
-import { Treemap } from './packages/visualization/src/components/TreeMap';
-import { TreemapNode } from './packages/visualization/src/components/TreeMap';
-import { Button } from '@mui/material';
-import { DownloadPlotHandle } from './packages/visualization/src/utility';
+import { ViolinPlot } from './packages/visualization/src/components/ViolinPlot';
 
 function TestingPage() {
   type MyMetadata = {
     description?: string;
-    source?: string;
   };
 
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
-
-const data: TreemapNode<MyMetadata>[] = useMemo(() => {
-  return [
-    {
-      label: "Cancer",
-      value: 1000,
-      style: { color: "#046798" },
-      children: [
-        { label: "Lung Cancer", value: 100, style: { color: "#69b3a2" } },
-        { label: "Breast Cancer", value: 200, style: { color: "#e08e79" } },
-        { label: "Liver Cancer", value: 200, style: { color: "#b39ddb" } },
-        { label: "Brain Cancer", value: 300, style: { color: "#ffcc80" } },
-        { label: "Pancreatic Cancer", value: 200, style: { color: "#ef9a9a" } },
-      ],
-    },
-    {
-      label: "Cardiovascular Disease",
-      value: 200,
-      style: { color: "#398e80", strokeWidth: selectedLabel === "Cardiovascular Disease" ? 4 : 0 },
-    },
-  ];
-}, [selectedLabel]);
-
-  
-  const ref = useRef<DownloadPlotHandle>(null);
+  const distributions = [
+    {data: [{value: 5}, {value: 4}, {value: 4}, {value: 3}, {value: 2}, {value: 2.5}, {value: 2.2}, {value: 2.3}, {value: 1}, {value: 1.5}], label: "test 1"},
+    {data: [{value: 2}, {value: 1.8}, {value: 1.75}, {value: .89}, {value: .25}, {value: .08}, {value: 2.2}, {value: 2.3}, {value: 1}, {value: -10}], label: "test 2"},
+    {data: [{value: 5}, {value: 4}, {value: 4}, {value: 4.2}, {value: 4.62}, {value: 3.5}, {value: 3.82}, {value: 2.3}, {value: 1}, {value: -8}], label: "test 3"},
+    {data: [{value: 3}, {value: 3.6}, {value: 4.7}, {value: 3.90}, {value: 2.1}, {value: 2.5}, {value: 2.2}, {value: 2.3}, {value: 4.1}, {value: -1.65}], label: "test 4"},
+  ]
 
   return (
     <Box height="700px" width="auto" padding={0} sx={{ position: "relative" }}>
-      <Treemap
-        data={data}
-        treemapStyle={{ padding: 8, borderRadius: 5, paddingOuter: 1 }}
-        tooltipBody={(node) => (
-          <Box maxWidth={300}>
-            <div><strong>Label:</strong> {node.label}</div>
-            <div><strong>Value:</strong> {node.value}</div>
-          </Box>
-        )}
-        animation="slideRight"
-        onNodeClicked={(node) =>
-          setSelectedLabel((prev) => (prev === node.label ? null : node.label))
-        }
-        ref={ref}
+      <ViolinPlot 
+        loading={false}
+        distributions={distributions}
+        violinProps={{showAllPoints: true, jitter: 10}}
+        cutoffValue={1.64}
       />
-      <Button onClick={() => ref.current?.downloadSVG()}>Download</Button>
     </Box>
   );
 }
