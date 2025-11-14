@@ -68,7 +68,7 @@ const ViolinPlot = <T extends object>(
             // Make the bottom most tick 7% of the domain less so that there is room between the lowest plot and the bottom axis
             domain: [(Math.max(minYValue, cutoffValue)) - padding, maxYValue + padding],
         });
-    }, [vertYMax, minYValue, maxYValue]);
+    }, [vertYMax, minYValue, maxYValue, cutoffValue]);
 
     const horizonXScale = useMemo(() => {
         const padding = .07 * (maxYValue - (Math.max(minYValue, cutoffValue)))
@@ -78,7 +78,7 @@ const ViolinPlot = <T extends object>(
             // Make the bottom most tick 7% of the domain less so that there is room between the lowest plot and the bottom axis
             domain: [(Math.max(minYValue, cutoffValue)) - padding, maxYValue + padding],
         });
-    }, [horizonXMax, minYValue, maxYValue]);
+    }, [horizonXMax, minYValue, maxYValue, cutoffValue]);
 
     const horizonYScale = useMemo(() => {
         return scaleBand<string>({
