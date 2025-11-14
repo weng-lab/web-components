@@ -48,6 +48,8 @@ const ViolinPlot = <T extends object>(
     const minYValue = Math.min(...allValues);
     const maxYValue = Math.max(...allValues);
 
+    const cutoffValue = props.cutoffValue ?? minYValue
+
     // scales
     const vertXScale = useMemo(() => {
         return scaleBand<string>({
@@ -59,22 +61,22 @@ const ViolinPlot = <T extends object>(
     }, [vertXMax, labels]);
 
     const vertYScale = useMemo(() => {
-        const padding = .07 * (maxYValue - minYValue)
+        const padding = .07 * (maxYValue - (Math.max(minYValue, cutoffValue)))
         return scaleLinear<number>({
             range: [vertYMax, 0],
             round: true,
             // Make the bottom most tick 7% of the domain less so that there is room between the lowest plot and the bottom axis
-            domain: [minYValue - padding, maxYValue + padding],
+            domain: [(Math.max(minYValue, cutoffValue)) - padding, maxYValue + padding],
         });
     }, [vertYMax, minYValue, maxYValue]);
 
     const horizonXScale = useMemo(() => {
-        const padding = .07 * (maxYValue - minYValue)
+        const padding = .07 * (maxYValue - (Math.max(minYValue, cutoffValue)))
         return scaleLinear<number>({
             range: [0, horizonXMax],
             round: true,
             // Make the bottom most tick 7% of the domain less so that there is room between the lowest plot and the bottom axis
-            domain: [minYValue - padding, maxYValue + padding],
+            domain: [(Math.max(minYValue, cutoffValue)) - padding, maxYValue + padding],
         });
     }, [horizonXMax, minYValue, maxYValue]);
 
@@ -114,6 +116,12 @@ const ViolinPlot = <T extends object>(
         </Text>
     );
 
+    const tickValues = useMemo(() => {
+        const baseTicks = vertYScale.ticks();
+        if (props.cutoffValue) return Array.from(new Set([...baseTicks, cutoffValue])).sort((a, b) => a - b);
+        return baseTicks;
+    }, [vertYScale, cutoffValue]);
+
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(props.ref, () => ({
         downloadSVG: () => {
@@ -128,6 +136,67 @@ const ViolinPlot = <T extends object>(
         <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
             <svg width={parentWidth ?? 0} height={parentHeight?? 0} ref={svgRef}>
                 <Group top={baseOffset} left={offset}>
+                    {props.distributions.map((x: Distribution<T>, i) => {
+                        return (
+                            <SingleViolin
+                                key={i}
+                                distribution={x}
+                                distIndex={i}
+                                violinProps={props.violinProps}
+                                crossProps={props.crossProps}
+                                valueScale={valueScale}
+                                labelScale={labelScale}
+                                offset={offset}
+                                labels={labels}
+                                disableCrossPlot={props.disableCrossPlot ?? false}
+                                disableViolinPlot={props.disableViolinPlot ?? false}
+                                horizontal={props.horizontal ?? false}
+                                pointTooltipBody={props.pointTooltipBody}
+                                onViolinClicked={props.onViolinClicked}
+                                onPointClicked={props.onPointClicked}
+                            />
+                        )
+                    })}
+                    {/* opacity box to cutoff the rest of the plot */}
+                    {props.cutoffValue && (
+                        props.horizontal ? (
+                            <>
+                                <rect
+                                    x={0}
+                                    y={0}
+                                    width={horizonXScale(cutoffValue)}
+                                    height={horizonYMax}
+                                    fill="white"
+                                    opacity={props.cutoffOpacity ?? .8}
+                                />
+                                <rect
+                                    x={-maxLabelHeight}
+                                    y={0}
+                                    width={maxLabelHeight + offset}
+                                    height={horizonYMax}
+                                    fill="white"
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <rect
+                                    x={offset}
+                                    y={vertYScale(cutoffValue)}
+                                    width={parentWidth - offset}
+                                    height={vertYScale(cutoffValue)}
+                                    fill="white"
+                                    opacity={props.cutoffOpacity ?? .8}
+                                />
+                                <rect
+                                    x={offset}
+                                    y={vertYMax}
+                                    width={parentWidth - offset}
+                                    height={maxLabelHeight + 2 * offset}
+                                    fill="white"
+                                />
+                            </>
+                        )
+                    )}
                     {props.horizontal ? (
                         <>
                             <AxisBottom
@@ -137,6 +206,7 @@ const ViolinPlot = <T extends object>(
                                 left={offset}
                                 stroke="black"
                                 tickStroke="black"
+                                tickValues={tickValues}
                                 tickLabelProps={() => ({
                                     fill: 'black',
                                     fontSize: fontSize,
@@ -260,28 +330,28 @@ const ViolinPlot = <T extends object>(
                         </>
                     )
                     }
-
-                    {props.distributions.map((x: Distribution<T>, i) => {
-                        return (
-                            <SingleViolin
-                                key={i}
-                                distribution={x}
-                                distIndex={i}
-                                violinProps={props.violinProps}
-                                crossProps={props.crossProps}
-                                valueScale={valueScale}
-                                labelScale={labelScale}
-                                offset={offset}
-                                labels={labels}
-                                disableCrossPlot={props.disableCrossPlot ?? false}
-                                disableViolinPlot={props.disableViolinPlot ?? false}
-                                horizontal={props.horizontal ?? false}
-                                pointTooltipBody={props.pointTooltipBody}
-                                onViolinClicked={props.onViolinClicked}
-                                onPointClicked={props.onPointClicked}
+                    {/* cutoff dotted line */}
+                    {props.cutoffValue && (
+                        props.horizontal ? (
+                            <line
+                                x1={horizonXScale(props.cutoffValue)}
+                                x2={horizonXScale(props.cutoffValue)}
+                                y1={0}
+                                y2={horizonYMax}
+                                stroke="black"
+                                strokeDasharray="5 7"
+                            />
+                        ) : (
+                            <line
+                                y1={vertYScale(props.cutoffValue)}
+                                y2={vertYScale(props.cutoffValue)}
+                                x1={offset}
+                                x2={parentWidth}
+                                stroke="black"
+                                strokeDasharray="5 7"
                             />
                         )
-                    })}
+                    )}
                 </Group>
             </svg>
         </div>

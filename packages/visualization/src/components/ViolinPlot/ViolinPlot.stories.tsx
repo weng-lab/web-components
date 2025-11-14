@@ -1,7 +1,7 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import ViolinPlot from './violinPlot';
 import { testData } from './testData';
 import { Box, Typography } from '@mui/material';
+import ViolinPlot from './violinPlot';
 
 const meta = {
     title: 'visualization/ViolinPlot',
@@ -140,5 +140,15 @@ export const CustomPointTooltip: Story = {
                 </Box>
             );
         }
+    },
+};
+
+export const CutoffValue: Story = {
+    args: {
+        distributions: testData,
+        loading: false,
+        axisLabel: "Axis Label",
+        labelOrientation: "rightDiagonal",
+        cutoffValue: 10
     },
 };
