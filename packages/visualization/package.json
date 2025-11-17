@@ -1,6 +1,6 @@
 {
   "name": "@weng-lab/visualization",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Visualization components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "clean": "rimraf dist",
