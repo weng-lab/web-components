@@ -21,7 +21,9 @@ function TestingPage() {
         loading={false}
         distributions={distributions}
         violinProps={{showAllPoints: true, jitter: 10}}
-        cutoffValue={1.64}
+        cutoffValue={.5}
+        cutoffLine='none'
+        show95thPercentileLine
       />
     </Box>
   );

@@ -58,6 +58,8 @@ export type ViolinPlotProps<T> = {
     downloadFileName?: string;
     cutoffValue?: number;
     cutoffOpacity?: number;
+    cutoffLine?: "none" | "dashed" | "solid";
+    show95thPercentileLine?: boolean;
 }
 
 export interface CrossPlotProps<T> {

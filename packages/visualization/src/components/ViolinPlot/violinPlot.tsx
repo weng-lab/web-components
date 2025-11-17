@@ -23,6 +23,8 @@ const ViolinPlot = <T extends object>(
     const labelOrientation = props.labelOrientation ?? "horizontal"
     const fontSize = 15;
 
+    const cutoffLine = props.cutoffLine ?? "none"
+
     //If the label orientation is anything but horizontal, find the max height of the elements, otherwise set to fontsize
     const maxLabelHeight = props.horizontal ? ((labelOrientation === "vertical" ? fontSize : Math.max(
         ...labels.map(label => getTextHeight(label, fontSize, "Arial"))
@@ -330,8 +332,33 @@ const ViolinPlot = <T extends object>(
                         </>
                     )
                     }
+                    {props.show95thPercentileLine && (
+                        props.horizontal ? (
+                            horizonXScale.domain()[1] > 1.645 && (
+                                <line
+                                    x1={horizonXScale(1.645)}
+                                    x2={horizonXScale(1.645)}
+                                    y1={0}
+                                    y2={horizonYMax}
+                                    stroke="black"
+                                    strokeDasharray="5 7"
+                                />
+                            )
+                        ) : (
+                            vertYScale.domain()[1] > 1.645 && (
+                                <line
+                                    y1={vertYScale(1.645)}
+                                    y2={vertYScale(1.645)}
+                                    x1={offset}
+                                    x2={parentWidth}
+                                    stroke="black"
+                                    strokeDasharray="5 7"
+                                />
+                            )
+                        )
+                    )}
                     {/* cutoff dotted line */}
-                    {props.cutoffValue && (
+                    {props.cutoffValue && cutoffLine !== "none" && (
                         props.horizontal ? (
                             <line
                                 x1={horizonXScale(props.cutoffValue)}
@@ -339,7 +366,7 @@ const ViolinPlot = <T extends object>(
                                 y1={0}
                                 y2={horizonYMax}
                                 stroke="black"
-                                strokeDasharray="5 7"
+                                strokeDasharray={cutoffLine === "dashed" ? "5 7" : ""}
                             />
                         ) : (
                             <line
@@ -348,7 +375,7 @@ const ViolinPlot = <T extends object>(
                                 x1={offset}
                                 x2={parentWidth}
                                 stroke="black"
-                                strokeDasharray="5 7"
+                                strokeDasharray={cutoffLine === "dashed" ? "5 7" : ""}
                             />
                         )
                     )}
