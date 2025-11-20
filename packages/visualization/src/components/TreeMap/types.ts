@@ -8,7 +8,8 @@ export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
 
 export type TreemapNode<T> = {
   label: string;
-  value: number;
+  //Only optional for Parents, bc if node has children value will automatically be infered
+  value?: number;
   children?: TreemapNode<T>[];
   // styling types applied only to this specific node
   style?: {
@@ -19,6 +20,7 @@ export type TreemapNode<T> = {
     strokeWidth?: number;
     strokeColor?: string;
   }
+  displayValue?: number;
   metaData?: T;
 }
 

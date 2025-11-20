@@ -1,18 +1,32 @@
-import { SingleNodeProps } from "./types";
+import { SingleNodeProps, TreemapNode } from "./types";
 import ValueOval from "./ValueOval";
 import { getLabelPlacement, truncateTextToWidth } from "./helpers";
 import { ReactNode, useCallback } from "react";
 import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";
 import React from "react";
+import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
 
 const SingleNode = <T,>(
     props: SingleNodeProps<T>
 ) => {
-    const isChild = props.node.parent !== undefined && props.node.parent?.data.label !== "root";
+    function getNodeValue(node: HierarchyRectangularNode<TreemapNode<T>>): number {
+        // If the node has children, sum their values
+        if (node.children && node.children.length > 0) {
+            return node.children.reduce((sum: number, child) => {
+                return sum + getNodeValue(child);
+            }, 0);
+        }
+
+        // Otherwise use the leaf's data value
+        return node.data.value ?? 0;
+    }
+
     const hasChildren = props.node.children !== undefined && props.node.children.length > 0;
+    
+    const value = hasChildren ? props.node.data.displayValue ?? getNodeValue(props.node) : props.node.data.value ?? 0
 
     const fontSize = props.fontSize
-    const nodeColor = isChild ? props.node.parent?.data.style?.color || "black" : props.node.data.style?.color || "black";
+    const nodeColor = props.node.data.style?.color ||  props.node.parent?.data.style?.color || "black"
     const labelColor = props.node.data.style?.labelColor || nodeColor;
     const nodeStrokeColor = props.node.data.style?.strokeColor || nodeColor;
     const nodeStroke = props.node.data.style?.strokeWidth === 0 ? 0 : props.node.data.style?.strokeWidth || props.strokeWidth;
@@ -23,7 +37,7 @@ const SingleNode = <T,>(
 
     const fullLabel = props.node.data.label;
     const truncatedLabel = truncateTextToWidth(fullLabel, width - 8, fontSize, "sans-serif");
-    const showValue = height > 55 && width > 50;
+    const showValue = height > 55 && width > 50 && value > 0;
     const showText = height > 20;
 
     const { textX, textY, textAnchor, valueAnchor, baseline, valueY, valueX } = getLabelPlacement(
@@ -103,7 +117,7 @@ const SingleNode = <T,>(
                         cx={valueX}
                         cy={valueY}
                         color={labelColor}
-                        value={props.node.data.value}
+                        value={value}
                         align={valueAnchor}
                     />
                 )}
