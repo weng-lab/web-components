@@ -1,14 +1,21 @@
 import {
-  DataGridPro,
+  DataGridPremium,
   GridAutosizeOptions,
   GridToolbarProps,
   ToolbarPropsOverrides,
   useGridApiRef,
-} from "@mui/x-data-grid-pro";
-import { useMemo, useEffect, useCallback } from "react";
+  useKeepGroupedColumnsHidden,
+} from "@mui/x-data-grid-premium";
+import { useMemo, useEffect, useCallback, useRef } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 import { CustomToolbar } from "./CustomToolbar";
+
+export const autosizeOptions: GridAutosizeOptions = {
+  expand: true,
+  includeHeaders: true,
+  outliersFactor: 1.5,
+};
 
 const Table = (props: TableProps) => {
   /**
@@ -35,6 +42,7 @@ const Table = (props: TableProps) => {
     toolbarSlot,
     toolbarStyle,
     toolbarIconColor,
+    initialState,
     ...restDataGridProps
   } = props;
 
@@ -45,46 +53,45 @@ const Table = (props: TableProps) => {
       labelTooltip,
       toolbarSlot,
       toolbarStyle,
-      toolbarIconColor
+      toolbarIconColor,
     };
     return (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />;
   }, [label, labelTooltip, toolbarSlot]);
 
   //Assign default ID if no ID is provided in the row data
-  const rowsWithIds = useMemo(
-    () => rows.map((row, index) => ({ ...row, id: row?.id || index })),
-    [rows]
-  );
-
-  const autosizeOptions: GridAutosizeOptions = useMemo(
-    () => ({
-      expand: true,
-      includeHeaders: true,
-      outliersFactor: 1.5,
-    }),
-    []
-  );
+  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
 
   const internalApiRef = useGridApiRef();
   // prioritize using the provided apiRef if available, otherwise create a new one
   const apiRef = externalApiRef ?? internalApiRef;
 
-  const handleResizeCols = useCallback(() => {
+  const handleResizeCols = () => {
+    console.log("handleResizeCols called");
     // need to check .autosizeCoumns since the current was being set with an empty object
     if (!apiRef.current?.autosizeColumns) return;
     apiRef.current.autosizeColumns(autosizeOptions);
-  }, [apiRef, autosizeOptions]);
+  };
 
   // trigger resize when rows or columns change so that rows/columns don't need to be memoized outisde of this component
   // otherwise sometimes would snap back to default widths when rows/columns change
-  useEffect(() => {
-    handleResizeCols();
-  }, [rows, columns, handleResizeCols]);
+  // useEffect(() => {
+  //   // avoid autosizing on every render by checking if apiRef is ready
+  //   // and only resize if we have content or if columns are defined
+  //   const timeoutId = setTimeout(() => {
+  //     handleResizeCols();
+  //   }, 0);
+  //   return () => clearTimeout(timeoutId);
+  // }, [rows, columns, handleResizeCols]);
 
-  const shouldDisplayEmptyFallback =
-    emptyTableFallback &&
-    rowsWithIds.length === 0 &&
-    !restDataGridProps.loading;
+  useEffect(() => {
+    return apiRef.current?.subscribeEvent("rowExpansionChange", (params) => {
+      if (params.childrenExpanded) {
+        apiRef.current?.autosizeColumns(autosizeOptions);
+      }
+    });
+  }, [apiRef]);
+
+  const shouldDisplayEmptyFallback = emptyTableFallback && rowsWithIds.length === 0 && !restDataGridProps.loading;
 
   if (shouldDisplayEmptyFallback) {
     return typeof emptyTableFallback === "string" ? (
@@ -95,8 +102,21 @@ const Table = (props: TableProps) => {
   }
 
   if (error) {
-    return <TableFallback message={`Error fetching ${label}`} variant="error" />
+    return <TableFallback message={`Error fetching ${label}`} variant="error" />;
   }
+
+  /**
+   * Todo:
+   * - For some reason (unknown if related to using the table with too many cols (in BiosampleTable) or if due to upgrading to premuim)
+   * calling handleResizeCols, which calls the autosize method of the api, triggers the onResize callback which infinitely rerenders.
+   * Maybe this can be solved with a ref that gates calling the method multiple times in a row, but not sure how that would play with the
+   * useEffect which aims to solve issue of rows snapping back to initial state when the reference to them changes.
+   */
+
+  const internalInitialState = useKeepGroupedColumnsHidden({
+    apiRef,
+    initialState,
+  });
 
   return (
     <div
@@ -107,7 +127,7 @@ const Table = (props: TableProps) => {
         ...divHeight,
       }}
     >
-      <DataGridPro
+      <DataGridPremium
         apiRef={apiRef}
         columns={columns}
         rows={rowsWithIds}
@@ -116,7 +136,9 @@ const Table = (props: TableProps) => {
           if (onResize) {
             onResize(params, event, details);
           }
-          handleResizeCols();
+          // console.log("onResize")
+          // This is being called infinitely now? Causes freeze
+          // handleResizeCols();
         }}
         autosizeOptions={autosizeOptions}
         disableRowSelectionOnClick
@@ -130,8 +152,9 @@ const Table = (props: TableProps) => {
         }}
         slots={{
           toolbar: CustomToolbarWrapper,
-          ...slots
+          ...slots,
         }}
+        initialState={internalInitialState}
         {...restDataGridProps}
       />
     </div>

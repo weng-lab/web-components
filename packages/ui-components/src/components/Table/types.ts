@@ -1,10 +1,10 @@
-import { DataGridProProps } from "@mui/x-data-grid-pro";
+import { DataGridPremiumProps } from "@mui/x-data-grid-premium";
 import { ReactElement, ReactNode } from "react"; 
 import { SvgIconOwnProps } from "@mui/material";
 
 //The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
 
-interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
+interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
   /**
    * Rows to be consumed in the table.
    * 
@@ -12,17 +12,17 @@ interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
    * 
    * Note: Rows without an 'id' property will be given id matching their index
    */
-  rows: DataGridProProps["rows"];
+  rows: DataGridPremiumProps["rows"];
   /**
    * @default true
    * @note Overrides MUI default
    */
-  disableRowSelectionOnClick?: DataGridProProps["disableRowSelectionOnClick"];
+  disableRowSelectionOnClick?: DataGridPremiumProps["disableRowSelectionOnClick"];
   /**
    * @default "compact"
    * @note Overrides MUI default
    */
-  density?: DataGridProProps["density"];
+  density?: DataGridPremiumProps["density"];
   /**
    * @default true
    * @note Overrides MUI default
@@ -31,7 +31,7 @@ interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
   /**
    * @note Table assigns a default internal ID to each row if no ID is provided in the row data.
    */
-  getRowId?: DataGridProProps["getRowId"];
+  getRowId?: DataGridPremiumProps["getRowId"];
   /**
    * Element to be rendered instead of `DataGridPro` when `rows` has a length of `0`.
    * If a string is passed will use `TableFallback` component
@@ -41,7 +41,7 @@ interface BaseTableProps extends Omit<DataGridProProps, 'label'> {
    * If true, the toolbar is displayed.
    * @default true
    */
-  showToolbar?: DataGridProProps["showToolbar"]
+  showToolbar?: DataGridPremiumProps["showToolbar"]
   /**
    * Configures the height properties of the wrapper `<div>`. 
    * 
