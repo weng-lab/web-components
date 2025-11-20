@@ -12,7 +12,7 @@ const SingleNode = <T,>(
     const hasChildren = props.node.children !== undefined && props.node.children.length > 0;
 
     const fontSize = props.fontSize
-    const nodeColor = isChild ? props.node.parent?.data.style?.color || "black" : props.node.data.style?.color || "black";
+    const nodeColor = props.node.data.style?.color ||  props.node.parent?.data.style?.color || "black"
     const labelColor = props.node.data.style?.labelColor || nodeColor;
     const nodeStrokeColor = props.node.data.style?.strokeColor || nodeColor;
     const nodeStroke = props.node.data.style?.strokeWidth === 0 ? 0 : props.node.data.style?.strokeWidth || props.strokeWidth;
