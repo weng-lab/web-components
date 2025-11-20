@@ -124,6 +124,7 @@ const Table = (props: TableProps) => {
         display: "flex",
         flexDirection: "column",
         width: "100%",
+        maxHeight: '100%',
         ...divHeight,
       }}
     >

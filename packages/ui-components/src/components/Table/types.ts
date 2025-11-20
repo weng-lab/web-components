@@ -53,9 +53,9 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    * Additional height properties spread onto this `<div>`
    */
   divHeight?: {
-    height?: string
-    minHeight?: string
-    maxHeight?: string
+    height?: string | number
+    minHeight?: string | number
+    maxHeight?: string | number
   }
   /**
    * Used for failed fetches. If true will display error fallback

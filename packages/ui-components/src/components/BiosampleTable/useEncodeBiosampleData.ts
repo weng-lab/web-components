@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { EncodeBiosample } from "./types"
 
-export const useEncodeBiosampleData = ({ assembly }: { assembly: "GRCh38" | "mm10" }) => {
+export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" | "mm10", skip?: boolean }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [data, setData] = useState<EncodeBiosample[] | undefined>(undefined);
@@ -23,8 +23,7 @@ export const useEncodeBiosampleData = ({ assembly }: { assembly: "GRCh38" | "mm1
         if (!biosamples) {
           throw new Error(`No biosamples present in return data`);
         }
-        biosamples.map((x: EncodeBiosample) => ({...x, type: "ENCODE"}))
-        setData(biosamples)
+        setData(biosamples.map((x: EncodeBiosample) => ({...x, type: "ENCODE"})))
       } catch (err) {
         setError(true);
       } finally {
@@ -32,7 +31,7 @@ export const useEncodeBiosampleData = ({ assembly }: { assembly: "GRCh38" | "mm1
       }
     };
 
-    fetchData();
+    if (!skip) fetchData();
   }, []);
 
   return { data, loading, error };
