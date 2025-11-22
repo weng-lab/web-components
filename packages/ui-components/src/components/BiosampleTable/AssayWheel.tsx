@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Tooltip, Stack, Typography } from "@mui/material";
 import { Launch } from "@mui/icons-material";
 import { CcreAssay } from "./types";
-import { ASSAY_COLORS } from "./const";
+import { ASSAY_COLORS } from "./helpers";
 import { assayHoverInfo, formatAssay } from "./helpers";
 
 export type AssayWheelProps = {
@@ -30,7 +30,7 @@ export const AssayWheel = ({ row }: AssayWheelProps) => {
 
   const assays: {
     id: CcreAssay;
-    accession: string;
+    accession: string | null;
     color: string;
     dashArray: string;
     radius: number;
@@ -87,14 +87,12 @@ export const AssayWheel = ({ row }: AssayWheelProps) => {
     <Tooltip
       title={
         <Stack spacing={1}>
-          <Typography variant="body2">
-            {assayHoverInfo(row)}
-          </Typography>
+          <Typography variant="body2">{assayHoverInfo(row)}</Typography>
           {hoveredAssay && (
             <>
               <Typography variant="body2">Click to view {formatAssay(hoveredAssay)} experiment:</Typography>
               <Stack direction="row" alignItems={"baseline"}>
-                <Typography variant="body2">{row[hoveredAssay.toLowerCase()]}</Typography>
+                <Typography variant="body2">{row[hoveredAssay]}</Typography>
                 <Launch fontSize="inherit" sx={{ ml: 0.5 }} />
               </Stack>
             </>
@@ -115,28 +113,26 @@ export const AssayWheel = ({ row }: AssayWheelProps) => {
           strokeWidth={0.25}
         />
         {assays.map((assay) => (
-          <circle
+          <a
+            href={assay.accession ? `https://www.encodeproject.org/experiments/${assay.accession}/` : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
             key={assay.id}
-            cursor={"pointer"}
-            pointerEvents={"auto"}
-            r={assay.radius}
-            cx={height / 2}
-            cy={height / 2}
-            fill="transparent"
-            stroke={assay.color}
-            strokeWidth={hoveredAssay === assay.id ? 2 * radiusHovered : 2 * radius}
-            strokeDasharray={assay.dashArray}
-            onMouseEnter={() => assay.accession && setHoveredAssay(assay.id)}
-            onMouseLeave={() => setHoveredAssay(null)}
-            onClick={(event) => {
-              event.stopPropagation();
-              window.open(
-                `https://www.encodeproject.org/experiments/${assay.accession}/`,
-                "_blank",
-                "noopener,noreferrer"
-              );
-            }}
-          />
+          >
+            <circle
+              cursor={"pointer"}
+              pointerEvents={"auto"}
+              r={assay.radius}
+              cx={height / 2}
+              cy={height / 2}
+              fill="transparent"
+              stroke={assay.color}
+              strokeWidth={hoveredAssay === assay.id ? 2 * radiusHovered : 2 * radius}
+              strokeDasharray={assay.dashArray}
+              onMouseEnter={() => assay.accession && setHoveredAssay(assay.id)}
+              onMouseLeave={() => setHoveredAssay(null)}
+            />
+          </a>
         ))}
         {/* Provides dead zone in middle to prevent ATAC wheel from capturing mouse events in center due to it being topmost element */}
         <circle r={radius} cx={height / 2} cy={height / 2} fill="white" stroke="black" strokeWidth={0.25} />

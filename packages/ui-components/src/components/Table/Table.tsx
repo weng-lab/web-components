@@ -29,7 +29,6 @@ const Table = (props: TableProps) => {
     density = "compact",
     rows = [],
     apiRef: externalApiRef,
-    onResize,
     emptyTableFallback,
     showToolbar = true,
     divHeight = {},
@@ -74,14 +73,9 @@ const Table = (props: TableProps) => {
 
   // trigger resize when rows or columns change so that rows/columns don't need to be memoized outisde of this component
   // otherwise sometimes would snap back to default widths when rows/columns change
-  // useEffect(() => {
-  //   // avoid autosizing on every render by checking if apiRef is ready
-  //   // and only resize if we have content or if columns are defined
-  //   const timeoutId = setTimeout(() => {
-  //     handleResizeCols();
-  //   }, 0);
-  //   return () => clearTimeout(timeoutId);
-  // }, [rows, columns, handleResizeCols]);
+  useEffect(() => {
+    handleResizeCols();
+  }, [rows, columns, handleResizeCols]);
 
   useEffect(() => {
     return apiRef.current?.subscribeEvent("rowExpansionChange", (params) => {
@@ -89,6 +83,11 @@ const Table = (props: TableProps) => {
         apiRef.current?.autosizeColumns(autosizeOptions);
       }
     });
+  }, [apiRef]);
+
+  //This creates a very slight performance impact. May need to remove down the line if it becomes an issue
+  useEffect(() => {
+    return apiRef.current?.subscribeEvent("resize", handleResizeCols);
   }, [apiRef]);
 
   const shouldDisplayEmptyFallback = emptyTableFallback && rowsWithIds.length === 0 && !restDataGridProps.loading;
@@ -133,14 +132,6 @@ const Table = (props: TableProps) => {
         columns={columns}
         rows={rowsWithIds}
         autosizeOnMount
-        onResize={(params, event, details) => {
-          if (onResize) {
-            onResize(params, event, details);
-          }
-          // console.log("onResize")
-          // This is being called infinitely now? Causes freeze
-          // handleResizeCols();
-        }}
         autosizeOptions={autosizeOptions}
         disableRowSelectionOnClick
         showToolbar={showToolbar}
@@ -155,6 +146,8 @@ const Table = (props: TableProps) => {
           toolbar: CustomToolbarWrapper,
           ...slots,
         }}
+        disableAggregation
+        disablePivoting
         initialState={internalInitialState}
         {...restDataGridProps}
       />

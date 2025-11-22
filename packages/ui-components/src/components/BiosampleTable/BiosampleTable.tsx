@@ -1,82 +1,86 @@
+import { capitalize } from "@mui/material";
 import Table from "../Table/Table";
-import { encodeColumns, initialTableState } from "./consts";
-import {
-  BiosampleTablePropsEncode,
-  BiosampleTablePropsMixed,
-  BiosampleTablePropsCustom,
-  EncodeBiosample,
-  UnknownRow,
-} from "./types";
+import { columns as defaultCols } from "./columns";
+import { BiosampleTableProps } from "./types";
 import { useEncodeBiosampleData } from "./useEncodeBiosampleData";
 import { JSX } from "react";
 
 /**
- * Overloads allow different combinations of props to be type validated properly
+ * This intentionally lists all columns in the visibility model (even visible cols) so that consumers can import and print it out to see all the keys
  */
-export function BiosampleTable(props: BiosampleTablePropsEncode): JSX.Element;
-export function BiosampleTable<T extends UnknownRow>(props: BiosampleTablePropsMixed<T>): JSX.Element;
-export function BiosampleTable<T extends UnknownRow>(props: BiosampleTablePropsCustom<T>): JSX.Element;
+export const initialTableState = {
+  rowGrouping: { model: ["ontology"] },
+  sorting: { sortModel: [{ field: "collection", sort: "asc" } as const] },
+  columns: {
+    columnVisibilityModel: {
+      displayname: false,
+      assays: true,
+      ontology: true,
+      sampleType: true,
+      lifeStage: true,
+      bedurl: false,
+      bigbedurl: false,
+      dnase_experiment_accession: false,
+      dnase_file_accession: false,
+      dnaseZ: false,
+      dnase_signal_url: false,
+      atac_experiment_accession: false,
+      atac_file_accession: false,
+      atacZ: false,
+      atac_signal_url: false,
+      h3k4me3_experiment_accession: false,
+      h3k4me3_file_accession: false,
+      h3k4me3Z: false,
+      h3k4me3_signal_url: false,
+      h3k27ac_experiment_accession: false,
+      h3k27ac_file_accession: false,
+      h3k27acZ: false,
+      h3k27ac_signal_url: false,
+      ctcf_experiment_accession: false,
+      ctcf_file_accession: false,
+      ctcfZ: false,
+      ctcf_signal_url: false,
+      chromhmm_url: false,
+      rnaSeqCheckCol: false
+    },
+  },
+};
 
-export function BiosampleTable<T extends UnknownRow>(
-  props: BiosampleTablePropsEncode | BiosampleTablePropsMixed<T> | BiosampleTablePropsCustom<T>
-): JSX.Element {
+export function BiosampleTable(props: BiosampleTableProps): JSX.Element {
   const {
-    sources = ["encode"],
-    extraRows,
+    data: encodeSamples,
+    loading: encodeLoading,
+    error: encodeError,
+  } = useEncodeBiosampleData({ assembly: props.assembly, skip: props.rows !== undefined });
+  
+  const {
     loading,
     error,
     assembly,
+    rows = encodeSamples,
     prefilterBiosamples,
-    columns = encodeColumns,
+    columns = defaultCols,
     label = "Biosamples",
     downloadFileName = "Biosamples",
     initialState = initialTableState,
     ...restProps
   } = props;
+  
 
-  const {
-    data: encodeSamples,
-    loading: encodeLoading,
-    error: encodeError,
-  } = useEncodeBiosampleData({ assembly, skip: !sources.length || !sources.includes("encode") });
-
-  const samples: (T | EncodeBiosample)[] = extraRows ? [...extraRows] : [];
-  if (sources) {
-    for (const source of sources) {
-      switch (source) {
-        case "encode":
-          encodeSamples && samples.push(...encodeSamples);
-      }
-    }
-  }
-  const rows = prefilterBiosamples
-    ? samples.filter((x) => (prefilterBiosamples as (biosample: T | EncodeBiosample) => boolean)(x))
-    : samples;
+  const internalRows = prefilterBiosamples ? rows?.filter(prefilterBiosamples) : rows;
 
   return (
     <Table
       label={label}
       downloadFileName={downloadFileName}
-      rows={rows}
+      rows={internalRows}
       columns={columns}
       loading={loading || encodeLoading}
       error={error || encodeError}
       initialState={initialState}
       rowSelectionPropagation={{ descendants: true }}
+      groupingColDef={{ leafField: "displayname", valueFormatter: (value) => capitalize(value) }}
       {...restProps}
     />
   );
 }
-
-/**
- * Standup:
- * - Properly setup all the typing for combining two different row types
- * - preFilterBiosample function (oddly difficult to type properly given different encode/non-encode combos)
- * - wrote data-fetching utilities
- * - Also figured out dark mode for storybook
- *  - May want to utilize https://storybook.js.org/addons/storybook-dark-mode instead though to unify the storybook ui and the story theme
- * Todo:
- * - Export the columns, expose initial state in such a way to show/hide specific columns, as well as add/subtract columns (necessary for when samples are added that don't conform to EncodeBiosample or more columns are added)
- * - Maybe expose the entire rows object and data fetching utility to allow adding properties to each of the encode samples, maybe unnecessary tho...
- *
- */
