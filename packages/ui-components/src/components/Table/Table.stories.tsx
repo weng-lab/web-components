@@ -2,7 +2,7 @@ import * as React from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
-import { GridColDef } from "@mui/x-data-grid-pro";
+import { GridColDef } from "@mui/x-data-grid-premium";
 import { Box, Button, FormControl, InputLabel, MenuItem, Popper, PopperProps, Select, Stack, Tooltip, Typography } from "@mui/material";
 import { QuestionMark } from "@mui/icons-material";
 
@@ -16,7 +16,7 @@ const meta = {
   decorators: [
     (Story) => {
       LicenseInfo.setLicenseKey(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY as string);
-      return <Story />;
+      return <div style={{height: 500}}><Story /></div>;
     },
   ],
 } satisfies Meta<typeof Table>;

@@ -1,0 +1,469 @@
+import { GridColDef, GridGroupingColDefOverride, GridValidRowModel } from "@mui/x-data-grid-premium";
+import { AssayWheel } from "./AssayWheel";
+import { EncodeBiosample } from "./types";
+import { DownloadButton } from "./DownloadButton";
+import { AggregateDownloadButton } from "./AggregateDownload";
+import { capitalize } from "@mui/material";
+import { Check } from "@mui/icons-material";
+
+export const ontologyCol: GridColDef<EncodeBiosample> = {
+  field: "ontology",
+  headerName: "Organ/Tissue",
+  type: "singleSelect",
+  valueOptions: [
+    "adipose",
+    "adrenal gland",
+    "blood",
+    "blood vessel",
+    "bone",
+    "bone marrow",
+    "brain",
+    "breast",
+    "connective tissue",
+    "embryo",
+    "epithelium",
+    "esophagus",
+    "eye",
+    "fallopian tube",
+    "gallbladder",
+    "heart",
+    "kidney",
+    "large intestine",
+    "limb",
+    "liver",
+    "lung",
+    "lymphoid tissue",
+    "mouth",
+    "muscle",
+    "nerve",
+    "nose",
+    "ovary",
+    "pancreas",
+    "paraythroid gland",
+    "penis",
+    "placenta",
+    "prostate",
+    "skin",
+    "small intestine",
+    "spinal cord",
+    "spleen",
+    "stomach",
+    "testis",
+    "thymus",
+    "thyroid",
+    "urinary bladder",
+    "uterus",
+    "vagina",
+  ],
+  valueFormatter: (value) => value && capitalize(value),
+};
+
+export const displayNameCol: GridColDef<EncodeBiosample> = {
+  field: "displayname",
+  headerName: "Biosample",
+  valueFormatter: (value) => value && capitalize(value),
+  maxWidth: 300,
+};
+
+export const sampleTypeCol: GridColDef<EncodeBiosample> = {
+  field: "sampleType",
+  headerName: "Sample Type",
+  type: "singleSelect",
+  valueOptions: ["tissue", "primary cell", "cell line", "in vitro differentiated cells", "organoid"],
+  valueFormatter: (value) => value && capitalize(value),
+};
+
+export const lifeStageCol: GridColDef<EncodeBiosample> = {
+  field: "lifeStage",
+  headerName: "Life Stage",
+  type: 'singleSelect',
+  valueOptions: ['adult', 'embryonic'],
+  valueFormatter: (value) => value && capitalize(value),
+};
+
+export const assaysCol: GridColDef<EncodeBiosample> = {
+  field: "assays",
+  headerName: "Assays",
+  valueGetter: (_, row) => {
+    const availableAssays = [];
+    if (row.dnase_experiment_accession) availableAssays.push("DNase");
+    if (row.atac_experiment_accession) availableAssays.push("ATAC");
+    if (row.h3k4me3_experiment_accession) availableAssays.push("H3K4me3");
+    if (row.h3k27ac_experiment_accession) availableAssays.push("H3K27ac");
+    if (row.ctcf_experiment_accession) availableAssays.push("CTCF");
+    return availableAssays.join(", ");
+  },
+  sortComparator: (v1, v2) => {
+    const count1 = v1.split(", ").filter((s: string) => s.length > 0).length;
+    const count2 = v2.split(", ").filter((s: string) => s.length > 0).length;
+    return count1 - count2;
+  },
+  renderCell: (params) => {
+    if (params.rowNode.type === "group") return null;
+    const row = params.row;
+    return (
+      <AssayWheel
+        row={{
+          dnase: row.dnase_experiment_accession,
+          atac: row.atac_experiment_accession,
+          h3k4me3: row.h3k4me3_experiment_accession,
+          h3k27ac: row.h3k27ac_experiment_accession,
+          ctcf: row.ctcf_experiment_accession,
+        }}
+      />
+    );
+  },
+  groupable: false,
+};
+
+const collections = ['Core', 'Partial', 'Ancillary']
+
+export const collectionCol: GridColDef<EncodeBiosample> = {
+  field: "collection",
+  headerName: "Collection",
+  type: "singleSelect",
+  valueOptions: collections,
+  valueGetter: (_, row) => {
+    if (
+      !(
+        row.dnase_experiment_accession ||
+        row.ctcf_experiment_accession ||
+        row.h3k4me3_experiment_accession ||
+        row.h3k27ac_experiment_accession ||
+        row.atac_experiment_accession
+      )
+    )
+      return null;
+    let collection = "Ancillary";
+    if (row.dnase_experiment_accession) {
+      collection = "Partial";
+      if (row.ctcf_experiment_accession && row.h3k4me3_experiment_accession && row.h3k27ac_experiment_accession) {
+        collection = "Core";
+      }
+    }
+    return collection;
+  },
+  sortComparator: (a,b) => collections.indexOf(a) - collections.indexOf(b),
+};
+
+//ENCODE Experiment Accession (plain text)
+export const dnaseExpCol: GridColDef<EncodeBiosample> = {
+  field: "dnase_experiment_accession",
+  headerName: "DNase Exp. ID",
+  sortable: false,
+  groupable: false,
+};
+export const h3k4me3ExpCol: GridColDef<EncodeBiosample> = {
+  field: "h3k4me3_experiment_accession",
+  headerName: "H3K4me3 Exp. ID",
+  sortable: false,
+  groupable: false,
+};
+export const h3k27acExpCol: GridColDef<EncodeBiosample> = {
+  field: "h3k27ac_experiment_accession",
+  headerName: "H3K27ac Exp. ID",
+  sortable: false,
+  groupable: false,
+};
+export const ctcfExpCol: GridColDef<EncodeBiosample> = {
+  field: "ctcf_experiment_accession",
+  headerName: "CTCF Exp. ID",
+  sortable: false,
+  groupable: false,
+};
+export const atacExpCol: GridColDef<EncodeBiosample> = {
+  field: "atac_experiment_accession",
+  headerName: "ATAC Exp. ID",
+  sortable: false,
+  groupable: false,
+};
+
+//ENCODE File ID (plain text)
+export const dnaseFileIdCol: GridColDef<EncodeBiosample> = {
+  field: "dnase_file_accession",
+  headerName: "DNase File ID",
+  sortable: false,
+  groupable: false,
+};
+export const h3k4me3FileIdCol: GridColDef<EncodeBiosample> = {
+  field: "h3k4me3_file_accession",
+  headerName: "H3K4me3 File ID",
+  sortable: false,
+  groupable: false,
+};
+export const h3k27acFileIdCol: GridColDef<EncodeBiosample> = {
+  field: "h3k27ac_file_accession",
+  headerName: "H3K27ac File ID",
+  sortable: false,
+  groupable: false,
+};
+export const ctcfFileIdCol: GridColDef<EncodeBiosample> = {
+  field: "ctcf_file_accession",
+  headerName: "CTCF File ID",
+  sortable: false,
+  groupable: false,
+};
+export const atacFileIdCol: GridColDef<EncodeBiosample> = {
+  field: "atac_file_accession",
+  headerName: "ATAC File ID",
+  sortable: false,
+  groupable: false,
+};
+
+export const dnaseZscoreUrlCol: GridColDef<EncodeBiosample> = {
+  field: "dnaseZ",
+  headerName: "DNase Z-scores",
+  valueGetter: (_, row) =>
+    row.dnase_experiment_accession && row.dnase_file_accession
+      ? `https://downloads.wenglab.org/Registry-V4/SCREEN/Signal-Files/${row.dnase_experiment_accession}-${row.dnase_file_accession}.tsv`
+      : null,
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton
+        message={(fileSize) => `Download DNase z-score by cCRE (.tsv) - ${fileSize}`}
+        url={params.value}
+      />
+    ),
+  groupable: false,
+  sortable: false
+};
+
+export const h3k4me3ZscoreUrlCol: GridColDef<EncodeBiosample> = {
+  field: "h3k4me3Z",
+  headerName: "H3K4me3 Z-scores",
+  valueGetter: (_, row) =>
+    row.h3k4me3_experiment_accession && row.h3k4me3_file_accession
+      ? `https://downloads.wenglab.org/Registry-V4/SCREEN/Signal-Files/${row.h3k4me3_experiment_accession}-${row.h3k4me3_file_accession}.tsv`
+      : null,
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton
+        message={(fileSize) => `Download H3K4me3 z-score by cCRE (.tsv) - ${fileSize}`}
+        url={params.value}
+      />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const h3k27acZscoreUrlCol: GridColDef<EncodeBiosample> = {
+  field: "h3k27acZ",
+  headerName: "H3K27ac Z-scores",
+  valueGetter: (_, row) =>
+    row.h3k27ac_experiment_accession && row.h3k27ac_file_accession
+      ? `https://downloads.wenglab.org/Registry-V4/SCREEN/Signal-Files/${row.h3k27ac_experiment_accession}-${row.h3k27ac_file_accession}.tsv`
+      : null,
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton
+        message={(fileSize) => `Download H3K27ac z-score by cCRE (.tsv) - ${fileSize}`}
+        url={params.value}
+      />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const ctcfZscoreUrlCol: GridColDef<EncodeBiosample> = {
+  field: "ctcfZ",
+  headerName: "CTCF Z-scores",
+  valueGetter: (_, row) =>
+    row.ctcf_experiment_accession && row.ctcf_file_accession
+      ? `https://downloads.wenglab.org/Registry-V4/SCREEN/Signal-Files/${row.ctcf_experiment_accession}-${row.ctcf_file_accession}.tsv`
+      : null,
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download CTCF z-score by cCRE (.tsv) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const atacZscoreUrlCol: GridColDef<EncodeBiosample> = {
+  field: "atacZ",
+  headerName: "ATAC Z-scores",
+  valueGetter: (_, row) =>
+    row.atac_experiment_accession && row.atac_file_accession
+      ? `https://downloads.wenglab.org/Registry-V4/SCREEN/Signal-Files/${row.atac_experiment_accession}-${row.atac_file_accession}.tsv`
+      : null,
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download ATAC z-score by cCRE (.tsv) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const dnaseSignalUrlCol: GridColDef<EncodeBiosample> = {
+  field: "dnase_signal_url",
+  headerName: "DNase Signal",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download DNase Signal (.bigWig) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const h3k4me3SignalUrlCol: GridColDef<EncodeBiosample> = {
+  field: "h3k4me3_signal_url",
+  headerName: "H3K4me3 Signal",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download H3K4me3 Signal (.bigWig) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const h3k27acSignalUrlCol: GridColDef<EncodeBiosample> = {
+  field: "h3k27ac_signal_url",
+  headerName: "H3K27ac Signal",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download H3K27ac Signal (.bigWig) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const ctcfSignalUrlCol: GridColDef<EncodeBiosample> = {
+  field: "ctcf_signal_url",
+  headerName: "CTCF Signal",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download CTCF Signal (.bigWig) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const atacSignalUrlCol: GridColDef<EncodeBiosample> = {
+  field: "atac_signal_url",
+  headerName: "ATAC Signal",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download ATAC Signal (.bigWig) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const chromHmmUrlCol: GridColDef<EncodeBiosample> = {
+  field: "chromhmm_url",
+  headerName: "ChromHMM States",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" &&
+    params.value && (
+      <DownloadButton message={(fileSize) => `Download ChromHMM States (.bigBed) - ${fileSize}`} url={params.value} />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const ccreBedUrlCol: GridColDef<EncodeBiosample> = {
+  field: "bedurl",
+  headerName: "cCREs (.bed)",
+  align: "center",
+  valueGetter: (_, row) => {
+    const signalIDs = [
+      row.dnase_file_accession,
+      row.h3k4me3_file_accession,
+      row.h3k27ac_file_accession,
+      row.ctcf_file_accession,
+    ].filter((id) => id !== null && id !== undefined);
+    const url = signalIDs.length ? `https://downloads.wenglab.org/Registry-V4/${signalIDs.join("_")}.bed` : null;
+    return url;
+  },
+  renderCell: (params) => {
+    if (params.rowNode.type === "group") {
+      if (params.rowNode.groupingField === "ontology") {
+        const ontology = (params.rowNode.groupingKey as string) ?? "";
+        return <AggregateDownloadButton ontology={ontology} />;
+      } else return null;
+    }
+    return (
+      <DownloadButton
+        message={(fileSize) =>
+          params.value ? `Download cCREs (.bed) - ${fileSize}` : "cCREs not avilable for ATAC-only samples"
+        }
+        url={params.value}
+        disabled={!params.value} //aka is ATAC-only
+      />
+    );
+  },
+  groupable: false,
+  sortable: false,
+};
+
+export const ccreBigBedUrlCol: GridColDef<EncodeBiosample> = {
+  field: "bigbedurl",
+  headerName: "cCREs (.bigBed)",
+  renderCell: (params) =>
+    params.rowNode.type !== "group" && (
+      <DownloadButton
+        message={(fileSize) =>
+          params.value ? `Download cCREs (.bigBed) - ${fileSize}` : "cCREs not avilable for ATAC-only samples"
+        }
+        url={params.value}
+        disabled={!params.value} //aka is ATAC-only
+      />
+    ),
+  groupable: false,
+  sortable: false,
+};
+
+export const rnaSeqCheckCol: GridColDef<EncodeBiosample> = {
+  field: 'rnaSeq',
+  headerName: 'Has RNA Seq',
+  type: 'boolean',
+  valueGetter: (_, row) => !!row?.rna_seq_tracks?.length,
+  renderCell: (params) => {
+    if (params.value) {
+      return <Check />
+    } else return null
+  }
+}
+
+export const columns: GridColDef<EncodeBiosample>[] = [
+  displayNameCol,
+  assaysCol,
+  ontologyCol,
+  sampleTypeCol,
+  lifeStageCol,
+  collectionCol,
+  ccreBedUrlCol,
+  ccreBigBedUrlCol,
+  dnaseExpCol,
+  dnaseFileIdCol,
+  dnaseZscoreUrlCol,
+  dnaseSignalUrlCol,
+  atacExpCol,
+  atacFileIdCol,
+  atacZscoreUrlCol,
+  atacSignalUrlCol,
+  h3k4me3ExpCol,
+  h3k4me3FileIdCol,
+  h3k4me3ZscoreUrlCol,
+  h3k4me3SignalUrlCol,
+  h3k27acExpCol,
+  h3k27acFileIdCol,
+  h3k27acZscoreUrlCol,
+  h3k27acSignalUrlCol,
+  ctcfExpCol,
+  ctcfFileIdCol,
+  ctcfZscoreUrlCol,
+  ctcfSignalUrlCol,
+  chromHmmUrlCol,
+  rnaSeqCheckCol,
+];
