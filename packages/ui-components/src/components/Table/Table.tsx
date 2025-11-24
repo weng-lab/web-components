@@ -65,7 +65,6 @@ const Table = (props: TableProps) => {
   const apiRef = externalApiRef ?? internalApiRef;
 
   const handleResizeCols = () => {
-    console.log("handleResizeCols called");
     // need to check .autosizeCoumns since the current was being set with an empty object
     if (!apiRef.current?.autosizeColumns) return;
     apiRef.current.autosizeColumns(autosizeOptions);
