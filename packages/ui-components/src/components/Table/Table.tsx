@@ -85,6 +85,7 @@ const Table = (props: TableProps) => {
     });
   }, [apiRef]);
 
+  //subscribe to resize events to resize columns automatically
   //This creates a very slight performance impact. May need to remove down the line if it becomes an issue
   useEffect(() => {
     return apiRef.current?.subscribeEvent("resize", handleResizeCols);
@@ -103,14 +104,6 @@ const Table = (props: TableProps) => {
   if (error) {
     return <TableFallback message={`Error fetching ${label}`} variant="error" />;
   }
-
-  /**
-   * Todo:
-   * - For some reason (unknown if related to using the table with too many cols (in BiosampleTable) or if due to upgrading to premuim)
-   * calling handleResizeCols, which calls the autosize method of the api, triggers the onResize callback which infinitely rerenders.
-   * Maybe this can be solved with a ref that gates calling the method multiple times in a row, but not sure how that would play with the
-   * useEffect which aims to solve issue of rows snapping back to initial state when the reference to them changes.
-   */
 
   const internalInitialState = useKeepGroupedColumnsHidden({
     apiRef,

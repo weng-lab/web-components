@@ -38,8 +38,18 @@ export type BiosampleTableProps<T extends TableProps["rows"] = EncodeBiosample[]
    * If passing rows, no biosamples will be fetched inside the component. Must use useEncodeBiosampleData to retrieve and pass in
    */
   rows?: T;
+  /**
+   * optionally prefilter biosamples. Filters the rows before going into the table. To modify initial filter state of table use initialState
+   */
   prefilterBiosamples?: (biosample: T extends object ? T[number] : undefined) => boolean;
+  /**
+   * assembly to fetch samples for
+   */
   assembly: "GRCh38" | "mm10";
+  /**
+   * Callback triggered when rowSelectionModel changes. Returns whole row objects. If only id needed, can use onRowSelectionModelChange
+   */
+  onSelectionChange?: (selected: EncodeBiosample[]) => void
 };
 
 const CCRE_ASSAYS = ["dnase", "atac", "h3k4me3", "h3k27ac", "ctcf"] as const;

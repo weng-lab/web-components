@@ -1,9 +1,10 @@
 import { capitalize } from "@mui/material";
 import Table from "../Table/Table";
 import { columns as defaultCols } from "./columns";
-import { BiosampleTableProps } from "./types";
+import { BiosampleTableProps, EncodeBiosample } from "./types";
 import { useEncodeBiosampleData } from "./useEncodeBiosampleData";
-import { JSX } from "react";
+import { JSX, useMemo } from "react";
+import { DataGridPremiumProps } from "@mui/x-data-grid-premium";
 
 /**
  * This intentionally lists all columns in the visibility model (even visible cols) so that consumers can import and print it out to see all the keys
@@ -13,11 +14,11 @@ export const initialTableState = {
   sorting: { sortModel: [{ field: "collection", sort: "asc" } as const] },
   columns: {
     columnVisibilityModel: {
-      displayname: false,
+      displayname: false, //only false since it is used as "leafField" in groupingColDef
       assays: true,
       ontology: true,
-      sampleType: true,
-      lifeStage: true,
+      sampleType: false,
+      lifeStage: false,
       bedurl: false,
       bigbedurl: false,
       dnase_experiment_accession: false,
@@ -41,7 +42,7 @@ export const initialTableState = {
       ctcfZ: false,
       ctcf_signal_url: false,
       chromhmm_url: false,
-      rnaSeqCheckCol: false
+      rnaSeq: false
     },
   },
 };
@@ -56,18 +57,25 @@ export function BiosampleTable(props: BiosampleTableProps): JSX.Element {
   const {
     loading,
     error,
-    assembly,
-    rows = encodeSamples,
-    prefilterBiosamples,
+    assembly, //custom added prop
+    rows = encodeSamples ?? [],
+    prefilterBiosamples = () => true, //custom added prop
     columns = defaultCols,
     label = "Biosamples",
     downloadFileName = "Biosamples",
     initialState = initialTableState,
+    onSelectionChange = (selected: EncodeBiosample[]) => null, //custom added prop
+    onRowSelectionModelChange, //have to extract here or else overrides to it would break the onSelectionChange functionality
     ...restProps
   } = props;
   
+  const internalRows = rows.filter(prefilterBiosamples)
 
-  const internalRows = prefilterBiosamples ? rows?.filter(prefilterBiosamples) : rows;
+  const handleSelection: DataGridPremiumProps["onRowSelectionModelChange"] = (rowSelectionModel, details) => {
+    if (onRowSelectionModelChange) onRowSelectionModelChange(rowSelectionModel, details);
+    // we are passing disableRowSelectionExcludeModel, so should always be using "include"
+    onSelectionChange(internalRows.filter(row => rowSelectionModel.ids.has(row.name)))
+  };
 
   return (
     <Table
@@ -80,6 +88,10 @@ export function BiosampleTable(props: BiosampleTableProps): JSX.Element {
       initialState={initialState}
       rowSelectionPropagation={{ descendants: true }}
       groupingColDef={{ leafField: "displayname", valueFormatter: (value) => capitalize(value) }}
+      getRowId={x => x.name}
+      onRowSelectionModelChange={handleSelection}
+      disableRowSelectionExcludeModel // forces only using "include" model for easier mapping
+      keepNonExistentRowsSelected
       {...restProps}
     />
   );

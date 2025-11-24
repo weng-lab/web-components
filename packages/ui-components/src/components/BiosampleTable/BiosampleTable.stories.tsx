@@ -3,6 +3,9 @@ import { Meta, StoryObj } from "@storybook/react-vite";
 import { LicenseInfo } from "@mui/x-license";
 import { BiosampleTable, initialTableState } from "./BiosampleTable";
 import { rnaSeqCheckCol } from "./columns";
+import { EncodeBiosample } from "./types";
+import { Stack } from "@mui/material";
+import { DataGridPremiumProps } from "@mui/x-data-grid-premium";
 
 const meta = {
   title: "ui-components/BiosampleTable",
@@ -20,71 +23,99 @@ const meta = {
 } satisfies Meta<typeof BiosampleTable>;
 
 export default meta;
-type Story = StoryObj<typeof BiosampleTable>
+type Story = StoryObj<typeof BiosampleTable>;
 
-export const Human: Story = {render: () => {
- return <BiosampleTable assembly="GRCh38" divHeight={{height: 600}} />
-}};
+export const Human: Story = {
+  render: () => {
+    return <BiosampleTable assembly="GRCh38" divHeight={{ height: 600 }} />;
+  },
+};
 
-export const Mouse: Story = {render: () => {
- return <BiosampleTable assembly="mm10" divHeight={{height: 600}} />
-}};
+export const Mouse: Story = {
+  render: () => {
+    return <BiosampleTable assembly="mm10" divHeight={{ height: 600 }} />;
+  },
+};
 
-export const ByCellAndTissueDownloads: Story = {render: () => {
- return (
-   <BiosampleTable
-     assembly="GRCh38"
-     divHeight={{ height: 600 }}
-     initialState={{
-       ...initialTableState,
-       columns: {
-         columnVisibilityModel: {
-           displayname: false,
-           assays: true,
-           ontology: true,
-           sampleType: true,
-           lifeStage: true,
-           bedurl: true,
-           bigbedurl: false,
-           dnase_experiment_accession: false,
-           dnase_file_accession: false,
-           dnaseZ: true,
-           dnase_signal_url: false,
-           atac_experiment_accession: false,
-           atac_file_accession: false,
-           atacZ: true,
-           atac_signal_url: false,
-           h3k4me3_experiment_accession: false,
-           h3k4me3_file_accession: false,
-           h3k4me3Z: true,
-           h3k4me3_signal_url: false,
-           h3k27ac_experiment_accession: false,
-           h3k27ac_file_accession: false,
-           h3k27acZ: true,
-           h3k27ac_signal_url: false,
-           ctcf_experiment_accession: false,
-           ctcf_file_accession: false,
-           ctcfZ: true,
-           ctcf_signal_url: false,
-           chromhmm_url: false,
-         },
-       },
-     }}
-   />
- );
-}};
+export const ByCellAndTissueDownloads: Story = {
+  render: () => {
+    return (
+      <BiosampleTable
+        assembly="GRCh38"
+        divHeight={{ height: 600 }}
+        initialState={{
+          ...initialTableState,
+          columns: {
+            columnVisibilityModel: {
+              ...initialTableState.columns.columnVisibilityModel,
+              bedurl: true,
+              dnaseZ: true,
+              atacZ: true,
+              h3k4me3Z: true,
+              h3k27acZ: true,
+              ctcfZ: true,
+            },
+          },
+        }}
+      />
+    );
+  },
+};
 
-export const ShowRnaSeq: Story = {render: () => {
- return (
-   <BiosampleTable
-     assembly="GRCh38"
-     divHeight={{ height: 600 }}
-     initialState={{
-       ...initialTableState,
-       columns: {
-         columnVisibilityModel: { ...initialTableState.columns.columnVisibilityModel, [rnaSeqCheckCol.field]: true },
-       },
-     }}
-   />
- );
-}};
+export const ShowRnaSeq: Story = {
+  render: () => {
+    return (
+      <BiosampleTable
+        assembly="GRCh38"
+        divHeight={{ height: 600 }}
+        initialState={{
+          ...initialTableState,
+          columns: {
+            columnVisibilityModel: { ...initialTableState.columns.columnVisibilityModel, [rnaSeqCheckCol.field]: true },
+          },
+        }}
+      />
+    );
+  },
+};
+
+export const MultiSelectWithCheckboxes: Story = {
+  render: () => {
+    const [selected, setSelected] = React.useState<EncodeBiosample[]>([]);
+
+    return (
+      <Stack>
+        <BiosampleTable
+          assembly="GRCh38"
+          divHeight={{ height: 600 }}
+          checkboxSelection
+          onSelectionChange={(newSelected) => setSelected(newSelected)}
+        />
+        Selected:
+        {selected.map((x) => <span>{x.name}</span>)}
+      </Stack>
+    );
+  },
+};
+
+export const SingleSelectWithoutCheckboxes: Story = {
+  render: () => {
+    const [selected, setSelected] = React.useState<EncodeBiosample[]>([]);
+
+    return (
+      <Stack>
+        <BiosampleTable
+          assembly="GRCh38"
+          divHeight={{ height: 600 }}
+          disableRowSelectionOnClick={false}
+          disableMultipleRowSelection
+          onSelectionChange={(newSelected) => setSelected(newSelected)}
+          // potentially unstable solution. Not sure if the ids of grouped rows are public api
+          isRowSelectable={(params) => !String(params.id).includes('auto-generated-row')}
+        />
+        Selected:
+        {selected.map((x) => <span>{x.name}</span>)}
+      </Stack>
+    );
+  },
+};
