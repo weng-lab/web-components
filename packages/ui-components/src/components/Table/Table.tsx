@@ -1,14 +1,21 @@
 import {
-  DataGridPro,
+  DataGridPremium,
   GridAutosizeOptions,
   GridToolbarProps,
   ToolbarPropsOverrides,
   useGridApiRef,
-} from "@mui/x-data-grid-pro";
-import { useMemo, useEffect, useCallback } from "react";
+  useKeepGroupedColumnsHidden,
+} from "@mui/x-data-grid-premium";
+import { useMemo, useEffect, useCallback, useRef } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 import { CustomToolbar } from "./CustomToolbar";
+
+export const autosizeOptions: GridAutosizeOptions = {
+  expand: true,
+  includeHeaders: true,
+  outliersFactor: 1.5,
+};
 
 const Table = (props: TableProps) => {
   /**
@@ -22,7 +29,6 @@ const Table = (props: TableProps) => {
     density = "compact",
     rows = [],
     apiRef: externalApiRef,
-    onResize,
     emptyTableFallback,
     showToolbar = true,
     divHeight = {},
@@ -35,6 +41,7 @@ const Table = (props: TableProps) => {
     toolbarSlot,
     toolbarStyle,
     toolbarIconColor,
+    initialState,
     ...restDataGridProps
   } = props;
 
@@ -45,35 +52,23 @@ const Table = (props: TableProps) => {
       labelTooltip,
       toolbarSlot,
       toolbarStyle,
-      toolbarIconColor
+      toolbarIconColor,
     };
     return (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />;
   }, [label, labelTooltip, toolbarSlot]);
 
   //Assign default ID if no ID is provided in the row data
-  const rowsWithIds = useMemo(
-    () => rows.map((row, index) => ({ ...row, id: row?.id || index })),
-    [rows]
-  );
-
-  const autosizeOptions: GridAutosizeOptions = useMemo(
-    () => ({
-      expand: true,
-      includeHeaders: true,
-      outliersFactor: 1.5,
-    }),
-    []
-  );
+  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
 
   const internalApiRef = useGridApiRef();
   // prioritize using the provided apiRef if available, otherwise create a new one
   const apiRef = externalApiRef ?? internalApiRef;
 
-  const handleResizeCols = useCallback(() => {
+  const handleResizeCols = () => {
     // need to check .autosizeCoumns since the current was being set with an empty object
     if (!apiRef.current?.autosizeColumns) return;
     apiRef.current.autosizeColumns(autosizeOptions);
-  }, [apiRef, autosizeOptions]);
+  };
 
   // trigger resize when rows or columns change so that rows/columns don't need to be memoized outisde of this component
   // otherwise sometimes would snap back to default widths when rows/columns change
@@ -81,10 +76,21 @@ const Table = (props: TableProps) => {
     handleResizeCols();
   }, [rows, columns, handleResizeCols]);
 
-  const shouldDisplayEmptyFallback =
-    emptyTableFallback &&
-    rowsWithIds.length === 0 &&
-    !restDataGridProps.loading;
+  useEffect(() => {
+    return apiRef.current?.subscribeEvent("rowExpansionChange", (params) => {
+      if (params.childrenExpanded) {
+        apiRef.current?.autosizeColumns(autosizeOptions);
+      }
+    });
+  }, [apiRef]);
+
+  //subscribe to resize events to resize columns automatically
+  //This creates a very slight performance impact. May need to remove down the line if it becomes an issue
+  useEffect(() => {
+    return apiRef.current?.subscribeEvent("resize", handleResizeCols);
+  }, [apiRef]);
+
+  const shouldDisplayEmptyFallback = emptyTableFallback && rowsWithIds.length === 0 && !restDataGridProps.loading;
 
   if (shouldDisplayEmptyFallback) {
     return typeof emptyTableFallback === "string" ? (
@@ -95,8 +101,13 @@ const Table = (props: TableProps) => {
   }
 
   if (error) {
-    return <TableFallback message={`Error fetching ${label}`} variant="error" />
+    return <TableFallback message={`Error fetching ${label}`} variant="error" />;
   }
+
+  const internalInitialState = useKeepGroupedColumnsHidden({
+    apiRef,
+    initialState,
+  });
 
   return (
     <div
@@ -104,20 +115,15 @@ const Table = (props: TableProps) => {
         display: "flex",
         flexDirection: "column",
         width: "100%",
+        maxHeight: '100%',
         ...divHeight,
       }}
     >
-      <DataGridPro
+      <DataGridPremium
         apiRef={apiRef}
         columns={columns}
         rows={rowsWithIds}
         autosizeOnMount
-        onResize={(params, event, details) => {
-          if (onResize) {
-            onResize(params, event, details);
-          }
-          handleResizeCols();
-        }}
         autosizeOptions={autosizeOptions}
         disableRowSelectionOnClick
         showToolbar={showToolbar}
@@ -130,8 +136,11 @@ const Table = (props: TableProps) => {
         }}
         slots={{
           toolbar: CustomToolbarWrapper,
-          ...slots
+          ...slots,
         }}
+        disableAggregation
+        disablePivoting
+        initialState={internalInitialState}
         {...restDataGridProps}
       />
     </div>

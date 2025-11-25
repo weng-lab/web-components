@@ -13,7 +13,7 @@ import {
   QuickFilterTrigger,
   GridToolbarProps,
   ToolbarPropsOverrides,
-} from "@mui/x-data-grid-pro";
+} from "@mui/x-data-grid-premium";
 import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
 import Badge from "@mui/material/Badge";
