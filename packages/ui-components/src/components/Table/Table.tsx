@@ -90,6 +90,11 @@ const Table = (props: TableProps) => {
     return apiRef.current?.subscribeEvent("resize", handleResizeCols);
   }, [apiRef]);
 
+  const internalInitialState = useKeepGroupedColumnsHidden({
+    apiRef,
+    initialState,
+  });
+
   const shouldDisplayEmptyFallback = emptyTableFallback && rowsWithIds.length === 0 && !restDataGridProps.loading;
 
   if (shouldDisplayEmptyFallback) {
@@ -103,11 +108,6 @@ const Table = (props: TableProps) => {
   if (error) {
     return <TableFallback message={`Error fetching ${label}`} variant="error" />;
   }
-
-  const internalInitialState = useKeepGroupedColumnsHidden({
-    apiRef,
-    initialState,
-  });
 
   return (
     <div
