@@ -33,24 +33,29 @@ export type EncodeBiosample = {
   bigbedurl?: string | null;
 };
 
-export type BiosampleTableProps<T extends TableProps["rows"] = EncodeBiosample[]> = Partial<TableProps> & {
+export interface BiosampleTableProps<T extends TableProps["rows"] = EncodeBiosample[]>
+  extends Omit<TableProps, "rows" | "columns"> {
+  /**
+   * assembly to fetch samples for (required)
+   */
+  assembly: "GRCh38" | "mm10";
   /**
    * If passing rows, no biosamples will be fetched inside the component. Must use useEncodeBiosampleData to retrieve and pass in
    */
   rows?: T;
   /**
+   * Optionally override columns
+   */
+  columns?: TableProps["columns"]
+  /**
    * optionally prefilter biosamples. Filters the rows before going into the table. To modify initial filter state of table use initialState
    */
   prefilterBiosamples?: (biosample: T extends object ? T[number] : undefined) => boolean;
   /**
-   * assembly to fetch samples for
-   */
-  assembly: "GRCh38" | "mm10";
-  /**
    * Callback triggered when rowSelectionModel changes. Returns whole row objects. If only id needed, can use onRowSelectionModelChange
    */
-  onSelectionChange?: (selected: EncodeBiosample[]) => void
-};
+  onSelectionChange?: (selected: EncodeBiosample[]) => void;
+}
 
 const CCRE_ASSAYS = ["dnase", "atac", "h3k4me3", "h3k27ac", "ctcf"] as const;
 

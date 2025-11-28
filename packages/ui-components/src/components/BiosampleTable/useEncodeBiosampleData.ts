@@ -32,7 +32,7 @@ export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" 
     };
 
     if (!skip) fetchData();
-  }, []);
+  }, [url, skip]);
 
   return { data, loading, error };
 };
