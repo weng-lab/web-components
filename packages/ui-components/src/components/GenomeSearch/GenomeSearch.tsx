@@ -1,6 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getCCREs, getGenes, getICREs, getSNPs, getStudys } from "./queries";
-import { ccreResultList, geneResultList, getCoordinates, icreResultList, isDomain, snpResultList, studyResultList } from "./utils";
+import {
+  ccreResultList,
+  geneResultList,
+  getCoordinates,
+  icreResultList,
+  isDomain,
+  snpResultList,
+  studyResultList,
+} from "./utils";
 import { AutocompleteProps, Box, Button, ButtonProps, TextField, TextFieldProps, Typography } from "@mui/material";
 import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
@@ -14,7 +22,6 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
  * You must also provide a function to call when a result is selected, which will run when the user clicks the button.
  * @param props - extends MUI AutocompleteProps and includes additional props specific to this component
  */
-
 const Search: React.FC<GenomeSearchProps> = ({
   queries,
   assembly,
@@ -65,6 +72,7 @@ const Search: React.FC<GenomeSearchProps> = ({
     queryFn: () => getCCREs(inputValue, assembly, ccreLimit || 3, showiCREFlag || false),
     enabled: false,
   });
+
   const {
     data: geneData,
     refetch: refetchGenes,
@@ -151,8 +159,8 @@ const Search: React.FC<GenomeSearchProps> = ({
         resultsList.push(...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit || 3));
       }
       if (studyData && searchStudy) {
-      resultsList.push(...studyResultList(studyData.data.getGWASStudiesMetadata, geneLimit || 3));
-    }
+        resultsList.push(...studyResultList(studyData.data.getGWASStudiesMetadata, geneLimit || 3));
+      }
     } else {
       if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {
         resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
@@ -184,14 +192,14 @@ const Search: React.FC<GenomeSearchProps> = ({
     icreLimit,
     ccreLimit,
     snpLimit,
-    studyLimit
+    studyLimit,
   ]);
 
   //Clear input on assembly change
   useEffect(() => {
-    setInputValue("")
-    setSelection(null)
-  }, [assembly])
+    setInputValue("");
+    setSelection(null);
+  }, [assembly]);
 
   // Handle submit
   const onSubmit = useCallback(() => {
@@ -202,10 +210,10 @@ const Search: React.FC<GenomeSearchProps> = ({
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Enter") {
-        const exactMatch = results?.find(x => x.title?.toLowerCase() === inputValue.toLowerCase())
+        const exactMatch = results?.find((x) => x.title?.toLowerCase() === inputValue.toLowerCase());
         if (exactMatch) {
-          setSelection(exactMatch)
-          if (onSearchSubmit) onSearchSubmit(exactMatch)
+          setSelection(exactMatch);
+          if (onSearchSubmit) onSearchSubmit(exactMatch);
         }
       }
     },
@@ -214,7 +222,7 @@ const Search: React.FC<GenomeSearchProps> = ({
 
   const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result) => {
     setSelection(newValue);
-    setInputValue(newValue?.title || "") //needed so that the matching to inputValue works on enter press after selection
+    setInputValue(newValue?.title || ""); //needed so that the matching to inputValue works on enter press after selection
   };
 
   return (
@@ -325,8 +333,8 @@ function noOptionsText(inputValue: string, isLoading: boolean, results: Result[]
         ? isLoading || results?.length === 0
           ? "Loading..."
           : results === null
-          ? "No results found"
-          : ""
+            ? "No results found"
+            : ""
         : "Start typing for options"}
     </Typography>
   );

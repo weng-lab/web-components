@@ -18,6 +18,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     assembly: "GRCh38",
+    geneVersion: [29, 40],
     onSearchSubmit: (r: Result) => console.log("Going to", r),
     queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study"],
     ccreLimit: 3,
@@ -84,12 +85,7 @@ export const ButtonAndInputSlot: Story = {
     sx: { width: 400 },
     slots: {
       button: (
-        <Button
-          variant="contained"
-          color="secondary"
-          startIcon={<SearchIcon />}
-          sx={{ paddingInline: 3 }}
-        >
+        <Button variant="contained" color="secondary" startIcon={<SearchIcon />} sx={{ paddingInline: 3 }}>
           Search
         </Button>
       ),
@@ -122,9 +118,9 @@ export const ClearOnAssemblyChange: Story = {
     },
   },
   render: (args) => {
-    const [assembly, setAssembly] = useState<"GRCh38" | "mm10">("GRCh38")
+    const [assembly, setAssembly] = useState<"GRCh38" | "mm10">("GRCh38");
 
-    const {assembly: unused, ...Autocompleteprops} = args
+    const { assembly: unused, ...Autocompleteprops } = args;
 
     return (
       <Stack maxWidth={400} spacing={2}>
@@ -146,10 +142,10 @@ export const ClearOnAssemblyChange: Story = {
       </Stack>
     );
   },
-}
+};
 
 export const GencodeVersions: Story = {
- args: {
+  args: {
     assembly: "GRCh38",
     onSearchSubmit: (r: Result) => console.log("Going to", r),
     queries: ["Gene"],
@@ -169,6 +165,6 @@ export const GencodeVersions: Story = {
         <Typography>V29, V40</Typography>
         <GenomeSearch {...args} geneVersion={[29, 40]} />
       </Stack>
-    )
-  }
-}
+    );
+  },
+};
