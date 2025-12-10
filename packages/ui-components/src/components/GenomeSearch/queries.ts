@@ -195,17 +195,17 @@ export const getGenes = async (
   );
 
   // Combine and deduplicate results
-  const geneMap = new Map<string, { gene: any; versions: number[] }>();
+  const geneMap = new Map<string, { gene: any; versions: { id: string; version: number }[] }>();
 
   versionResults.forEach((result, idx) => {
     const genes = result.data.gene || [];
     genes.forEach((gene: any) => {
       if (!geneMap.has(gene.name)) {
-        geneMap.set(gene.name, { gene, versions: [versions[idx]] });
+        geneMap.set(gene.name, { gene, versions: [{ id: gene.id, version: versions[idx] }] });
       } else {
         // if gene already exists, just add legacy versions to list.
         const existing = geneMap.get(gene.name)!;
-        existing.versions.unshift(versions[idx]);
+        existing.versions.push({ id: gene.id, version: versions[idx] });
       }
     });
   });

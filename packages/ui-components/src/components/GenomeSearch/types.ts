@@ -1,14 +1,7 @@
-import {
-  AutocompleteProps,
-  BoxProps,
-  ButtonProps,
-  TextFieldProps,
-} from "@mui/material";
+import { AutocompleteProps, BoxProps, ButtonProps, TextFieldProps } from "@mui/material";
 
 // Props for the GenomeSearch component
-export type GenomeSearchProps = Partial<
-  AutocompleteProps<Result, false, true, false, React.ElementType>
-> & {
+export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, false, React.ElementType>> & {
   assembly: "GRCh38" | "mm10";
   onSearchSubmit: (result: Result) => void;
   defaultResults?: Result[];
@@ -76,7 +69,7 @@ export interface GeneResponse {
     end: number;
   };
   description: string;
-  versions: number[];
+  versions: { id: string; version: number }[];
 }
 
 // Response from the ICRE GraphQL query
@@ -97,12 +90,12 @@ export interface CCREResponse {
 
 // Response from the GWAS GraphQL query
 export interface StudyResponse {
-  disease_trait: string
-  studyid: string
-  population: string
-  parent_terms: string[]
-  has_enrichment_info: boolean
-  author: string
-  pubmedid: string
-  total_ld_blocks: number
+  disease_trait: string;
+  studyid: string;
+  population: string;
+  parent_terms: string[];
+  has_enrichment_info: boolean;
+  author: string;
+  pubmedid: string;
+  total_ld_blocks: number;
 }
