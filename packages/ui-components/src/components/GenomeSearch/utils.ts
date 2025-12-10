@@ -1,12 +1,4 @@
-import {
-  CCREResponse,
-  GeneResponse,
-  ICREResponse,
-  Result,
-  ResultType,
-  SnpResponse,
-  StudyResponse,
-} from "./types";
+import { CCREResponse, GeneResponse, ICREResponse, Result, ResultType, SnpResponse, StudyResponse } from "./types";
 
 /**
  * Get the coordinates from a string input.
@@ -34,8 +26,8 @@ export function getCoordinates(input: string, assembly: string): Result[] {
   }
 
   // Normalize chromosome name to use capital X and Y
-  const normalizedChromosome = chromosome.replace(/chrx$/, 'chrX').replace(/chry$/, 'chrY');
-  
+  const normalizedChromosome = chromosome.replace(/chrx$/, "chrX").replace(/chry$/, "chrY");
+
   const chrLength = chromosomeLengths[assembly][chromosome];
   if (end > start && chrLength && end <= chrLength) {
     results.push({
@@ -61,9 +53,7 @@ interface ResultFormatterOptions<T> {
 }
 
 // Generic formatter function
-function formatResults<
-  T extends { coordinates: { chromosome: string; start: number; end: number } }
->(
+function formatResults<T extends { coordinates: { chromosome: string; start: number; end: number } }>(
   results: T[] | null,
   limit: number,
   options: ResultFormatterOptions<T>
@@ -93,40 +83,31 @@ export function snpResultList(results: SnpResponse[], limit: number): Result[] {
   });
 }
 
-export function geneResultList(
-  results: GeneResponse[],
-  limit: number,
-  showVersions: boolean
-): Result[] {
+export function geneResultList(results: GeneResponse[], limit: number, showVersions: boolean): Result[] {
   return formatResults(results, limit, {
     getTitle: (result) => result.name,
     getDescription: (result) => {
-      return (
-        `${result.description}\n${result.id}\n${result.coordinates.chromosome}:${result.coordinates.start}-${result.coordinates.end}` +
-        (showVersions ? ` (${result.versions.map((x) => "V" + x).join(", ")})` : "")
+      let idStr = "";
+      result.versions.forEach(
+        (x, i) => (idStr += "V" + x.version + " " + x.id + (i === result.versions.length - 1 ? "" : "\n"))
       );
+      return `${result.description}\n${idStr}\n${result.coordinates.chromosome}:${result.coordinates.start}-${result.coordinates.end}`;
     },
     type: "Gene",
   });
 }
 
-export function studyResultList(
-  results: StudyResponse[],
-  limit: number
-): Result[] {
+export function studyResultList(results: StudyResponse[], limit: number): Result[] {
   return results.slice(0, limit).map((result) => ({
     title: result.disease_trait,
-    description: `${result.author.replace("_", " ")} (${result.studyid.split("-")[1]})\n${result.parent_terms.join(",")}\n ${result.has_enrichment_info ?"Biosample Enrichment" : ""}`,
+    description: `${result.author.replace("_", " ")} (${result.studyid.split("-")[1]})\n${result.parent_terms.join(",")}\n ${result.has_enrichment_info ? "Biosample Enrichment" : ""}`,
     domain: undefined,
     id: result.studyid,
     type: "Study",
   }));
 }
 
-export function icreResultList(
-  results: ICREResponse[],
-  limit: number
-): Result[] {
+export function icreResultList(results: ICREResponse[], limit: number): Result[] {
   return formatResults(results, limit, {
     getTitle: (result) => result.accession,
     getDescription: (result) =>
@@ -135,10 +116,7 @@ export function icreResultList(
   });
 }
 
-export function ccreResultList(
-  results: CCREResponse[],
-  limit: number
-): Result[] {
+export function ccreResultList(results: CCREResponse[], limit: number): Result[] {
   return formatResults(results, limit, {
     getTitle: (result) => result.accession,
     getDescription: (result) =>
@@ -210,7 +188,5 @@ export function isDomain(input: string) {
   const hasTabs = input.includes("\t");
   const hasHyphens = input.includes("-");
   const hasChromosomeNumber = input.length >= 4 && /^[0-9xyXY]$/.test(input[3]);
-  return (
-    (hasTabs || hasHyphens) && input.startsWith("chr") && hasChromosomeNumber
-  );
+  return (hasTabs || hasHyphens) && input.startsWith("chr") && hasChromosomeNumber;
 }
