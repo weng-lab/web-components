@@ -82,7 +82,15 @@ export const ByCellAndTissueDownloads: Story = {
       });
     }, [apiRef]);
 
-    return <BiosampleTable apiRef={apiRef} assembly="GRCh38" divHeight={{ height: 600 }} initialState={overrideInitialTableState} />;
+    return (
+      <BiosampleTable
+        apiRef={apiRef}
+        assembly="GRCh38"
+        divHeight={{ height: 600 }}
+        initialState={overrideInitialTableState}
+        slotProps={{ toolbar: { csvOptions: { allColumns: true }, excelOptions: { allColumns: true } } }}
+      />
+    );
   },
 };
 

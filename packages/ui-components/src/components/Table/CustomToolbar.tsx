@@ -13,6 +13,7 @@ import {
   QuickFilterTrigger,
   GridToolbarProps,
   ToolbarPropsOverrides,
+  ExportExcel,
 } from "@mui/x-data-grid-premium";
 import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
@@ -76,8 +77,8 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
   const iconColor = toolbarIconColor ?? "inherit"
 
   return (
-    <Toolbar style={{...toolbarStyle}}>
-      {typeof label !== "string" && label }
+    <Toolbar style={{ ...toolbarStyle }}>
+      {typeof label !== "string" && label}
       <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
         {typeof label === "string" && label}
         {/* ReactNode can be more than just an element, string, or number but not accounting for that for simplicity */}
@@ -140,12 +141,27 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
           },
         }}
       >
-        <ExportPrint options={{...restToolbarProps.printOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
+        <ExportPrint
+          options={{ ...restToolbarProps.printOptions }}
+          render={<MenuItem />}
+          onClick={() => setExportMenuOpen(false)}
+        >
           Print
         </ExportPrint>
-        <ExportCsv options={{fileName: typeof label === "string" ? label : downloadFileName, ...restToolbarProps.csvOptions}} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
+        <ExportCsv
+          options={{ fileName: typeof label === "string" ? label : downloadFileName, ...restToolbarProps.csvOptions }}
+          render={<MenuItem />}
+          onClick={() => setExportMenuOpen(false)}
+        >
           Download as CSV
         </ExportCsv>
+        <ExportExcel
+          options={{ ...restToolbarProps.excelOptions }}
+          render={<MenuItem />}
+          onClick={() => setExportMenuOpen(false)}
+        >
+          Download as Excel
+        </ExportExcel>
       </Menu>
 
       <StyledQuickFilter>

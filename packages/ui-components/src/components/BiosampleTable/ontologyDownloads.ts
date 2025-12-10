@@ -38,7 +38,6 @@ export const ontologyDownloadMap: Record<string, DownloadLink[]> = {
     { label: "Excluding Cancer Cell Lines", filename: "eye.noccl.cCREs.bed" },
     { label: "All Biosamples", filename: "eye.all.cCREs.bed" },
   ],
-  gallbladder: [{ label: "All Biosamples", filename: "gallbladder.noccl.cCREs.bed" }],
   heart: [{ label: "All Biosamples", filename: "heart.noccl.cCREs.bed" }],
   kidney: [
     { label: "Excluding Cancer Cell Lines", filename: "kidney.noccl.cCREs.bed" },
@@ -67,13 +66,11 @@ export const ontologyDownloadMap: Record<string, DownloadLink[]> = {
     { label: "All Biosamples", filename: "muscle.all.cCREs.bed" },
   ],
   nerve: [{ label: "All Biosamples", filename: "nerve.noccl.cCREs.bed" }],
-  nose: [{ label: "All Biosamples", filename: "nose.noccl.cCREs.bed" }],
   ovary: [{ label: "All Biosamples", filename: "ovary.noccl.cCREs.bed" }],
   pancreas: [
     { label: "Excluding Cancer Cell Lines", filename: "pancreas.noccl.cCREs.bed" },
     { label: "All Biosamples", filename: "pancreas.all.cCREs.bed" },
   ],
-  parathyroid_gland: [{ label: "All Biosamples", filename: "paraythroid_gland.noccl.cCREs.bed" }],
   penis: [{ label: "All Biosamples", filename: "penis.noccl.cCREs.bed" }],
   placenta: [{ label: "All Biosamples", filename: "placenta.noccl.cCREs.bed" }],
   prostate: [
@@ -94,7 +91,6 @@ export const ontologyDownloadMap: Record<string, DownloadLink[]> = {
   ],
   thymus: [{ label: "All Biosamples", filename: "thymus.noccl.cCREs.bed" }],
   thyroid: [{ label: "All Biosamples", filename: "thyroid.noccl.cCREs.bed" }],
-  urinary_bladder: [{ label: "All Biosamples", filename: "urinary_bladder.noccl.cCREs.bed" }],
   uterus: [
     { label: "Excluding Cancer Cell Lines", filename: "uterus.noccl.cCREs.bed" },
     { label: "All Biosamples", filename: "uterus.all.cCREs.bed" },
