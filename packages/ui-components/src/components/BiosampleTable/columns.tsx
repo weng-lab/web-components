@@ -106,15 +106,17 @@ export const assaysCol: GridColDef<EncodeBiosample> = {
     if (params.rowNode.type === "group") return null;
     const row = params.row;
     return (
-      <AssayWheel
-        row={{
-          dnase: row.dnase_experiment_accession,
-          atac: row.atac_experiment_accession,
-          h3k4me3: row.h3k4me3_experiment_accession,
-          h3k27ac: row.h3k27ac_experiment_accession,
-          ctcf: row.ctcf_experiment_accession,
-        }}
-      />
+      <div onClick={(e) => e.stopPropagation()}>
+        <AssayWheel
+          row={{
+            dnase: row.dnase_experiment_accession,
+            atac: row.atac_experiment_accession,
+            h3k4me3: row.h3k4me3_experiment_accession,
+            h3k27ac: row.h3k27ac_experiment_accession,
+            ctcf: row.ctcf_experiment_accession,
+          }}
+        />
+      </div>
     );
   },
   groupable: false,
