@@ -122,6 +122,7 @@ export const MultiSelectWithCheckboxes: Story = {
           assembly="GRCh38"
           divHeight={{ height: 600 }}
           checkboxSelection
+          selected={selected.map((x) => x.name)}
           onSelectionChange={(newSelected) => setSelected(newSelected)}
         />
         Selected:
