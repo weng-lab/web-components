@@ -1,9 +1,13 @@
-import { DataGridPremiumProps } from "@mui/x-data-grid-premium";
+import { DataGridPremiumProps, GridColDef } from "@mui/x-data-grid-premium";
 import { ReactElement, ReactNode } from "react"; 
-import { SvgIconOwnProps } from "@mui/material";
+import { SvgIconOwnProps, TooltipProps } from "@mui/material";
 
-//The props listed here are the props which are new (like elevation) or overridden (like pageSizeOptions) compared to the MUI DataGridProProps
+// Extend the GridColDef type to add optional tooltip to column
+export type TableColDef = GridColDef & { 
+  tooltip?: TooltipProps["title"]
+};
 
+//The props listed here are the props which are new or overridden compared to the MUI DataGridProProps
 interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
   /**
    * Rows to be consumed in the table.
@@ -13,6 +17,10 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    * Note: Rows without an 'id' property will be given id matching their index
    */
   rows: DataGridPremiumProps["rows"];
+  /**
+   * Columns to be used. TableColDef is same as GridColDef plus an optional tooltip property
+   */
+  columns: TableColDef[];
   /**
    * @default true
    * @note Overrides MUI default
