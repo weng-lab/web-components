@@ -12,7 +12,8 @@ import { CircularProgress } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
-import { downloadAsSVG, downloadSVGAsPNG } from '../../utility';
+import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from '../../utility';
+import { motion } from 'framer-motion';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
@@ -44,7 +45,8 @@ const BarPlot = <T,>({
     fill = false,
     legendTitle = "FDR",
     legendValues = [1, 0.05, 0.01, 0.001],
-    downloadFileName
+    downloadFileName,
+    animation
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
@@ -294,6 +296,9 @@ const BarPlot = <T,>({
 
                             const valueLabelY = barY + barHeight / 2
 
+                            const Wrapper = animation ? motion.g : "g";
+                            const animProps = getAnimationProps(animation, i);
+
                             return (
                                 <Group
                                     key={i}
@@ -314,48 +319,50 @@ const BarPlot = <T,>({
                                     >
                                         {d.category}
                                     </Text>
-                                    <Group>
-                                        <Bar
-                                            key={`bar-${d.label}`}
-                                            x={barX}
-                                            y={barY}
-                                            width={barWidth}
-                                            height={barHeight}
-                                            fill={d.color || "black"}
-                                            opacity={cutoffNegativeValues && pointValue === negativeCutoff ? 0.4 : 1}
-                                            rx={3}
-                                            stroke={hovered ? "black" : "none"}
-                                        />
-                                        {d.lollipopValue && (
-                                            <>
-                                                <Circle
-                                                    r={getlollipopRadius(d.lollipopValue) * 1.5}
-                                                    cx={d.value < 0 ? barX : barX + barWidth}
-                                                    cy={barY + barHeight / 2}
-                                                    fill={d.color}
-                                                    stroke={hovered ? "black" : "none"}
-                                                />
-                                                <Circle
-                                                    r={getlollipopRadius(d.lollipopValue)}
-                                                    cx={d.value < 0 ? barX : barX + barWidth}
-                                                    cy={barY + barHeight / 2}
-                                                    fill='black'
-                                                />
-                                            </>
-                                        )}
-                                        {/* Value label */}
-                                        <Text
-                                            id={`label-${i}-${uniqueID}`}
-                                            x={valueLabelX}
-                                            y={valueLabelY}
-                                            dy={".35em"}
-                                            textAnchor={"start"}
-                                            fill="black"
-                                            fontSize={12}
-                                        >
-                                            {d.label}
-                                        </Text>
-                                    </Group>
+                                    <Wrapper key={`node-${i}`} {...animProps}>
+                                        <Group>
+                                            <Bar
+                                                key={`bar-${d.label}`}
+                                                x={barX}
+                                                y={barY}
+                                                width={barWidth}
+                                                height={barHeight}
+                                                fill={d.color || "black"}
+                                                opacity={cutoffNegativeValues && pointValue === negativeCutoff ? 0.4 : 1}
+                                                rx={3}
+                                                stroke={hovered ? "black" : "none"}
+                                            />
+                                            {d.lollipopValue && (
+                                                <>
+                                                    <Circle
+                                                        r={getlollipopRadius(d.lollipopValue) * 1.5}
+                                                        cx={d.value < 0 ? barX : barX + barWidth}
+                                                        cy={barY + barHeight / 2}
+                                                        fill={d.color}
+                                                        stroke={hovered ? "black" : "none"}
+                                                    />
+                                                    <Circle
+                                                        r={getlollipopRadius(d.lollipopValue)}
+                                                        cx={d.value < 0 ? barX : barX + barWidth}
+                                                        cy={barY + barHeight / 2}
+                                                        fill='black'
+                                                    />
+                                                </>
+                                            )}
+                                            {/* Value label */}
+                                            <Text
+                                                id={`label-${i}-${uniqueID}`}
+                                                x={valueLabelX}
+                                                y={valueLabelY}
+                                                dy={".35em"}
+                                                textAnchor={"start"}
+                                                fill="black"
+                                                fontSize={12}
+                                            >
+                                                {d.label}
+                                            </Text>
+                                        </Group>
+                                    </Wrapper>
                                 </Group>
                             );
                         })}
