@@ -1,4 +1,4 @@
-import { DownloadPlotHandle } from "../../utility";
+import { AnimationType, DownloadPlotHandle } from "../../utility";
 
 export interface BarData<T> {
   category?: string;
@@ -45,6 +45,7 @@ export interface BarPlotProps<T> {
   legendTitle?: string;
   legendValues?: [number] | [number, number] | [number, number, number] | [number, number, number, number];
   downloadFileName?: string;
+  animation?: AnimationType;
 }
 
 export type LollipopLegendProps = {

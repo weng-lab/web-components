@@ -5,8 +5,7 @@ import { useParentSize } from "@visx/responsive";
 import SingleNode from "./SingleNode";
 import { TileMethod } from "@visx/hierarchy/lib/types";
 import { motion } from "framer-motion";
-import { getAnimationProps } from "./helpers";
-import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
+import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
 
 const Treemap = <T extends object>(
     props: TreemapProps<T>,

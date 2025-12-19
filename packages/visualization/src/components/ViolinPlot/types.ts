@@ -1,6 +1,6 @@
 import { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale';
 import { ReactElement } from "react";
-import { DownloadPlotHandle } from '../../utility';
+import { AnimationType, DownloadPlotHandle } from '../../utility';
 
 type Outliers = "all" | "top" | "bottom" | "none"
 
@@ -60,6 +60,7 @@ export type ViolinPlotProps<T> = {
     cutoffOpacity?: number;
     cutoffLine?: "none" | "dashed" | "solid";
     show95thPercentileLine?: boolean;
+    animation?: AnimationType;
 }
 
 export interface CrossPlotProps<T> {
