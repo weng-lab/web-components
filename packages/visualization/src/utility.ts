@@ -14,17 +14,31 @@ export interface DownloadPlotHandle {
  */
 export function downloadDivAsPNG(
     target: HTMLElement | null,
-    filename: string = 'scatterPlot.png'
+    filename = "scatterPlot.png",
+    scale = window.devicePixelRatio || 2
 ) {
     if (!target) return;
 
+    const rect = target.getBoundingClientRect();
+    const size = Math.ceil(Math.max(rect.width, rect.height));
+
     domtoimage
-        .toPng(target)
+        .toPng(target, {
+            width: size * scale,
+            height: size * scale,
+            style: {
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                width: `${size}px`,
+                height: `${size}px`,
+                overflow: "visible",
+            },
+        })
         .then((dataUrl) => {
-            downloadjs(dataUrl, filename, 'image/png');
+            downloadjs(dataUrl, filename, "image/png");
         })
         .catch((error) => {
-            console.error('Download failed:', error);
+            console.error("Download failed:", error);
         });
 }
 
@@ -69,7 +83,7 @@ export function downloadAsSVG(svgElement: SVGSVGElement, fileName = "chart.svg")
 /**
  * Converts an SVG element to PNG and downloads it
  */
-export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.png") {
+export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.png", scale = window.devicePixelRatio || 2) {
     const serializer = new XMLSerializer();
     const svgString = serializer.serializeToString(svgElement);
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
@@ -78,11 +92,18 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
     const img = new Image();
     img.onload = () => {
         const canvas = document.createElement("canvas");
-        canvas.width = svgElement.clientWidth || 800;
-        canvas.height = svgElement.clientHeight || 600;
+        const width = svgElement.clientWidth || 800;
+        const height = svgElement.clientHeight || 600;
+        canvas.width = width * scale;
+        canvas.height = height * scale;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
+
+        // Ensure sharp scaling
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
 
         ctx.drawImage(img, 0, 0);
         URL.revokeObjectURL(url);
@@ -95,7 +116,9 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
             link.download = fileName;
             link.click();
             URL.revokeObjectURL(pngUrl);
-        }, "image/png");
+        }, "image/png",
+            1, // max quality
+        );
     };
 
     img.src = url;
