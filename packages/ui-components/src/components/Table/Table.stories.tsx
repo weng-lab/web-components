@@ -2,7 +2,7 @@ import * as React from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import { Table } from "../..";
 import { LicenseInfo } from "@mui/x-license";
-import { GridColDef } from "@mui/x-data-grid-premium";
+import { DataGridPremium, GridColDef, useGridApiRef } from "@mui/x-data-grid-premium";
 import { Box, Button, FormControl, InputLabel, MenuItem, Popper, PopperProps, Select, Stack, Tooltip, Typography } from "@mui/material";
 import { QuestionMark } from "@mui/icons-material";
 
@@ -31,6 +31,7 @@ const columns: GridColDef<(typeof rows)[number]>[] = [
     headerName: "First name",
     width: 150,
     editable: true,
+
   },
   {
     field: "lastName",
@@ -224,4 +225,83 @@ export const ReactElementLabel: Story = {
     </Stack>
   );
   return <Table {...args} label={CustomLabelEl} downloadFileName="needWithCustomElementLabel" />},
+};
+
+export const columnTooltips: Story = {
+  args: {
+    columns: [
+      { field: "id", headerName: "ID", width: 90, tooltip: "This column has a normal string tooltip" },
+      {
+        field: "firstName",
+        headerName: "First name",
+        width: 150,
+        editable: true,
+        renderHeader: () => <i>First Name</i>,
+        tooltip: "This column has a tooltip and a custom renderHeader, which are merged by the HeaderWithTooltip component",
+      },
+      {
+        field: "lastName",
+        headerName: "Last name",
+        width: 150,
+        editable: true,
+        tooltip: <i>This tooltip is using a JSX element</i>
+      },
+      {
+        field: "age",
+        headerName: "Age",
+        // type: 'number',
+        width: 110,
+        editable: true,
+      },
+      {
+        field: "fullName",
+        headerName: "Full name",
+        description: "This column has a value getter and is not sortable.",
+        sortable: false,
+        width: 160,
+        valueGetter: (value, row) => `${row.firstName || ""} ${row.lastName || ""}`,
+      },
+    ],
+    rows,
+    label: "Table Title",
+    labelTooltip: "This is a tooltip",
+  },
+};
+
+export const Test: Story = {
+  render: () => {
+    const apiRef = useGridApiRef();
+
+    React.useEffect(() => {
+      return apiRef.current?.subscribeEvent("viewportInnerSizeChange", (params, event, details) => {
+        console.log("viewportInnerSizeChange event", params);
+      });
+    }, [apiRef]);
+
+    React.useEffect(() => {
+      return apiRef.current?.subscribeEvent("resize", (params, event, details) => {
+        console.log("resize event", params);
+      });
+    }, [apiRef]);
+
+    return (
+      <DataGridPremium
+        apiRef={apiRef}
+        autosizeOnMount
+        autosizeOptions={{
+          expand: true,
+          includeHeaders: true,
+          outliersFactor: 1.5,
+        }}
+        rows={[{ a: "test a", b: "test b", c: "test c", d: "test d", e: "test e", id: "1" }]}
+        columns={[
+          { field: "a", headerName: "test a" },
+          { field: "b", headerName: "test b" },
+          { field: "c", headerName: "test c" },
+          { field: "d", headerName: "test d" },
+          { field: "e", headerName: "test e" },
+        ]}
+      />
+    );
+  },
 };
