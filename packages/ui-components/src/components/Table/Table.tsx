@@ -13,6 +13,7 @@ import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 import { CustomToolbar } from "./CustomToolbar";
 import { HeaderWithTooltip } from "./HeaderWithToolip";
+import { useContainerResize } from "./useContainerResize";
 
 export const autosizeOptions: GridAutosizeOptions = {
   expand: true,
@@ -47,6 +48,9 @@ const Table = (props: TableProps) => {
     initialState,
     ...restDataGridProps
   } = props;
+
+  // Create a ref for the wrapper div to measure container resizing
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const CustomToolbarWrapper = useMemo(() => {
     const customToolbarProps = {
@@ -109,11 +113,9 @@ const Table = (props: TableProps) => {
     });
   }, [apiRef]);
 
-  //subscribe to viewportInnerSizeChange events to resize columns automatically on screen width change
-  //This creates a very slight performance impact. May need to remove down the line if it becomes an issue
-  useEffect(() => {
-    return apiRef.current?.subscribeEvent("viewportInnerSizeChange", handleResizeCols);
-  }, [apiRef]);
+  // Measure wrapper div for changes in size to trigger autosizeColumns
+  // Both resize and viewportInnerSizeChange events on the DataGrid are triggered on column resize so couldn't use those instead
+  useContainerResize(wrapperRef, handleResizeCols);
 
   const internalInitialState = useKeepGroupedColumnsHidden({
     apiRef,
@@ -136,6 +138,7 @@ const Table = (props: TableProps) => {
 
   return (
     <div
+      ref={wrapperRef}
       style={{
         display: "flex",
         flexDirection: "column",

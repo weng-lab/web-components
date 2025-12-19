@@ -11,7 +11,6 @@ export interface HeaderWithTooltipProps {
 export const HeaderWithTooltip = ({ params, tooltipTitle, originalRenderHeader }: HeaderWithTooltipProps) => {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      {/* 1. Render the main header content */}
       <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {originalRenderHeader ? (
           originalRenderHeader(params)
@@ -22,10 +21,8 @@ export const HeaderWithTooltip = ({ params, tooltipTitle, originalRenderHeader }
           </Typography>
         )}
       </Box>
-
-      {/* 2. Render the Tooltip Icon */}
       <Tooltip title={tooltipTitle}>
-        <InfoOutlinedIcon fontSize="small" color="action" sx={{ opacity: 0.7 }} />
+        <InfoOutlinedIcon fontSize="inherit" color="primary" />
       </Tooltip>
     </Box>
   );
