@@ -1,10 +1,8 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
 import { ReactElement } from "react";
-import { DownloadPlotHandle } from "../../utility";
+import { AnimationType, DownloadPlotHandle } from "../../utility";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
-
-export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
 
 export type TreemapNode<T> = {
   label: string;

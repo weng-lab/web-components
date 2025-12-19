@@ -68,7 +68,7 @@ export const ShowPointsWithJitter: Story = {
             bandwidth: "scott",
             showAllPoints: true,
             jitter: 20
-        }
+        },
     },
 };
 

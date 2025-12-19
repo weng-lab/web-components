@@ -1,6 +1,5 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
-import { AnimationType, TreemapNode, TreemapProps } from "./types";
-import { easeOut, Transition } from "framer-motion";
+import { TreemapNode, TreemapProps } from "./types";
 
 //get coords for label placement based on user input
 export function getLabelPlacement(
@@ -100,39 +99,3 @@ export function truncateTextToWidth(
 
   return result;
 }
-
-export const getAnimationProps = (type: AnimationType | undefined, index: number) => {
-    if (!type) return {};
-
-    const delay = index * 0.03;
-
-    // Reusable transition object, typed properly
-    const common: { transition: Transition } = {
-        transition: { duration: 0.4, delay, ease: easeOut },
-    };
-
-    switch (type) {
-        case "fade":
-            return { initial: { opacity: 0 }, animate: { opacity: 1 }, ...common };
-        case "scale":
-            return { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 }, ...common };
-        case "slideUp":
-            return { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, ...common };
-        case "slideRight":
-            return { initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, ...common };
-        case "pop":
-            const spring: Transition = {
-                type: "spring" as const,
-                stiffness: 150,
-                damping: 12,
-                delay,
-            };
-            return {
-                initial: { scale: 0 },
-                animate: { scale: 1 },
-                transition: spring,
-            };
-        default:
-            return {};
-    }
-};

@@ -7,7 +7,8 @@ import { useImperativeHandle, useMemo, useRef } from "react";
 import { Text } from '@visx/text';
 import { getTextHeight } from "./helpers";
 import SingleViolin from "./singleViolin";
-import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
+import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
+import { motion } from "framer-motion";
 
 const ViolinPlot = <T extends object>(
     props: ViolinPlotProps<T>,
@@ -139,24 +140,29 @@ const ViolinPlot = <T extends object>(
             <svg width={parentWidth ?? 0} height={parentHeight?? 0} ref={svgRef}>
                 <Group top={baseOffset} left={offset}>
                     {props.distributions.map((x: Distribution<T>, i) => {
+                        const Wrapper = props.animation ? motion.g : "g";
+                        const animProps = getAnimationProps(props.animation, i);
+                        
                         return (
-                            <SingleViolin
-                                key={i}
-                                distribution={x}
-                                distIndex={i}
-                                violinProps={props.violinProps}
-                                crossProps={props.crossProps}
-                                valueScale={valueScale}
-                                labelScale={labelScale}
-                                offset={offset}
-                                labels={labels}
-                                disableCrossPlot={props.disableCrossPlot ?? false}
-                                disableViolinPlot={props.disableViolinPlot ?? false}
-                                horizontal={props.horizontal ?? false}
-                                pointTooltipBody={props.pointTooltipBody}
-                                onViolinClicked={props.onViolinClicked}
-                                onPointClicked={props.onPointClicked}
-                            />
+                            <Wrapper key={`node-${i}`} {...animProps}>
+                                <SingleViolin
+                                    key={i}
+                                    distribution={x}
+                                    distIndex={i}
+                                    violinProps={props.violinProps}
+                                    crossProps={props.crossProps}
+                                    valueScale={valueScale}
+                                    labelScale={labelScale}
+                                    offset={offset}
+                                    labels={labels}
+                                    disableCrossPlot={props.disableCrossPlot ?? false}
+                                    disableViolinPlot={props.disableViolinPlot ?? false}
+                                    horizontal={props.horizontal ?? false}
+                                    pointTooltipBody={props.pointTooltipBody}
+                                    onViolinClicked={props.onViolinClicked}
+                                    onPointClicked={props.onPointClicked}
+                                />
+                            </Wrapper>
                         )
                     })}
                     {/* opacity box to cutoff the rest of the plot */}
