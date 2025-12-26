@@ -124,10 +124,10 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
     img.src = url;
 }
 
-export const getAnimationProps = (type: AnimationType | undefined, index: number) => {
+export const getAnimationProps = (type: AnimationType | undefined, index: number, buffer = .03) => {
     if (!type) return {};
 
-    const delay = index * 0.03;
+    const delay = index * buffer;
 
     // Reusable transition object, typed properly
     const common: { transition: Transition } = {

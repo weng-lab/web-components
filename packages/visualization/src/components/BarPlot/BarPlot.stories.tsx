@@ -101,7 +101,8 @@ const TooltipContents = (bar: BarData<MyMetadata>) => (
 // Default story
 export const Default: Story = {
     args: {
-        data: sampleData
+        data: sampleData,
+        animation: "scale"
     },
 };
 

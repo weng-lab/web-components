@@ -30,7 +30,9 @@ export const Default: Story = {
         distributions: testData,
         loading: false,
         axisLabel: "Axis Label",
-        labelOrientation: "rightDiagonal"
+        labelOrientation: "rightDiagonal",
+        animation: "scale",
+        animationBuffer: .08
     },
 };
 
