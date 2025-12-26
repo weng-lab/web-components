@@ -46,6 +46,7 @@ export interface BarPlotProps<T> {
   legendValues?: [number] | [number, number] | [number, number, number] | [number, number, number, number];
   downloadFileName?: string;
   animation?: AnimationType;
+  animationBuffer?: number;
 }
 
 export type LollipopLegendProps = {

@@ -141,7 +141,7 @@ const ViolinPlot = <T extends object>(
                 <Group top={baseOffset} left={offset}>
                     {props.distributions.map((x: Distribution<T>, i) => {
                         const Wrapper = props.animation ? motion.g : "g";
-                        const animProps = getAnimationProps(props.animation, i);
+                        const animProps = getAnimationProps(props.animation, i, props.animationBuffer ?? .03);
                         
                         return (
                             <Wrapper key={`node-${i}`} {...animProps}>

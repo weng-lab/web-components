@@ -46,10 +46,14 @@ const BarPlot = <T,>({
     legendTitle = "FDR",
     legendValues = [1, 0.05, 0.01, 0.001],
     downloadFileName,
-    animation
+    animation,
+    animationBuffer
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
+    // State to control whether animation is enabled so that if scrollling too fast through a long list of bars, 
+    // you dont have to wait for the animation to catch up
+    const [animationEnabled, setAnimationEnabled] = useState(true);
     // Unique ID needed to not mix up getElementByID calls if multiple charts are in DOM
     const [uniqueID] = useState(topAxisLabel + String(Math.random()))
     const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } = useTooltip<BarData<T>>({});
@@ -65,6 +69,18 @@ const BarPlot = <T,>({
     const TooltipWithBounds = VisxTooltipWithBounds as unknown as React.FC<TooltipWithBoundsProps>;
 
     const outerSvgRef = useRef<SVGSVGElement>(null)
+    const { parentRef, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
+
+    useEffect(() => {
+        const el = parentRef.current;
+        if (!el) return;
+
+        const handleScroll = () => setAnimationEnabled(false);
+
+        el.addEventListener("scroll", handleScroll, { once: true });
+
+        return () => el.removeEventListener("scroll", handleScroll);
+    }, []);
 
     const handleMouseMove = useCallback((event: React.MouseEvent, barData: BarData<T>) => {
         tooltipDataRef.current = {
@@ -86,7 +102,6 @@ const BarPlot = <T,>({
         }
     }, [showTooltip]);
 
-    const { parentRef, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
 
     const lollipopValues = data
         .map(d => d.lollipopValue)
@@ -221,7 +236,7 @@ const BarPlot = <T,>({
 
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
-        <div ref={parentRef} style={{ minWidth: '500px', height: '100%', }}>
+        <div ref={parentRef} style={{ minWidth: '500px', height: '100%', overflow: 'auto'}}>
             {lollipopValues.length > 0 && (
                 <Legend
                     values={lollipopValues}
@@ -250,7 +265,7 @@ const BarPlot = <T,>({
                     height={fill ? ParentHeight ? ParentHeight - legendHeight : ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
-                    <Group left={spaceForCategory} top={spaceForTopAxis}>
+                    <Group left={spaceForCategory} top={spaceForTopAxis} key={animationEnabled ? "animating" : "static"}>
                         {/* Top Axis with Label */}
                         <AxisTop
                             scale={xScale}
@@ -296,8 +311,8 @@ const BarPlot = <T,>({
 
                             const valueLabelY = barY + barHeight / 2
 
-                            const Wrapper = animation ? motion.g : "g";
-                            const animProps = getAnimationProps(animation, i);
+                            const Wrapper = animation && animationEnabled ? motion.g : "g";
+                            const animProps = getAnimationProps(animation, i, animationBuffer ?? .03);
 
                             return (
                                 <Group

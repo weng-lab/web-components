@@ -4,36 +4,121 @@ import Box from '@mui/material/Box';
 import {  ScatterPlot } from './packages/visualization/src/components/ScatterPlot';
 import { Button } from '@mui/material';
 import { DownloadPlotHandle } from './packages/visualization/src/utility';
+import { BarData } from './packages/visualization/src/components/BarPlot/types';
+import BarPlot from './packages/visualization/src/components/BarPlot/barplot';
 
 function TestingPage() {
   type MyMetadata = {
     description?: string;
+    source?: string;
   };
 
-  type Point = {
-    x: number;
-    y: number;
-    color: string;
-    shape?: "circle" | "triangle";
-};
-
-  // Example data for the scatter plot
-  const scatterData: Point[] = [
-    { x: 1, y: 2, color: 'red' },
-    { x: 3, y: 4, color: 'blue' },
-    { x: 5, y: 6, color: 'green' },
-  ];
-
-      const ref = useRef<DownloadPlotHandle>(null)
+  const sampleData: BarData<MyMetadata>[] = [
+      {
+          category: "Group A",
+          label: "Apples",
+          value: 30,
+          id: "apples-a1",
+          color: "#FF6384",
+          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
+      },
+      {
+          category: "Group B",
+          label: "Grapes",
+          value: 50,
+          id: "grapes-b1",
+          color: "#4BC0C0",
+          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
+      },
+      {
+          category: "Group C",
+          label: "Bananas",
+          value: 27,
+          id: "bananas-c1",
+          color: "#FFCD56",
+          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
+      },
+      {
+          category: "Group A",
+          label: "Apples",
+          value: 30,
+          id: "apples-a2",
+          color: "#FF6384",
+          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
+      },
+      {
+          category: "Group B",
+          label: "Grapes",
+          value: 50,
+          id: "grapes-b2",
+          color: "#4BC0C0",
+          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
+      },
+      {
+          category: "Group C",
+          label: "Bananas",
+          value: 27,
+          id: "bananas-c2",
+          color: "#FFCD56",
+          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
+      },
+      {
+          category: "Group A",
+          label: "Apples",
+          value: 30,
+          id: "apples-a3",
+          color: "#FF6384",
+          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
+      },
+      {
+          category: "Group B",
+          label: "Grapes",
+          value: 50,
+          id: "grapes-b3",
+          color: "#4BC0C0",
+          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
+      },
+      {
+          category: "Group C",
+          label: "Bananas",
+          value: 27,
+          id: "bananas-c3",
+          color: "#FFCD56",
+          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
+      },
+      {
+          category: "Group A",
+          label: "Apples",
+          value: 30,
+          id: "apples-a4",
+          color: "#FF6384",
+          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
+      },
+      {
+          category: "Group B",
+          label: "Grapes",
+          value: 50,
+          id: "grapes-b4",
+          color: "#4BC0C0",
+          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
+      },
+      {
+          category: "Group C",
+          label: "Bananas",
+          value: 27,
+          id: "bananas-c4",
+          color: "#FFCD56",
+          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
+      },
+  ]
 
   return (
-    <Box height="700px" width="auto" padding={0} sx={{ position: "relative" }}>
-      <ScatterPlot
-        pointData={scatterData}
-        loading={false}
-        ref={ref}
+    <Box height="250px" width="auto" padding={0} sx={{ position: "relative", border: "1px solid black", overflow: "auto" }}>
+      <BarPlot
+        data={sampleData}
+        animation="scale"
+        barSize={25}
       />
-      <Button onClick={() => ref.current?.downloadPNG()}>Download</Button>
     </Box>
   );
 }

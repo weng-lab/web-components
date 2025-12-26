@@ -61,6 +61,8 @@ export type ViolinPlotProps<T> = {
     cutoffLine?: "none" | "dashed" | "solid";
     show95thPercentileLine?: boolean;
     animation?: AnimationType;
+    //default .03
+    animationBuffer?: number;
 }
 
 export interface CrossPlotProps<T> {
