@@ -60,3 +60,22 @@ export type LollipopLegendProps = {
     axisCenter: number;
     loading: boolean;
 }
+
+export interface SingleBarProps<T> {
+    bar: BarData<T>;
+    index: number;
+    onBarClicked?: (bar: BarData<T>) => void;
+    TooltipContents?: (bar: BarData<T>) => React.ReactNode;
+    cutoffNegativeValues: boolean;
+    negativeCutoff: number;
+    xScale: any;
+    yScale: any;
+    barSize: number;
+    barSpacing: number;
+    gapBetweenTextAndBar: number;
+    getLollipopRadius: (x: number) => number;
+    animation?: AnimationType;
+    animationEnabled: boolean;
+    animationBuffer?: number;
+    uniqueID: string;
+}
