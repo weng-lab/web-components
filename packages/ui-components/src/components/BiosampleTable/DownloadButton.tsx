@@ -9,6 +9,8 @@ export type DownloadButtonProps = {
   url: string;
   filename?: string;
   disabled?: boolean;
+  displayName?: string;
+  assay?: string;
 };
 
 export const DownloadButton = <T extends boolean>({
@@ -16,6 +18,8 @@ export const DownloadButton = <T extends boolean>({
   url,
   filename,
   disabled = false,
+  displayName,
+  assay,
 }: DownloadButtonProps) => {
   const [fileSize, setFileSize] = useState<number | null>(null);
   const { onDownload } = useDownloadContext();
@@ -28,7 +32,14 @@ export const DownloadButton = <T extends boolean>({
 
   const handleClick = (e: React.MouseEvent) => {
     if (onDownload && url) {
-      const name = filename || url.split("/").pop() || "download";
+      let name: string;
+      if (displayName && assay) {
+        // Use descriptive name: displayName_assay
+        name = `${displayName}_${assay}`;
+      } else {
+        // Fall back to filename or extracted from URL
+        name = filename || url.split("/").pop() || "download";
+      }
       onDownload(url, name);
     }
   };

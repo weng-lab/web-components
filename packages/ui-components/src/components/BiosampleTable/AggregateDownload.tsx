@@ -67,7 +67,9 @@ export const AggregateDownloadButton = ({ ontology }: AggregateDownloadProps) =>
 
       setTimeout(() => {
         if (onDownload) {
-          onDownload(url, filename);
+          // Use descriptive name: ontology_aggregate
+          const name = `${ontology}_aggregate`;
+          onDownload(url, name);
         }
 
         const link = document.createElement("a");
@@ -79,7 +81,7 @@ export const AggregateDownloadButton = ({ ontology }: AggregateDownloadProps) =>
         document.body.removeChild(link);
       }, index * 500); // 500ms delay between downloads (some browsers prevent against mutliple downloads at once)
     });
-  }, [all, allFile, availibleDownloads, ncFile, noccl, onDownload]);
+  }, [all, allFile, availibleDownloads, ncFile, noccl, onDownload, ontology]);
 
   return (
     <>
