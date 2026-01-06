@@ -17,13 +17,14 @@ import { useCallback, useMemo, useState } from "react";
 import { Download } from "@mui/icons-material";
 import { ontologyDownloadMap } from "./ontologyDownloads";
 import { fetchFileSize, formatFileSize } from "./helpers";
+import { useDownloadContext } from "./DownloadContext";
 
 export type AggregateDownloadProps = {
   ontology: string;
 };
 
 /**
- * 
+ *
  * @param ontology
  * Finds available aggregate file urls for the given ontology in the form `[noccl, ccl]`
  */
@@ -39,31 +40,38 @@ export const AggregateDownloadButton = ({ ontology }: AggregateDownloadProps) =>
   const [all, setAll] = useState(false);
   const [nocclFileSize, setNocclFileSize] = useState<number | null>(null);
   const [allFileSize, setAllFileSize] = useState<number | null>(null);
+  const { onDownload } = useDownloadContext();
 
-  const availibleDownloads = getAvailableFiles(ontology)
-  
+  const availibleDownloads = getAvailableFiles(ontology);
+
   const ncFile = availibleDownloads.find((d) => d.label === "Excluding Cancer Cell Lines")?.filename ?? undefined;
   const allFile = availibleDownloads.find((d) => d.label === "All Biosamples")?.filename ?? undefined;
-  
+
   const handleOpenDialog = () => {
-    if (ncFile && !nocclFileSize) fetchFileSize(`https://downloads.wenglab.org/${ncFile}`, setNocclFileSize)
-    if (allFile && !allFileSize) fetchFileSize(`https://downloads.wenglab.org/${allFile}`, setAllFileSize)
-    setIsDialogOpen(true)
-  }
+    if (ncFile && !nocclFileSize) fetchFileSize(`https://downloads.wenglab.org/${ncFile}`, setNocclFileSize);
+    if (allFile && !allFileSize) fetchFileSize(`https://downloads.wenglab.org/${allFile}`, setAllFileSize);
+    setIsDialogOpen(true);
+  };
 
   const handleDownload = useCallback(() => {
     if (!availibleDownloads || availibleDownloads.length === 0) return;
 
-    const checked = [];
-    if (noccl) checked.push(ncFile);
-    if (all) checked.push(allFile);
+    const filesToDownload: { filename: string; label: string }[] = [];
+    if (noccl && ncFile) filesToDownload.push({ filename: ncFile, label: "excluding_cancer_cell_lines" });
+    if (all && allFile) filesToDownload.push({ filename: allFile, label: "all_biosamples" });
 
-    checked.forEach((filename, index) => {
-      if (!filename) return;
+    filesToDownload.forEach(({ filename, label }, index) => {
+      const url = `https://downloads.wenglab.org/${filename}`;
 
       setTimeout(() => {
+        if (onDownload) {
+          // Use descriptive name: ontology_aggregate_ccres_label
+          const name = `${ontology}_aggregate_ccres_${label}`;
+          onDownload(url, name);
+        }
+
         const link = document.createElement("a");
-        link.href = `https://downloads.wenglab.org/${filename}`;
+        link.href = url;
         link.download = filename;
 
         document.body.appendChild(link);
@@ -71,7 +79,7 @@ export const AggregateDownloadButton = ({ ontology }: AggregateDownloadProps) =>
         document.body.removeChild(link);
       }, index * 500); // 500ms delay between downloads (some browsers prevent against mutliple downloads at once)
     });
-  }, [all, allFile, availibleDownloads, ncFile, noccl]);
+  }, [all, allFile, availibleDownloads, ncFile, noccl, onDownload, ontology]);
 
   return (
     <>
@@ -95,11 +103,13 @@ export const AggregateDownloadButton = ({ ontology }: AggregateDownloadProps) =>
         arrow
       >
         <span>
-          <IconButton onClick={(e) => {
+          <IconButton
+            onClick={(e) => {
               e.stopPropagation();
               handleOpenDialog();
             }}
-            disabled={availibleDownloads.length === 0}>
+            disabled={availibleDownloads.length === 0}
+          >
             <Download />
           </IconButton>
         </span>
