@@ -10,5 +10,5 @@ export type * from "./components/Table";
 export * from "./components/BiosampleTable";
 export type * from "./components/BiosampleTable";
 
-export { GenomeSearch } from "./components/GenomeSearch";
-export type { GenomeSearchProps, Result, Domain, ResultType } from "./components/GenomeSearch";
+export * from "./components/GenomeSearch";
+export type * from "./components/GenomeSearch";

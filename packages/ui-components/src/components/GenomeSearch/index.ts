@@ -3,3 +3,5 @@ import GenomeSearch from './GenomeSearch';
 
 export { GenomeSearch };
 export type { GenomeSearchProps, Result, Domain, ResultType };
+
+export * from './useEntityAutocomplete'
