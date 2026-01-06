@@ -56,19 +56,17 @@ export const AggregateDownloadButton = ({ ontology }: AggregateDownloadProps) =>
   const handleDownload = useCallback(() => {
     if (!availibleDownloads || availibleDownloads.length === 0) return;
 
-    const checked = [];
-    if (noccl) checked.push(ncFile);
-    if (all) checked.push(allFile);
+    const filesToDownload: { filename: string; label: string }[] = [];
+    if (noccl && ncFile) filesToDownload.push({ filename: ncFile, label: "excluding_cancer_cell_lines" });
+    if (all && allFile) filesToDownload.push({ filename: allFile, label: "all_biosamples" });
 
-    checked.forEach((filename, index) => {
-      if (!filename) return;
-
+    filesToDownload.forEach(({ filename, label }, index) => {
       const url = `https://downloads.wenglab.org/${filename}`;
 
       setTimeout(() => {
         if (onDownload) {
-          // Use descriptive name: ontology_aggregate
-          const name = `${ontology}_aggregate`;
+          // Use descriptive name: ontology_aggregate_ccres_label
+          const name = `${ontology}_aggregate_ccres_${label}`;
           onDownload(url, name);
         }
 
