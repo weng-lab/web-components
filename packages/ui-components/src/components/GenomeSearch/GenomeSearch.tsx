@@ -1,18 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { getCCREs, getGenes, getICREs, getSNPs, getStudys } from "./queries";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  ccreResultList,
-  geneResultList,
-  getCoordinates,
-  icreResultList,
   isDomain,
-  snpResultList,
-  studyResultList,
 } from "./utils";
 import { AutocompleteProps, Box, Button, ButtonProps, TextField, TextFieldProps, Typography } from "@mui/material";
 import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { useEntityAutocomplete } from "./useEntityAutocomplete";
 
 /**
  * An autocomplete search component for genomic landmarks such as genes, SNPs, ICRs, and CCRs.
@@ -46,154 +39,40 @@ const Search: React.FC<GenomeSearchProps> = ({
   const [results, setResults] = useState<Result[] | null>(defaultResults || null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const searchGene = queries.includes("Gene");
-  const searchSnp = queries.includes("SNP");
-  const searchICRE = queries.includes("iCRE");
-  const searchCCRE = queries.includes("cCRE");
-  const searchCoordinate = queries.includes("Coordinate");
-  const searchStudy = queries.includes("Study");
-
-  const {
-    data: icreData,
-    refetch: refetchICREs,
-    isFetching: icreFetching,
-  } = useQuery({
-    queryKey: ["icres", inputValue],
-    queryFn: () => getICREs(inputValue, icreLimit || 3),
-    enabled: false,
-  });
-
-  const {
-    data: ccreData,
-    refetch: refetchCCREs,
-    isFetching: ccreFetching,
-  } = useQuery({
-    queryKey: ["ccres", inputValue, assembly],
-    queryFn: () => getCCREs(inputValue, assembly, ccreLimit || 3, showiCREFlag || false),
-    enabled: false,
-  });
-
-  const {
-    data: geneData,
-    refetch: refetchGenes,
-    isFetching: geneFetching,
-  } = useQuery({
-    queryKey: ["genes", inputValue, assembly, geneVersion],
-    queryFn: () => getGenes(inputValue, assembly, geneLimit || 3, geneVersion),
-    enabled: false,
-  });
-
-  const {
-    data: snpData,
-    refetch: refetchSNPs,
-    isFetching: snpFetching,
-  } = useQuery({
-    queryKey: ["snps", inputValue, assembly],
-    queryFn: () => getSNPs(inputValue, assembly, snpLimit || 3),
-    enabled: false,
-  });
-
-  const {
-    data: studyData,
-    refetch: refetchStudies,
-    isFetching: studyFetching,
-  } = useQuery({
-    queryKey: ["study", inputValue],
-    queryFn: () => getStudys(inputValue, studyLimit || 3),
-    enabled: false,
-  });
-
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { data: fetchedResults, loading: hookLoading } = useEntityAutocomplete(
+    inputValue && inputValue !== "" ? [inputValue] : [],
+    {
+      queries,
+      assembly,
+      geneVersion,
+      limits: {
+        gene: geneLimit,
+        snp: snpLimit,
+        icre: icreLimit,
+        ccre: ccreLimit,
+        study: studyLimit,
+      },
+      showiCREFlag,
+      debounceMs: 100,
+    }
+  );
 
   useEffect(() => {
     if (inputValue.length === 0) {
       setResults(null);
-    } else {
-      setResults([]);
     }
-
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // Set new timeout
-    timeoutRef.current = setTimeout(() => {
-      if (searchGene && !isDomain(inputValue)) refetchGenes();
-      if (assembly === "GRCh38") {
-        if (searchICRE && inputValue.toLowerCase().startsWith("eh")) refetchICREs();
-        if (searchCCRE && inputValue.toLowerCase().startsWith("eh")) refetchCCREs();
-        if (searchSnp && inputValue.toLowerCase().startsWith("rs")) refetchSNPs();
-        if (searchStudy && !isDomain(inputValue) && inputValue !== "") refetchStudies();
-      } else {
-        if (searchCCRE && inputValue.toLowerCase().startsWith("em")) refetchCCREs();
-      }
-    }, 100);
-
-    // Cleanup function
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
   }, [inputValue]);
 
   useEffect(() => {
-    setIsLoading(icreFetching || ccreFetching || geneFetching || snpFetching || studyFetching);
-  }, [icreFetching, ccreFetching, geneFetching, snpFetching, studyFetching]);
+    setIsLoading(hookLoading);
+  }, [hookLoading]);
 
   useEffect(() => {
-    if (isLoading) return;
-    const resultsList = [];
-    if (geneData && searchGene) {
-      resultsList.push(...geneResultList(geneData, geneLimit || 3, typeof geneVersion === "object"));
+    if (!hookLoading) {
+      if (!fetchedResults || fetchedResults.length === 0) setResults(null);
+      else setResults(fetchedResults);
     }
-    if (assembly === "GRCh38") {
-      if (icreData && searchICRE && inputValue.toLowerCase().startsWith("eh")) {
-        resultsList.push(...icreResultList(icreData.data.iCREQuery, icreLimit || 3));
-      }
-      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("eh")) {
-        resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
-      }
-      if (snpData && searchSnp && inputValue.toLowerCase().startsWith("rs")) {
-        resultsList.push(...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit || 3));
-      }
-      if (studyData && searchStudy) {
-        resultsList.push(...studyResultList(studyData.data.getGWASStudiesMetadata, geneLimit || 3));
-      }
-    } else {
-      if (ccreData && searchCCRE && inputValue.toLowerCase().startsWith("em")) {
-        resultsList.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit || 3));
-      }
-    }
-
-    if (isDomain(inputValue) && searchCoordinate) {
-      resultsList.push(...getCoordinates(inputValue, assembly));
-    }
-
-    if (resultsList.length === 0) setResults(null);
-    else setResults(resultsList);
-  }, [
-    isLoading,
-    icreData,
-    ccreData,
-    geneData,
-    snpData,
-    studyData,
-    searchGene,
-    searchICRE,
-    searchCCRE,
-    searchSnp,
-    searchCoordinate,
-    searchStudy,
-    inputValue,
-    assembly,
-    geneLimit,
-    icreLimit,
-    ccreLimit,
-    snpLimit,
-    studyLimit,
-  ]);
+  }, [hookLoading, fetchedResults]);
 
   //Clear input on assembly change
   useEffect(() => {
@@ -231,6 +110,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         onChange={onChange}
         value={selection as Result}
         options={inputValue === "" ? defaultResults || [] : results || []}
+        
         getOptionLabel={(option: Result) => {
           return option.title || "";
         }}
@@ -371,13 +251,8 @@ function renderOptions(props: any, option: Result) {
  * @param props - The props object from the Autocomplete component
  * @returns A wrapped Search component
  */
-const client = new QueryClient();
 function GenomeSearch(props: GenomeSearchProps) {
-  return (
-    <QueryClientProvider client={client}>
-      <Search {...props} />
-    </QueryClientProvider>
-  );
+  return <Search {...props} />;
 }
 
 export default GenomeSearch;

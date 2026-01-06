@@ -54,24 +54,6 @@ export const GENE_AUTOCOMPLETE_QUERY = `
   }
 `;
 
-export const RESOLVE_QUERY = `
-  query q(
-      $id: String!
-      $assembly: String!
-  ) {
-      resolve(
-          id: $id
-          assembly: $assembly
-      ) {
-          coordinates {
-              chromosome
-              start
-              end
-          }
-      }
-  }
-`;
-
 export const ICRE_AUTOCOMPLETE_QUERY = `
   query iCREQuery($accession_prefix: [String!], $limit: Int) {
       iCREQuery(accession_prefix: $accession_prefix, limit: $limit) {
@@ -143,7 +125,7 @@ export const getICREs = async (value: string, limit: number) => {
   return response.json();
 };
 
-export const getCCREs = async (value: string, assembly: string, limit: number, showiCREFlag: boolean) => {
+export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
@@ -162,7 +144,7 @@ export const getCCREs = async (value: string, assembly: string, limit: number, s
 
 export const getGenes = async (
   value: string,
-  assembly: string,
+  assembly: GenomeSearchProps["assembly"],
   limit: number,
   geneVersions: GenomeSearchProps["geneVersion"]
 ) => {
@@ -239,7 +221,7 @@ async function getDescription(name: string): Promise<string | null> {
   return matches && matches.length >= 1 ? matches[0][4] : null;
 }
 
-export const getSNPs = async (value: string, assembly: string, limit: number) => {
+export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
