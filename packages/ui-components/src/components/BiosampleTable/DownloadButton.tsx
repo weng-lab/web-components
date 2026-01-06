@@ -11,6 +11,7 @@ export type DownloadButtonProps = {
   disabled?: boolean;
   displayName?: string;
   assay?: string;
+  ontology?: string;
 };
 
 export const DownloadButton = <T extends boolean>({
@@ -20,6 +21,7 @@ export const DownloadButton = <T extends boolean>({
   disabled = false,
   displayName,
   assay,
+  ontology,
 }: DownloadButtonProps) => {
   const [fileSize, setFileSize] = useState<number | null>(null);
   const { onDownload } = useDownloadContext();
@@ -34,8 +36,9 @@ export const DownloadButton = <T extends boolean>({
     if (onDownload && url) {
       let name: string;
       if (displayName && assay) {
-        // Use descriptive name: displayName_assay
-        name = `${displayName}_${assay}`;
+        // Use descriptive name: ontology_displayName_assay
+        const prefix = ontology ? `${ontology}_` : "";
+        name = `${prefix}${displayName}_${assay}`;
       } else {
         // Fall back to filename or extracted from URL
         name = filename || url.split("/").pop() || "download";

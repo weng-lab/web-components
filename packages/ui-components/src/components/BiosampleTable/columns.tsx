@@ -239,6 +239,7 @@ export const dnaseZscoreUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="DNase"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -260,6 +261,7 @@ export const h3k4me3ZscoreUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="H3K4me3"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -281,6 +283,7 @@ export const h3k27acZscoreUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="H3K27ac"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -302,6 +305,7 @@ export const ctcfZscoreUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="CTCF"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -323,6 +327,7 @@ export const atacZscoreUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="ATAC"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -340,6 +345,7 @@ export const dnaseSignalUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="DNase"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -357,6 +363,7 @@ export const h3k4me3SignalUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="H3K4me3"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -374,6 +381,7 @@ export const h3k27acSignalUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="H3K27ac"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -391,6 +399,7 @@ export const ctcfSignalUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="CTCF"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -408,6 +417,7 @@ export const atacSignalUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="ATAC"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -425,6 +435,7 @@ export const chromHmmUrlCol: GridColDef<EncodeBiosample> = {
         url={params.value}
         displayName={params.row.displayname}
         assay="ChromHMM"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
@@ -470,6 +481,7 @@ export const ccreBedUrlCol: GridColDef<EncodeBiosample> = {
         disabled={!params.value} //aka is ATAC-only
         displayName={params.row.displayname}
         assay="cCREs"
+        ontology={params.row.ontology}
       />
     );
   },
@@ -490,6 +502,7 @@ export const ccreBigBedUrlCol: GridColDef<EncodeBiosample> = {
         disabled={!params.value} //aka is ATAC-only
         displayName={params.row.displayname}
         assay="cCREs"
+        ontology={params.row.ontology}
       />
     ),
   groupable: false,
