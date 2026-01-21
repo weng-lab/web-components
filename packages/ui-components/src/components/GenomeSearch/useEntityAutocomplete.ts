@@ -42,7 +42,7 @@ export function useEntityAutocomplete(
   options: HookOptions
 ): HookResult {
   const inputs = Array.isArray(inputsArg) ? inputsArg : [inputsArg];
-  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 100 } = options;
+  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 200 } = options;
 
   const [data, setData] = useState<Result[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +67,7 @@ export function useEntityAutocomplete(
     }
 
     setLoading(true);
+    setData([])
     setError(null);
 
     timeoutRef.current = window.setTimeout(() => {

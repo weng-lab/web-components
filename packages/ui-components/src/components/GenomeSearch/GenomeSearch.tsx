@@ -190,13 +190,13 @@ function renderGroup(params: any, inputValue: string) {
  * @param results - The results from the query
  * @returns A rendered "no options" text
  */
-function noOptionsText(inputValue: string, isLoading: boolean, results: Result[] | null) {
+function noOptionsText(inputValue: string, isLoading: boolean, results: Result[]) {
   return (
     <Typography variant="caption">
       {inputValue
-        ? isLoading || results?.length === 0
+        ? isLoading
           ? "Loading..."
-          : results === null
+          : results.length === 0
             ? "No results found"
             : ""
         : "Start typing for options"}
