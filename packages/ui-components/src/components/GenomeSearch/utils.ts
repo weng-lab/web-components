@@ -133,10 +133,11 @@ export function legacyCcreResultList(results: LegacyCcreResponse[], limit: numbe
     .slice(0, limit)
     .map((result) => {
       const region = result.input_region;
-      const overlapping = result.v4_match_or_intersecting.split(",")
+      const overlapping = result.v4_match_or_intersecting
       return {
         title: result.input,
-        description: `(Registry ${result.input_latest_previous_version}), ${result.input_region}, ${overlapping.length ? "Intersects: " + overlapping.join(", ") : "No intersecting v4 cCREs"}`,
+        // !!! Do not change this format without also modifying SCREEN's /search page. This specific formatting is relied upon
+        description: `(Registry ${result.input_latest_previous_version})\n${result.input_region}\n${overlapping ? `Intersects v4 cCRE${overlapping.includes(",") ? "s" : ""}: ${overlapping.replace(",", ", ")}` : "No intersecting v4 cCREs"}`,
         domain: {
           chromosome: region.split(":")[0],
           start: parseInt(region.split(":")[1].split("-")[0]),

@@ -125,7 +125,7 @@ export function useEntityAutocomplete(
                 );
               }
 
-              // Assembly specific queries (GRCh38)
+              // Human only fetches
               if (assembly === "GRCh38") {
                 if (qICRE && input.toLowerCase().startsWith("eh")) {
                   const icreLimit = limits?.icre ?? 3;

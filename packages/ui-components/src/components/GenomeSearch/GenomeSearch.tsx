@@ -36,13 +36,10 @@ const Search: React.FC<GenomeSearchProps> = ({
   slotProps,
   ...autocompleteProps
 }) => {
-  // State variables
   const [inputValue, setInputValue] = useState("");
   const [selection, setSelection] = useState<Result | null>(null);
-  const [results, setResults] = useState<Result[] | null>(defaultResults || null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: fetchedResults, loading: hookLoading } = useEntityAutocomplete(
+  const { data: results, loading } = useEntityAutocomplete(
     inputValue && inputValue !== "" ? [inputValue] : [],
     {
       queries,
@@ -60,23 +57,6 @@ const Search: React.FC<GenomeSearchProps> = ({
       debounceMs: 100,
     }
   );
-
-  useEffect(() => {
-    if (inputValue.length === 0) {
-      setResults(null);
-    }
-  }, [inputValue]);
-
-  useEffect(() => {
-    setIsLoading(hookLoading);
-  }, [hookLoading]);
-
-  useEffect(() => {
-    if (!hookLoading) {
-      if (!fetchedResults || fetchedResults.length === 0) setResults(null);
-      else setResults(fetchedResults);
-    }
-  }, [hookLoading, fetchedResults]);
 
   //Clear input on assembly change
   useEffect(() => {
@@ -120,7 +100,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         }}
         groupBy={(option: Result) => option.type || ""}
         renderGroup={(params) => renderGroup(params, inputValue)}
-        noOptionsText={noOptionsText(inputValue, isLoading, results)}
+        noOptionsText={noOptionsText(inputValue, loading, results)}
         isOptionEqualToValue={(option, value) => option.title === value.title}
         renderOption={renderOptions}
         filterOptions={(x) => x}
