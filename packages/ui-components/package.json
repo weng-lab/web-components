@@ -23,8 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "@mui/x-data-grid-premium": "^8.18.0",
-    "@mui/x-license": "^8.18.0",
-    "@tanstack/react-query": "^5.81.2"
+    "@mui/x-license": "^8.18.0"
   },
   "peerDependencies": {
     "@emotion/react": "^11.14.0",

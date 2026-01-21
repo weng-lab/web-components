@@ -20,7 +20,7 @@ export const Default: Story = {
     assembly: "GRCh38",
     geneVersion: [29, 40],
     onSearchSubmit: (r: Result) => console.log("Going to", r),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study"],
+    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study", "Legacy cCRE"],
     ccreLimit: 3,
     geneLimit: 3,
     icreLimit: 3,

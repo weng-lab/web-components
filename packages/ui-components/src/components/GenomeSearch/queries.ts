@@ -93,6 +93,21 @@ export const CCRE_AUTOCOMPLETE_QUERY = `
   }
 `;
 
+export const LEGACY_CCRE_QUERY = `
+  query getv2v3CcreMapping($accessions: [String], $assembly: String!) {
+    ccreMappings: getv2cCREMappings(
+      v2_accession: $accessions
+      assembly: $assembly
+    ) {
+      input: v2_accession
+      input_latest_previous_version: ccre_version
+      input_region: v2_region
+      v4_match_or_intersecting: v4_accession
+      v4_region
+    }
+  }
+`
+
 export const GWAS_AUTOCOMPLETE_QUERY = `
 query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [String], $parent_terms: [String]){
     getGWASStudiesMetadata(studyid: $studyid, limit: $limit, parent_terms: $parent_terms, studyname_prefix: $studyname_prefix )
@@ -135,6 +150,21 @@ export const getCCREs = async (value: string, assembly: GenomeSearchProps["assem
         assembly: assembly.toLowerCase(),
         limit: limit,
         includeiCREs: showiCREFlag,
+      },
+    }),
+    headers: { "Content-Type": "application/json" },
+  });
+  return response.json();
+};
+
+export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"]) => {
+  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+    method: "POST",
+    body: JSON.stringify({
+      query: LEGACY_CCRE_QUERY,
+      variables: {
+        accessions: [value],
+        assembly,
       },
     }),
     headers: { "Content-Type": "application/json" },

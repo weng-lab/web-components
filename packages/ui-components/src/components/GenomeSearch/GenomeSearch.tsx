@@ -7,6 +7,8 @@ import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
 import { useEntityAutocomplete } from "./useEntityAutocomplete";
 
+const defaultLimit = 3
+
 /**
  * An autocomplete search component for genomic landmarks such as genes, SNPs, ICRs, and CCRs.
  * The props extends the MUI Autocomplete props, so you are able to adjust that component's props as well.
@@ -20,11 +22,12 @@ const Search: React.FC<GenomeSearchProps> = ({
   assembly,
   showiCREFlag,
   geneVersion,
-  geneLimit,
-  snpLimit,
-  icreLimit,
-  ccreLimit,
-  studyLimit,
+  geneLimit = defaultLimit,
+  snpLimit = defaultLimit,
+  icreLimit = defaultLimit,
+  ccreLimit = defaultLimit,
+  legacyCcreLimit = defaultLimit,
+  studyLimit = defaultLimit,
   onSearchSubmit,
   defaultResults,
   style,
@@ -50,6 +53,7 @@ const Search: React.FC<GenomeSearchProps> = ({
         snp: snpLimit,
         icre: icreLimit,
         ccre: ccreLimit,
+        legacyCcre: legacyCcreLimit,
         study: studyLimit,
       },
       showiCREFlag,
