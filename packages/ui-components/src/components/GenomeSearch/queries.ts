@@ -125,7 +125,7 @@ query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [
 }
 `;
 
-export const getICREs = async (value: string, limit: number) => {
+export const getICREs = async (value: string, limit: number, signal?: AbortSignal) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
@@ -136,11 +136,12 @@ export const getICREs = async (value: string, limit: number) => {
       },
     }),
     headers: { "Content-Type": "application/json" },
+    signal,
   });
   return response.json();
 };
 
-export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean) => {
+export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean, signal?: AbortSignal) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
@@ -153,11 +154,12 @@ export const getCCREs = async (value: string, assembly: GenomeSearchProps["assem
       },
     }),
     headers: { "Content-Type": "application/json" },
+    signal,
   });
   return response.json();
 };
 
-export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"]) => {
+export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], signal?: AbortSignal) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
@@ -168,6 +170,7 @@ export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps[
       },
     }),
     headers: { "Content-Type": "application/json" },
+    signal,
   });
   return response.json();
 };
@@ -176,7 +179,8 @@ export const getGenes = async (
   value: string,
   assembly: GenomeSearchProps["assembly"],
   limit: number,
-  geneVersions: GenomeSearchProps["geneVersion"]
+  geneVersions: GenomeSearchProps["geneVersion"],
+  signal?: AbortSignal
 ) => {
   let versions = geneVersions
     ? typeof geneVersions === "number"
@@ -202,6 +206,7 @@ export const getGenes = async (
           },
         }),
         headers: { "Content-Type": "application/json" },
+        signal,
       }).then((res) => res.json())
     )
   );
@@ -251,7 +256,7 @@ async function getDescription(name: string): Promise<string | null> {
   return matches && matches.length >= 1 ? matches[0][4] : null;
 }
 
-export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number) => {
+export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, signal?: AbortSignal) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
@@ -263,11 +268,12 @@ export const getSNPs = async (value: string, assembly: GenomeSearchProps["assemb
       },
     }),
     headers: { "Content-Type": "application/json" },
+    signal,
   });
   return response.json();
 };
 
-export const getStudys = async (value: string, limit: number) => {
+export const getStudys = async (value: string, limit: number, signal?: AbortSignal) => {
   const response = await fetch("https://screen.api.wenglab.org/graphql", {
     method: "POST",
     body: JSON.stringify({
@@ -278,6 +284,7 @@ export const getStudys = async (value: string, limit: number) => {
       },
     }),
     headers: { "Content-Type": "application/json" },
+    signal,
   });
 
   return response.json();
