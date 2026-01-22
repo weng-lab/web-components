@@ -31,7 +31,7 @@ type HookOptions = {
 };
 
 type HookResult = {
-  data: Result[];
+  data: Result[] | null;
   loading: boolean;
   error: Error | null;
 };
@@ -44,7 +44,7 @@ export function useEntityAutocomplete(
   const inputs = Array.isArray(inputsArg) ? inputsArg : [inputsArg];
   const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 200 } = options;
 
-  const [data, setData] = useState<Result[]>([]);
+  const [data, setData] = useState<Result[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

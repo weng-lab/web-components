@@ -39,7 +39,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   const [inputValue, setInputValue] = useState("");
   const [selection, setSelection] = useState<Result | null>(null);
 
-  const { data: results, loading } = useEntityAutocomplete(
+  const { data, loading } = useEntityAutocomplete(
     inputValue && inputValue !== "" ? [inputValue] : [],
     {
       queries,
@@ -57,6 +57,8 @@ const Search: React.FC<GenomeSearchProps> = ({
       debounceMs: 100,
     }
   );
+
+  const results = data ?? []
 
   //Clear input on assembly change
   useEffect(() => {
