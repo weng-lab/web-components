@@ -29,7 +29,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   legacyCcreLimit = defaultLimit,
   studyLimit = defaultLimit,
   onSearchSubmit,
-  defaultResults,
+  defaultResults = [],
   style,
   sx,
   slots,
@@ -58,8 +58,6 @@ const Search: React.FC<GenomeSearchProps> = ({
     }
   );
 
-  const results = data ?? []
-
   //Clear input on assembly change
   useEffect(() => {
     setInputValue("");
@@ -75,14 +73,14 @@ const Search: React.FC<GenomeSearchProps> = ({
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Enter") {
-        const exactMatch = results?.find((x) => x.title?.toLowerCase() === inputValue.toLowerCase());
+        const exactMatch = data?.find((x) => x.title?.toLowerCase() === inputValue.toLowerCase());
         if (exactMatch) {
           setSelection(exactMatch);
           if (onSearchSubmit) onSearchSubmit(exactMatch);
         }
       }
     },
-    [results, setSelection, onSearchSubmit]
+    [data, setSelection, onSearchSubmit]
   );
 
   const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result) => {
@@ -95,14 +93,13 @@ const Search: React.FC<GenomeSearchProps> = ({
       <Autocomplete
         onChange={onChange}
         value={selection as Result}
-        options={inputValue === "" ? defaultResults || [] : results || []}
-        
+        options={inputValue === "" ? defaultResults : loading || !data ? [] : data}
         getOptionLabel={(option: Result) => {
           return option.title || "";
         }}
         groupBy={(option: Result) => option.type || ""}
         renderGroup={(params) => renderGroup(params, inputValue)}
-        noOptionsText={noOptionsText(inputValue, loading, results)}
+        noOptionsText={noOptionsText(inputValue, loading, data)}
         isOptionEqualToValue={(option, value) => option.title === value.title}
         renderOption={renderOptions}
         filterOptions={(x) => x}
@@ -192,13 +189,13 @@ function renderGroup(params: any, inputValue: string) {
  * @param results - The results from the query
  * @returns A rendered "no options" text
  */
-function noOptionsText(inputValue: string, isLoading: boolean, results: Result[]) {
+function noOptionsText(inputValue: string, isLoading: boolean, data: Result[] | null) {
   return (
     <Typography variant="caption">
       {inputValue
         ? isLoading
           ? "Loading..."
-          : results.length === 0
+          : Array.isArray(data) && data.length === 0
             ? "No results found"
             : ""
         : "Start typing for options"}

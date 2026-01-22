@@ -72,7 +72,6 @@ export function useEntityAutocomplete(
     }
 
     setLoading(true);
-    setData([])
     setError(null);
 
     // Create a new AbortController for this search request
