@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getCCREs, getGenes, getICREs, getSNPs, getStudys } from "./queries";
+import { getCCREs, getGenes, getICREs, getLegacyCCREs, getSNPs, getStudys } from "./queries";
 import {
   ccreResultList,
   geneResultList,
@@ -8,6 +8,7 @@ import {
   snpResultList,
   studyResultList,
   isDomain,
+  legacyCcreResultList,
 } from "./utils";
 import { GenomeSearchProps, Result, ResultType } from "./types";
 
@@ -16,6 +17,7 @@ type Limits = {
   snp?: number;
   icre?: number;
   ccre?: number;
+  legacyCcre?: number;
   study?: number;
 };
 
@@ -29,7 +31,7 @@ type HookOptions = {
 };
 
 type HookResult = {
-  data: Result[];
+  data: Result[] | null;
   loading: boolean;
   error: Error | null;
 };
@@ -40,19 +42,24 @@ export function useEntityAutocomplete(
   options: HookOptions
 ): HookResult {
   const inputs = Array.isArray(inputsArg) ? inputsArg : [inputsArg];
-  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 100 } = options;
+  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 200 } = options;
 
-  const [data, setData] = useState<Result[]>([]);
+  const [data, setData] = useState<Result[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const timeoutRef = useRef<number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    // clear any pending timer
+    // clear any pending timer and abort previous requests
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
 
     // if no inputs or only empty strings, clear
@@ -67,6 +74,10 @@ export function useEntityAutocomplete(
     setLoading(true);
     setError(null);
 
+    // Create a new AbortController for this search request
+    abortControllerRef.current = new AbortController();
+    const abortSignal = abortControllerRef.current.signal;
+
     timeoutRef.current = window.setTimeout(() => {
       (async () => {
         try {
@@ -78,64 +89,102 @@ export function useEntityAutocomplete(
               const qSnp = queries.includes("SNP");
               const qICRE = queries.includes("iCRE");
               const qCCRE = queries.includes("cCRE");
+              const qLegacyCcre = queries.includes("Legacy cCRE");
               const qCoordinate = queries.includes("Coordinate");
               const qStudy = queries.includes("Study");
+
+              // array for fetch promises (so that we can Promise.all them in parallel)
+              const fetchPromises: Promise<Result[]>[] = [];
 
               // Genes
               if (qGene && !isDomain(input)) {
                 const geneLimit = limits?.gene ?? 3;
-                const geneResults = await getGenes(input, assembly, geneLimit, geneVersion);
-                if (geneResults) {
-                  aggregated.push(...geneResultList(geneResults as any, geneLimit, typeof geneVersion === "object"));
-                }
+                fetchPromises.push(
+                  getGenes(input, assembly, geneLimit, geneVersion, abortSignal).then((geneResults) =>
+                    geneResults ? geneResultList(geneResults as any, geneLimit, typeof geneVersion === "object") : []
+                  )
+                );
               }
 
-              // Assembly specific queries
+              // cCRE - check beginning of input to make sure it matches that assembly
+              if (qCCRE && input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh" : "em")) {
+                const ccreLimit = limits?.ccre ?? 3;
+                fetchPromises.push(
+                  getCCREs(input, assembly, ccreLimit, showiCREFlag || false, abortSignal).then((ccreData) =>
+                    ccreData?.data?.cCREAutocompleteQuery
+                      ? ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit)
+                      : []
+                  )
+                );
+              }
+
+              // Coordinates (synchronous, push directly)
+              if (qCoordinate && isDomain(input)) {
+                aggregated.push(...getCoordinates(input, assembly));
+              }
+
+              if (qLegacyCcre) {
+                const legacyCcreLimit = limits?.legacyCcre ?? 3;
+                fetchPromises.push(
+                  getLegacyCCREs(input, assembly, abortSignal).then((legacyData) =>
+                    legacyData?.data?.ccreMappings
+                      ? legacyCcreResultList(legacyData.data.ccreMappings, legacyCcreLimit)
+                      : []
+                  )
+                );
+              }
+
+              // Human only fetches
               if (assembly === "GRCh38") {
                 if (qICRE && input.toLowerCase().startsWith("eh")) {
                   const icreLimit = limits?.icre ?? 3;
-                  const icreData = await getICREs(input, icreLimit);
-                  if (icreData?.data?.iCREQuery) aggregated.push(...icreResultList(icreData.data.iCREQuery, icreLimit));
-                }
-
-                if (qCCRE && input.toLowerCase().startsWith("eh")) {
-                  const ccreLimit = limits?.ccre ?? 3;
-                  const ccreData = await getCCREs(input, assembly, ccreLimit, showiCREFlag || false);
-                  if (ccreData?.data?.cCREAutocompleteQuery) aggregated.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit));
+                  fetchPromises.push(
+                    getICREs(input, icreLimit, abortSignal).then((icreData) =>
+                      icreData?.data?.iCREQuery ? icreResultList(icreData.data.iCREQuery, icreLimit) : []
+                    )
+                  );
                 }
 
                 if (qSnp && input.toLowerCase().startsWith("rs")) {
                   const snpLimit = limits?.snp ?? 3;
-                  const snpData = await getSNPs(input, assembly, snpLimit);
-                  if (snpData?.data?.snpAutocompleteQuery) aggregated.push(...snpResultList(snpData.data.snpAutocompleteQuery, snpLimit));
+                  fetchPromises.push(
+                    getSNPs(input, assembly, snpLimit, abortSignal).then((snpData) =>
+                      snpData?.data?.snpAutocompleteQuery
+                        ? snpResultList(snpData.data.snpAutocompleteQuery, snpLimit)
+                        : []
+                    )
+                  );
                 }
 
                 if (qStudy && !isDomain(input) && input !== "") {
                   const studyLimit = limits?.study ?? 3;
-                  const studyData = await getStudys(input, studyLimit);
-                  if (studyData?.data?.getGWASStudiesMetadata) aggregated.push(...studyResultList(studyData.data.getGWASStudiesMetadata, studyLimit));
-                }
-              } else {
-                // mm10
-                if (qCCRE && input.toLowerCase().startsWith("em")) {
-                  const ccreLimit = limits?.ccre ?? 3;
-                  const ccreData = await getCCREs(input, assembly, ccreLimit, showiCREFlag || false);
-                  if (ccreData?.data?.cCREAutocompleteQuery) aggregated.push(...ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit));
+                  fetchPromises.push(
+                    getStudys(input, studyLimit, abortSignal).then((studyData) =>
+                      studyData?.data?.getGWASStudiesMetadata
+                        ? studyResultList(studyData.data.getGWASStudiesMetadata, studyLimit)
+                        : []
+                    )
+                  );
                 }
               }
 
-              // Coordinates
-              if (isDomain(input) && qCoordinate) {
-                aggregated.push(...getCoordinates(input, assembly));
-              }
+              // Execute all parallel fetches and aggregate results
+              const allResults = await Promise.all(fetchPromises);
+              allResults.forEach((results) => aggregated.push(...results));
             })
           );
 
-          setData(aggregated);
-          setLoading(false);
+          // Only update state if this request wasn't aborted
+          if (!abortSignal.aborted) {
+            setData(aggregated);
+            setLoading(false);
+          }
         } catch (err: any) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setLoading(false);
+          // Only update error state if this request wasn't aborted
+          if (!abortSignal.aborted) {
+            setError(err instanceof Error ? err : new Error(String(err)));
+            setLoading(false);
+          }
         }
       })();
     }, debounceMs);

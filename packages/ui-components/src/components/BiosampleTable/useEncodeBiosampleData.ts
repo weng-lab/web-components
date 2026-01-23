@@ -23,7 +23,15 @@ export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" 
         if (!biosamples) {
           throw new Error(`No biosamples present in return data`);
         }
-        setData(biosamples.map((x: EncodeBiosample) => ({...x, type: "ENCODE"})))
+        setData(
+          biosamples
+            .filter((x: EncodeBiosample) => x.name !== "GM12866_ENCDO000ABQ")
+            .map((x: EncodeBiosample) =>
+              x.name === "neural_crest_cell_ENCDO222AAA"
+                ? { ...x, h3k4me3_file_accession: null, h3k4me3_experiment_accession: null, h3k4me3_signal_url: null }
+                : x
+            )
+        );
       } catch (err) {
         setError(true);
       } finally {

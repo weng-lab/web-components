@@ -13,6 +13,7 @@ export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, f
   snpLimit?: number;
   icreLimit?: number;
   ccreLimit?: number;
+  legacyCcreLimit?: number;
   studyLimit?: number;
 
   // slot props for internal MUI components
@@ -37,7 +38,7 @@ export type Domain = {
 };
 
 // Result types used to distinguish between different types of results
-export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Study";
+export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Study" | "Legacy cCRE";
 
 // Result object used to display in the autocomplete dropdown
 export type Result = {
@@ -87,6 +88,16 @@ export interface CCREResponse {
   celltypes: string[];
   isiCRE: boolean;
 }
+
+// Response from the CCRE GraphQL query
+export interface LegacyCcreResponse {
+  input: string;
+  input_latest_previous_version: "v2" | "v3";
+  input_region: string;
+  v4_match_or_intersecting: string;
+  v4_region: string;
+}
+
 
 // Response from the GWAS GraphQL query
 export interface StudyResponse {

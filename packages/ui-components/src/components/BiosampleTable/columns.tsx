@@ -463,6 +463,7 @@ export const ccreBedUrlCol: GridColDef<EncodeBiosample> = {
       row.h3k27ac_file_accession,
       row.ctcf_file_accession,
     ].filter((id) => id !== null && id !== undefined);
+    if (!signalIDs.length) return null // aka is ATAC-only
     return `https://downloads.wenglab.org/Registry-V4/${signalIDs.join("_")}.bed`;
   },
   renderCell: (params) => {
