@@ -22,28 +22,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Radial: Story = {
+export const WithBranchLengths: Story = {
   args: {
-    layout: "radial",
     data: data,
     width: 800,
     height: 800,
+    useBranchLengths: true,
   },
 };
 
-
-export const Vertical: Story = {
+export const WithoutBranchLengths: Story = {
   args: {
-    layout: "vertical",
-    data: data,
-    width: 800,
-    height: 800,
-  },
-};
-
-export const Horizontal: Story = {
-  args: {
-    layout: "horizontal",
     data: data,
     width: 800,
     height: 800,
