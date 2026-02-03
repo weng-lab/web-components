@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import PhyloTree from "./PhyloTree";
 import { data } from "./data";
+import {ParentSize} from "@visx/responsive"
 
 const meta = {
   title: "visualization/PhyloTree",
@@ -13,9 +14,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 850, height: 500 }}>
-        <Story />
-      </div>
+      <Story />
     ),
   ],
 } satisfies Meta<typeof PhyloTree>;
@@ -23,47 +22,24 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const WithBranchLengths: Story = {
-  args: {
-    data: data,
-    width: 800,
-    height: 800,
-    useBranchLengths: true,
-  },
-};
-
-export const WithoutBranchLengths: Story = {
-  args: {
-    data: data,
-    width: 800,
-    height: 800,
-  },
-};
-
-export const InteractiveBranchLength: Story = {
+export const Default: Story = {
   render: (args) => {
-    const [useBranchLengths, setUseBranchLengths] = useState<boolean>(args.useBranchLengths ?? false);
+    const [useBranchLengths, setUseBranchLengths] = useState<boolean>(args.useBranchLengths ?? true);
 
     return (
       <div>
         <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-          <input
-            type="checkbox"
-            checked={useBranchLengths}
-            onChange={(e) => setUseBranchLengths(e.target.checked)}
-          />
+          <input type="checkbox" checked={useBranchLengths} onChange={(e) => setUseBranchLengths(e.target.checked)} />
           Use Branch Lengths
         </label>
-        <div style={{ width: 850, height: 500 }}>
-          <PhyloTree {...args} useBranchLengths={useBranchLengths} />
-        </div>
+        <PhyloTree {...args} useBranchLengths={useBranchLengths} />
       </div>
     );
   },
   args: {
     data: data,
-    width: 800,
-    height: 800,
-    useBranchLengths: false,
+    width: 1000,
+    height: 1000,
+    useBranchLengths: true,
   },
 };
