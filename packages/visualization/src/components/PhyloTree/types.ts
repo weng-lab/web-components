@@ -21,5 +21,8 @@ export type PhyloTreeProps = {
    * @default false
    */
   useBranchLengths?: boolean;
-  data: TreeItem;
+  /**
+   * @todo change this back to required before publishing
+   */
+  data?: TreeItem;
 };

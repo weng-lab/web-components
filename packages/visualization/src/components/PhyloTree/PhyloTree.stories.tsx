@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import PhyloTree from "./PhyloTree";
 import { data } from "./data";
-import {ParentSize} from "@visx/responsive"
 
 const meta = {
   title: "visualization/PhyloTree",

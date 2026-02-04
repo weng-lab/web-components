@@ -56,7 +56,8 @@ export default function PhyloTree({
     return map;
   }, [root]);
 
-  const [hovered, setHovered] = useState<HierarchyPointNode<TreeItem> | null>(null)
+  const [hoveredLeaf, setHoveredLeaf] = useState<HierarchyPointNode<TreeItem> | null>(null)
+  const [hoveredBranchTarget, setHoveredBranchTarget] = useState<HierarchyPointNode<TreeItem> | null>(null)
 
   const metadataInfo = useMemo(() => {
     const map: Record<string, { common_name: string; order?: string }> = {};
@@ -145,23 +146,24 @@ export default function PhyloTree({
                       },
                     };
 
-                    const meta = metadataInfo[String(hovered?.data.name ?? "")];
+                    const meta = metadataInfo[String(hoveredLeaf?.data.name ?? "")];
                     const order = meta?.order;
                     const color = getOrderColor(order);
 
+                    const leafIsHovered = link.target.leaves().some((leafNode) => leafNode === hoveredLeaf)
+
+                    const ancestorLinkIsHovered = link.target.ancestors().some((node) => node === hoveredBranchTarget);
+
                     return (
                       <LinkRadialStep
+                        onMouseEnter={() => setHoveredBranchTarget(link.target)}
+                        onMouseLeave={() => setHoveredBranchTarget(null)}
                         key={i}
                         data={data}
                         percent={0}
-                        stroke={
-                          link.target.leaves().some((leafNode) => leafNode === hovered) ? color : "#999"
-                        }
-                        strokeWidth={
-                          link.target.leaves().some((leafNode) => leafNode === hovered) ? 3 : 1
-                        }
+                        stroke={leafIsHovered ? color : "#999"}
+                        strokeWidth={leafIsHovered || ancestorLinkIsHovered ? 2 : 1}
                         fill="none"
-                        pointerEvents={"none"}
                       />
                     );
                   })}
@@ -181,6 +183,9 @@ export default function PhyloTree({
                     const order = meta?.order;
                     const color = getOrderColor(order);
 
+                    const leafIsHovered = hoveredLeaf === node
+                    const ancestorLinkIsHovered = node.ancestors().some((node) => node === hoveredBranchTarget);
+
                     return (
                       <Group key={key}>
                         <line
@@ -191,11 +196,8 @@ export default function PhyloTree({
                           stroke={color}
                           opacity={0.2}
                           // why not working?
-                          // style={{
-                          //   transition: "x1 750ms ease, y1 750ms ease, x2 750ms ease, y2 750ms ease",
-                          // }}
                           style={{
-                            transition: "stroke-width 0.2s ease-in-out",
+                            transition: "stroke-width 0.2s ease-in-out, x1 750ms ease, y1 750ms ease, x2 750ms ease, y2 750ms ease",
                           }}
                         />
                         <Group
@@ -203,7 +205,7 @@ export default function PhyloTree({
                           left={labelX}
                           onClick={() => console.log(node.data)}
                           onMouseEnter={(e: React.MouseEvent) => {
-                            setHovered(node);
+                            setHoveredLeaf(node);
                             const rect = containerRef.current?.getBoundingClientRect();
                             const left = e.clientX - (rect?.left ?? 0);
                             const top = e.clientY - (rect?.top ?? 0);
@@ -216,7 +218,7 @@ export default function PhyloTree({
                             showTooltip({ tooltipData: { common_name: label, order }, tooltipLeft: left, tooltipTop: top });
                           }}
                           onMouseLeave={() => {
-                            setHovered(null);
+                            setHoveredLeaf(null);
                             hideTooltip();
                           }}
                         >
@@ -229,11 +231,11 @@ export default function PhyloTree({
                             textAnchor={anchor}
                             x={xOffset}
                             dy={".33em"}
-                            fontWeight={hovered === node ? 700 : 400}
+                            fontWeight={leafIsHovered || ancestorLinkIsHovered ? 700 : 400}
                           >
                             {label}
                           </text>
-                          <circle r={1.5} fill={color}/>
+                          <circle r={leafIsHovered || ancestorLinkIsHovered ? 3 : 1.5} fill={color}/>
                         </Group>
                       </Group>
                     );
