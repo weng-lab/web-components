@@ -21,7 +21,8 @@ import { HighlightAlt, Download } from "@mui/icons-material"
 import MiniMap from './minimap';
 import { HandlerArgs } from '@visx/drag/lib/useDrag';
 import { useParentSize } from '@visx/responsive';
-import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
+import { downloadDivAsPNG, downloadDivAsSVG, getAnimationProps } from '../../utility';
+import { motion } from "framer-motion";
 
 const initialTransformMatrix = {
     scaleX: 1,
@@ -74,6 +75,23 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const hoveredPoint = tooltipData ? props.pointData.find(point => point.x === tooltipData.x && point.y === tooltipData.y) : null;
     const [previousDisplayedPoints, setPreviousDisplayedPoints] = useState<Point<T>[]>([])
     const downloadButton = props.downloadButton ?? "none"
+    const [showPointAnimation, setShowPointAnimation] = useState(Boolean(props.animation));
+
+    useEffect(() => {
+        if (!props.animation) return;
+        if(props.pointData.length > 2500) {
+            setShowPointAnimation(false);
+            return;
+        }
+        const duration = 450;
+        const buffer = (props.animationBuffer ?? 0.03) * 1000;
+        const groups = Math.ceil(props.pointData.length / (props.animationGroupSize ?? 1));
+        const total = duration + groups * buffer;
+
+        const t = window.setTimeout(() => setShowPointAnimation(false), total);
+        return () => window.clearTimeout(t);
+    }, [props.animation, props.animationBuffer, props.animationGroupSize, props.pointData.length]);
+
 
     useEffect(() => {
         const graphElement = graphRef.current;
@@ -474,6 +492,18 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         if (divRef.current) downloadDivAsSVG(divRef.current, props.downloadFileName ?? "scatter_plot.svg");
     };
 
+    function getTrianglePoints(cx: number, cy: number, r: number) {
+        // equilateral triangle centered at cx, cy
+        const height = r * Math.sqrt(3);
+
+        const p1 = `${cx},${cy - (2 / 3) * height}`;
+        const p2 = `${cx - r},${cy + (1 / 3) * height}`;
+        const p3 = `${cx + r},${cy + (1 / 3) * height}`;
+
+        return `${p1} ${p2} ${p3}`;
+    }
+
+
     return (
         <div ref={parentRef} style={{ width: "100%", height: "100%", position: "relative" }}>
             <Zoom width={boundedWidth} height={boundedHeight} scaleXMin={1 / 2} scaleXMax={10} scaleYMin={1 / 2} scaleYMax={10} initialTransformMatrix={initialTransformMatrix}>
@@ -559,7 +589,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                         <div style={{ position: 'relative' }} ref={divRef} >
                                             <canvas
                                                 ref={(canvas) => {
-                                                    if (canvas) {
+                                                    if (canvas && !showPointAnimation) {
                                                         drawPoints(xScaleTransformed, yScaleTransformed, canvas);
                                                     }
                                                 }}
@@ -585,6 +615,42 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                                 onMouseMove={(e) => handleMouseMove(e, zoom)} onMouseLeave={handleMouseLeave}
                                             >
                                                 <Group top={margin.top} left={margin.left}>
+                                                    {/* Animate points */}
+                                                    {showPointAnimation && props.animation && (
+                                                    <g>
+                                                        {props.pointData.map((pt, i) => {
+                                                            const Wrapper = motion.g;
+                                                            const index = Math.floor(i / (props.animationGroupSize ?? 1));
+                                                            const animProps = getAnimationProps(props.animation, index, props.animationBuffer ?? 0.03);
+
+                                                            const cx = xScaleTransformed(pt.x);
+                                                            const cy = yScaleTransformed(pt.y);
+                                                            if (cx < 0 || cx > boundedWidth || cy < 0 || cy > boundedHeight) return null;
+
+                                                            const r = pt.r ?? 3;
+
+                                                            return (
+                                                                <Wrapper key={`pt-${i}`} {...animProps}>
+                                                                    {pt.shape === "triangle" ? (
+                                                                        <polygon
+                                                                            points={getTrianglePoints(cx, cy, r)}
+                                                                            fill={pt.color ?? "black"}
+                                                                            opacity={pt.opacity ?? 1}
+                                                                        />
+                                                                    ) : (
+                                                                        <circle
+                                                                            cx={cx}
+                                                                            cy={cy}
+                                                                            r={r}
+                                                                            fill={pt.color ?? "black"}
+                                                                            opacity={pt.opacity ?? 1}
+                                                                        />
+                                                                    )}
+                                                                </Wrapper>
+                                                            );
+                                                        })}
+                                                    </g>
+                                                    )}
                                                     {selectMode === "select" && (
                                                         <>
                                                             {/* Render lasso */}
@@ -662,6 +728,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                                         } : props.disableZoom ? undefined : zoom.dragEnd}
                                                         onTouchMove={selectMode === "none" ? undefined : selectMode === "select" ? (isDragging ? dragMove : undefined) : props.disableZoom ? undefined : zoom.dragMove}
                                                         onWheel={(event) => {
+                                                            setShowPointAnimation(false);
                                                             if (!props.disableZoom) {
                                                                 const point = localPoint(event) || { x: 0, y: 0 };
                                                                 const zoomDirection = event.deltaY < 0 ? 1.1 : 0.9;

@@ -1,7 +1,7 @@
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ReactElement } from "react";
-import { DownloadPlotHandle } from '../../utility';
+import { DownloadPlotHandle, AnimationType } from '../../utility';
 
 type Download = "none" | "inline" | "topRight" | "topLeft" | "bottomRight" | "bottomLeft"
 
@@ -60,9 +60,9 @@ export type Point<T> = {
     prop in here
 **/
 export type MiniMapProps = {
-    position?: { 
-        right: number; 
-        bottom: number 
+    position?: {
+        right: number;
+        bottom: number
     };
 };
 
@@ -213,6 +213,9 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      * Default none
      */
     downloadButton?: Download;
+    animation?: AnimationType;
+    animationBuffer?: number;
+    animationGroupSize?: number;
 };
 
 export type Line = { x: number; y: number }[];
