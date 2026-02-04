@@ -492,6 +492,18 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         if (divRef.current) downloadDivAsSVG(divRef.current, props.downloadFileName ?? "scatter_plot.svg");
     };
 
+    function getTrianglePoints(cx: number, cy: number, r: number) {
+        // equilateral triangle centered at cx, cy
+        const height = r * Math.sqrt(3);
+
+        const p1 = `${cx},${cy - (2 / 3) * height}`;
+        const p2 = `${cx - r},${cy + (1 / 3) * height}`;
+        const p3 = `${cx + r},${cy + (1 / 3) * height}`;
+
+        return `${p1} ${p2} ${p3}`;
+    }
+
+
     return (
         <div ref={parentRef} style={{ width: "100%", height: "100%", position: "relative" }}>
             <Zoom width={boundedWidth} height={boundedHeight} scaleXMin={1 / 2} scaleXMax={10} scaleYMin={1 / 2} scaleYMax={10} initialTransformMatrix={initialTransformMatrix}>
@@ -619,13 +631,21 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
                                                             return (
                                                                 <Wrapper key={`pt-${i}`} {...animProps}>
-                                                                    <circle
-                                                                    cx={cx}
-                                                                    cy={cy}
-                                                                    r={r}
-                                                                    fill={pt.color ?? "black"}
-                                                                    opacity={pt.opacity ?? 1}
-                                                                    />
+                                                                    {pt.shape === "triangle" ? (
+                                                                        <polygon
+                                                                            points={getTrianglePoints(cx, cy, r)}
+                                                                            fill={pt.color ?? "black"}
+                                                                            opacity={pt.opacity ?? 1}
+                                                                        />
+                                                                    ) : (
+                                                                        <circle
+                                                                            cx={cx}
+                                                                            cy={cy}
+                                                                            r={r}
+                                                                            fill={pt.color ?? "black"}
+                                                                            opacity={pt.opacity ?? 1}
+                                                                        />
+                                                                    )}
                                                                 </Wrapper>
                                                             );
                                                         })}
