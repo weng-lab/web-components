@@ -6,7 +6,6 @@ export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" 
   const [error, setError] = useState(false);
   const [data, setData] = useState<EncodeBiosample[] | undefined>(undefined);
 
-  // to be filled in with downloads url
   const url = assembly === "GRCh38" ? "https://downloads.wenglab.org/human_biosamples_tracks_metadata.json" : "https://downloads.wenglab.org/mouse_biosamples_tracks_metadata.json"
 
   useEffect(() => {
@@ -23,7 +22,7 @@ export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" 
         if (!biosamples) {
           throw new Error(`No biosamples present in return data`);
         }
-        setData(biosamples.map((x: EncodeBiosample) => ({...x, type: "ENCODE"})))
+        setData(biosamples);
       } catch (err) {
         setError(true);
       } finally {

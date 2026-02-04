@@ -1,4 +1,4 @@
-import { CCREResponse, GeneResponse, ICREResponse, Result, ResultType, SnpResponse, StudyResponse } from "./types";
+import { CCREResponse, GeneResponse, ICREResponse, LegacyCcreResponse, Result, ResultType, SnpResponse, StudyResponse } from "./types";
 
 /**
  * Get the coordinates from a string input.
@@ -125,6 +125,27 @@ export function ccreResultList(results: CCREResponse[], limit: number): Result[]
       }${result.isiCRE ? ", iCRE" : ""}`,
     type: "cCRE",
   });
+}
+
+export function legacyCcreResultList(results: LegacyCcreResponse[], limit: number): Result[] {
+  return results
+    .filter((result) => result.input !== result.v4_match_or_intersecting) //filter v4 cCREs
+    .slice(0, limit)
+    .map((result) => {
+      const region = result.input_region;
+      const overlapping = result.v4_match_or_intersecting
+      return {
+        title: result.input,
+        // !!! Do not change this format without also modifying SCREEN's /search page. This specific formatting is relied upon
+        description: `(Registry ${result.input_latest_previous_version})\n${result.input_region}\n${overlapping ? `Intersects v4 cCRE${overlapping.includes(",") ? "s" : ""}: ${overlapping.replace(",", ", ")}` : "No intersecting v4 cCREs"}`,
+        domain: {
+          chromosome: region.split(":")[0],
+          start: parseInt(region.split(":")[1].split("-")[0]),
+          end: parseInt(region.split(":")[1].split("-")[1]),
+        },
+        type: "Legacy cCRE",
+      };
+    });
 }
 
 // Object to store chromosome lengths for GRCh38 and mm10

@@ -7,6 +7,8 @@ import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
 import { useEntityAutocomplete } from "./useEntityAutocomplete";
 
+const defaultLimit = 3
+
 /**
  * An autocomplete search component for genomic landmarks such as genes, SNPs, ICRs, and CCRs.
  * The props extends the MUI Autocomplete props, so you are able to adjust that component's props as well.
@@ -20,26 +22,24 @@ const Search: React.FC<GenomeSearchProps> = ({
   assembly,
   showiCREFlag,
   geneVersion,
-  geneLimit,
-  snpLimit,
-  icreLimit,
-  ccreLimit,
-  studyLimit,
+  geneLimit = defaultLimit,
+  snpLimit = defaultLimit,
+  icreLimit = defaultLimit,
+  ccreLimit = defaultLimit,
+  legacyCcreLimit = defaultLimit,
+  studyLimit = defaultLimit,
   onSearchSubmit,
-  defaultResults,
+  defaultResults = [],
   style,
   sx,
   slots,
   slotProps,
   ...autocompleteProps
 }) => {
-  // State variables
   const [inputValue, setInputValue] = useState("");
   const [selection, setSelection] = useState<Result | null>(null);
-  const [results, setResults] = useState<Result[] | null>(defaultResults || null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: fetchedResults, loading: hookLoading } = useEntityAutocomplete(
+  const { data, loading } = useEntityAutocomplete(
     inputValue && inputValue !== "" ? [inputValue] : [],
     {
       queries,
@@ -50,29 +50,13 @@ const Search: React.FC<GenomeSearchProps> = ({
         snp: snpLimit,
         icre: icreLimit,
         ccre: ccreLimit,
+        legacyCcre: legacyCcreLimit,
         study: studyLimit,
       },
       showiCREFlag,
       debounceMs: 100,
     }
   );
-
-  useEffect(() => {
-    if (inputValue.length === 0) {
-      setResults(null);
-    }
-  }, [inputValue]);
-
-  useEffect(() => {
-    setIsLoading(hookLoading);
-  }, [hookLoading]);
-
-  useEffect(() => {
-    if (!hookLoading) {
-      if (!fetchedResults || fetchedResults.length === 0) setResults(null);
-      else setResults(fetchedResults);
-    }
-  }, [hookLoading, fetchedResults]);
 
   //Clear input on assembly change
   useEffect(() => {
@@ -89,14 +73,14 @@ const Search: React.FC<GenomeSearchProps> = ({
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Enter") {
-        const exactMatch = results?.find((x) => x.title?.toLowerCase() === inputValue.toLowerCase());
+        const exactMatch = data?.find((x) => x.title?.toLowerCase() === inputValue.toLowerCase());
         if (exactMatch) {
           setSelection(exactMatch);
           if (onSearchSubmit) onSearchSubmit(exactMatch);
         }
       }
     },
-    [results, setSelection, onSearchSubmit]
+    [data, setSelection, onSearchSubmit]
   );
 
   const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result) => {
@@ -109,14 +93,13 @@ const Search: React.FC<GenomeSearchProps> = ({
       <Autocomplete
         onChange={onChange}
         value={selection as Result}
-        options={inputValue === "" ? defaultResults || [] : results || []}
-        
+        options={inputValue === "" ? defaultResults : loading || !data ? [] : data}
         getOptionLabel={(option: Result) => {
           return option.title || "";
         }}
         groupBy={(option: Result) => option.type || ""}
         renderGroup={(params) => renderGroup(params, inputValue)}
-        noOptionsText={noOptionsText(inputValue, isLoading, results)}
+        noOptionsText={noOptionsText(inputValue, loading, data)}
         isOptionEqualToValue={(option, value) => option.title === value.title}
         renderOption={renderOptions}
         filterOptions={(x) => x}
@@ -206,13 +189,13 @@ function renderGroup(params: any, inputValue: string) {
  * @param results - The results from the query
  * @returns A rendered "no options" text
  */
-function noOptionsText(inputValue: string, isLoading: boolean, results: Result[] | null) {
+function noOptionsText(inputValue: string, isLoading: boolean, data: Result[] | null) {
   return (
     <Typography variant="caption">
       {inputValue
-        ? isLoading || results?.length === 0
+        ? isLoading
           ? "Loading..."
-          : results === null
+          : Array.isArray(data) && data.length === 0
             ? "No results found"
             : ""
         : "Start typing for options"}
