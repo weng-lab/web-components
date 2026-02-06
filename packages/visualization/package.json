@@ -22,9 +22,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/d3-shape": "^3.1.8",
     "cytoscape": "^3.32.0",
     "cytoscape-cose-bilkent": "^4.1.0",
     "cytoscape-popper": "^4.0.1",
+    "d3-shape": "^3.2.0",
     "dom-to-image": "^2.6.0",
     "downloadjs": "^1.4.7",
     "framer-motion": "^12.23.24",
