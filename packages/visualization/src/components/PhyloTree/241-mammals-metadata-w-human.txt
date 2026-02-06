@@ -239,4 +239,4 @@ Acomys_cahirinus	Cairo-Spiny-Mouse	RODENTIA
 Felis_catus	Domestic-Cat	CARNIVORA
 Vicugna_pacos	Alpaca	CETARTIODACTYLA
 Giraffa_tippelskirchi	Giraffe	CETARTIODACTYLA
-Homo_sapiens	human	PRIMATES
+Homo_sapiens	Human	PRIMATES

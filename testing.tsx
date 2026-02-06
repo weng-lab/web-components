@@ -1,16 +1,19 @@
 import React, { useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import Box from '@mui/material/Box';
-import {PhyloTree, PhyloTreeProps} from './packages/visualization/src/components/PhyloTree'
-import {ParentSize} from '@visx/responsive'
+import {PhyloTree} from './packages/visualization/src/components/PhyloTree'
 
 function TestingPage() {
+    const [useBranchLengths, setUseBranchLengths] = useState<boolean>(true);
 
-  return (
-    <Box width={1000} height={1000} sx={{ position: "relative", border: "1px solid black", overflow: "auto" }}>
-      <ParentSize>{(parent) => <PhyloTree width={parent.width} height={parent.height} />}</ParentSize>
-    </Box>
-  );
+    return (
+      <div>
+        <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          <input type="checkbox" checked={useBranchLengths} onChange={(e) => setUseBranchLengths(e.target.checked)} />
+          Use Branch Lengths
+        </label>
+        <PhyloTree width={1000} height={1000} useBranchLengths={useBranchLengths} />
+      </div>
+    );
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<TestingPage />);
