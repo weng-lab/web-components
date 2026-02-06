@@ -234,6 +234,11 @@ export default function PhyloTree({
                         ? "highlighted"
                         : "dimmed";
 
+                    /**
+                     * What will the data look like?
+                     * {[key: Species]: number[]}
+                     */
+
                     return (
                       <Group key={i}>
                         <line
