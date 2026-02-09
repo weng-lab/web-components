@@ -1,36 +1,13 @@
 import { useMemo, useState, useRef, useCallback } from "react";
 import { Group } from "@visx/group";
-import { Cluster, hierarchy, Tree } from "@visx/hierarchy";
+import { Cluster, hierarchy } from "@visx/hierarchy";
 import { ascending } from "@visx/vendor/d3-array";
 import { pointRadial } from "d3-shape";
 import { PhyloTreeProps, TreeItem } from "./types";
-import { data as sampleTreeData } from "./data";
-import { LinkRadialStep } from "@visx/shape";
-import { HierarchyPointNode } from "@visx/hierarchy/lib/types";
+import { pathRadialStep } from "@visx/shape";
+import { HierarchyPointLink, HierarchyPointNode } from "@visx/hierarchy/lib/types";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
-import metadataRaw from "./241-mammals-metadata-w-human.txt?raw";
-
-const ORDER_COLORS: Record<string, string> = {
-  DERMOPTERA: "#d62728",
-  CARNIVORA: "#1f77b4",
-  LAGOMORPHA: "#ff7f0e",
-  CETARTIODACTYLA: "#2ca02c",
-  RODENTIA: "#9467bd",
-  PRIMATES: "#d60404",
-  HYRACOIDEA: "#17a2b8",
-  PERISSODACTYLA: "#e377c2",
-  CHIROPTERA: "#7f7f7f",
-  EULIPOTYPHLA: "#6b6ecf",
-  PHOLIDOTA: "#08519c",
-  PILOSA: "#7f3b08",
-  AFROSORICIDA: "#b15928",
-  SIRENIA: "#800000",
-  TUBULIDENTATA: "#006d2c",
-  PROBOSCIDEA: "#4d4d4d",
-  SCANDENTIA: "#b35806",
-  CINGULATA: "#3f007d",
-  MACROSCELIDEA: "#525252",
-};
+import { motion } from "framer-motion";
 
 export type LinkTypesProps = {
   width: number;
@@ -40,13 +17,34 @@ export type LinkTypesProps = {
 
 const t = "0.2s ease-in-out";
 
+const highlightTransition = {
+  duration: 0.2,
+  ease: "easeInOut",
+} as const;
+
+const linkTransition = {
+  duration: 0.3,
+  ease: "easeInOut",
+} as const;
+
+const getPathRadialStep = pathRadialStep<HierarchyPointLink<TreeItem>, HierarchyPointNode<TreeItem>>({
+  source: (l) => l.source,
+  target: (l) => l.target,
+  x: (n) => n?.x || 0,
+  y: (n) => n?.y || 0,
+});
+
 export default function PhyloTree({
   width: totalHeight,
   height: totalWidth,
   margin = { top: 30, left: 30, right: 30, bottom: 30 },
-  data = sampleTreeData,
+  data,
+  highlighted = [],
+  getColor = () => "black",
+  getLabel = (item: TreeItem) => item.id,
   useBranchLengths = false,
   labelPadding = 120,
+  tooltipContents,
 }: PhyloTreeProps) {
   const innerWidth = totalWidth - margin.left - margin.right;
   const innerHeight = totalHeight - margin.top - margin.bottom;
@@ -86,66 +84,10 @@ export default function PhyloTree({
   const [hoveredLeaf, setHoveredLeaf] = useState<HierarchyPointNode<TreeItem> | null>(null);
   const [hoveredBranchTarget, setHoveredBranchTarget] = useState<HierarchyPointNode<TreeItem> | null>(null);
 
-  const metadataInfo = useMemo(() => {
-    const map: Record<string, { common_name: string; order?: string }> = {};
-    try {
-      const text = String(metadataRaw ?? "");
-      const lines = text.trim().split(/\r?\n/);
-      if (lines.length <= 1) return map;
-      const header = lines[0].split(/\t/).map((h) => h.trim());
-      const fileIndex = header.indexOf("file_name");
-      const commonIndex = header.indexOf("common_name");
-      const orderIndex = header.indexOf("order");
-      lines.slice(1).forEach((line) => {
-        const cols = line.split(/\t/);
-        const file = cols[fileIndex]?.trim();
-        const common = cols[commonIndex]?.trim();
-        const order = cols[orderIndex]?.trim();
-        if (file) map[file] = { common_name: common ?? file, order: order || undefined };
-      });
-    } catch (e) {
-      // ignore parse errors
-    }
-    return map;
-  }, [metadataRaw]);
-
   // tooltip state & container ref
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<{
-    common_name: string;
-    order?: string;
-  }>();
+  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
 
-  /**
-   * These should all be external to the component probably?
-   */
-  const getLabel = useCallback(
-    (node: HierarchyPointNode<TreeItem>): string => {
-      const meta = metadataInfo[String(node.data.name ?? "")];
-      const label = meta?.common_name ?? String(node.data.name ?? "");
-      return label;
-    },
-    [metadataInfo]
-  );
-
-  const getColor = useCallback(
-    (node: HierarchyPointNode<TreeItem>) => {
-      const meta = metadataInfo[String(node?.data.name ?? "")];
-      const order = meta?.order;
-      const color = ORDER_COLORS[order ?? ""] ?? null;
-      return color;
-    },
-    [metadataInfo]
-  );
-
-  const getOrder = useCallback(
-    (node: HierarchyPointNode<TreeItem>) => {
-      const meta = metadataInfo[String(node?.data.name ?? "")];
-      const order = meta?.order;
-      return order;
-    },
-    [metadataInfo]
-  );
   return totalWidth < 10 ? null : (
     <div ref={containerRef} style={{ position: "relative" }}>
       <svg width={totalWidth} height={totalHeight}>
@@ -169,41 +111,54 @@ export default function PhyloTree({
               return (
                 <Group top={origin.y} left={origin.x}>
                   {/* In this coordinate system, x is the angle and y is the radius */}
-                  {/* Render the normal link */}
                   {cluster.links().map((link, i) => {
-                    const data = {
+                    const dConstant = getPathRadialStep(link);
+                    const dScaled = getPathRadialStep({
                       source: {
                         ...link.source,
-                        y: useBranchLengths ? scaleLengthToRadius(lengthMap.get(link.source) ?? 0) : link.source.y,
+                        y: scaleLengthToRadius(lengthMap.get(link.source) ?? 0),
                       },
                       target: {
                         ...link.target,
-                        y: useBranchLengths ? scaleLengthToRadius(lengthMap.get(link.target) ?? 0) : link.target.y,
+                        y: scaleLengthToRadius(lengthMap.get(link.target) ?? 0),
                       },
-                    };
+                    });
 
                     const targetLeafIsHovered = link.target.leaves().some((leafNode) => leafNode === hoveredLeaf);
-                    const hoveredLeafColor = hoveredLeaf && targetLeafIsHovered ? getColor(hoveredLeaf) : null;
-                    const ancestorLinkIsHovered = link.target.ancestors().some((node) => node === hoveredBranchTarget);
+                    const hoveredLeafColor = hoveredLeaf && targetLeafIsHovered ? getColor(hoveredLeaf.data) : null;
+                    const targetAncestorLinkIsHovered = link.target.ancestors().some((node) => node === hoveredBranchTarget);
+                    const targetLeafIsHighlighted = link.target.leaves().some((leafNode) => highlighted.includes(leafNode.data.id))
+                    const somethingIsHovered = (hoveredLeaf !== null || hoveredBranchTarget !== null);
+
                     const stroke = hoveredLeafColor ?? "#999";
-                    const strokeWidth = ancestorLinkIsHovered || targetLeafIsHovered ? 2 : 1;
+                    const strokeWidth =
+                      targetAncestorLinkIsHovered || targetLeafIsHovered || (!somethingIsHovered && targetLeafIsHighlighted) ? 2.5 : 1;
 
                     //When it's the branch that's hovered, need to find depth relative to hovered link
-                    const depthOffset = hoveredBranchTarget ? hoveredBranchTarget.depth : 0
-                    const delay = String ((link.target.depth - depthOffset) * 0.015) + 's'
+                    const depthOffset = hoveredBranchTarget ? hoveredBranchTarget.depth : 0;
+                    const delay = (link.target.depth - depthOffset) * 0.015;
 
                     return (
-                      <LinkRadialStep
+                      <motion.path
                         onMouseEnter={() => setHoveredBranchTarget(link.target)}
                         onMouseLeave={() => setHoveredBranchTarget(null)}
-                        key={i}
-                        data={data}
-                        percent={0}
-                        stroke={stroke}
-                        strokeWidth={strokeWidth}
                         fill="none"
-                        style={{
-                          transition: `opacity ${t} ${delay}, stroke-width ${t} ${delay}, stroke ${t} ${delay}`,
+                        initial={false}
+                        animate={{
+                          d: useBranchLengths ? dScaled : dConstant,
+                          stroke,
+                          strokeWidth,
+                        }}
+                        transition={{
+                          d: { ...linkTransition, duration: 0.3 },
+                          stroke: {
+                            ...highlightTransition,
+                            delay,
+                          },
+                          strokeWidth: {
+                            ...highlightTransition,
+                            delay,
+                          },
                         }}
                       />
                     );
@@ -219,68 +174,58 @@ export default function PhyloTree({
                     const textAnchor: "start" | "end" = flip ? "end" : "start";
                     const xOffset = flip ? -6 : 6;
 
-                    const label = getLabel(node);
-                    const color = getColor(node);
-                    const order = getOrder(node) ?? "";
+                    const label = getLabel(node.data);
+                    const color = getColor(node.data);
 
-                    const someLeafIsHovered = hoveredLeaf !== null;
                     const thisLeafIsHovered = hoveredLeaf === node;
-                    const anyLinkIsHovered = hoveredBranchTarget !== null;
                     const ancestorLinkIsHovered = node.ancestors().some((node) => node === hoveredBranchTarget);
+                    const somethingIsHovered = (hoveredLeaf !== null || hoveredBranchTarget !== null);
+                    const thisLeafIsHighlighted = highlighted.includes(node.data.id);
 
-                    const state = !(someLeafIsHovered || anyLinkIsHovered)
-                      ? "normal"
-                      : thisLeafIsHovered || ancestorLinkIsHovered
-                        ? "highlighted"
-                        : "dimmed";
+                    const shouldHighlight = somethingIsHovered
+                      ? thisLeafIsHovered || ancestorLinkIsHovered
+                      : thisLeafIsHighlighted;
 
-                    /**
-                     * What will the data look like?
-                     * {[key: Species]: number[]}
-                     */
+                    const state = shouldHighlight ? "highlighted" : somethingIsHovered ? "dimmed" : "normal";
 
                     return (
-                      <Group key={i}>
-                        <line
-                          x1={nodeX}
-                          y1={nodeY}
-                          x2={labelX}
-                          y2={labelY}
+                      <Group
+                        key={i}
+                        onMouseMove={(e: React.MouseEvent) => {
+                          if (node !== hoveredLeaf) setHoveredLeaf(node);
+                          const rect = containerRef.current?.getBoundingClientRect();
+                          const left = e.clientX - (rect?.left ?? 0);
+                          const top = e.clientY - (rect?.top ?? 0);
+                          showTooltip({
+                            tooltipData: node.data,
+                            tooltipLeft: left,
+                            tooltipTop: top,
+                          });
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredLeaf(null);
+                          hideTooltip();
+                        }}
+                      >
+                        <motion.line
+                          initial={false}
+                          animate={{
+                            x1: nodeX,
+                            y1: nodeY,
+                            x2: labelX,
+                            y2: labelY,
+                            opacity: state === "highlighted" ? 1 : 0.2,
+                          }}
                           stroke={color}
-                          opacity={state === "highlighted" ? 1 : 0.2}
-                          style={{
-                            transition: `opacity ${t}, stroke-width ${t}`,
+                          transition={{
+                            x1: linkTransition,
+                            y1: linkTransition,
+                            x2: linkTransition,
+                            y2: linkTransition,
+                            opacity: highlightTransition,
                           }}
                         />
-                        <Group
-                          top={labelY}
-                          left={labelX}
-                          onMouseEnter={(e: React.MouseEvent) => {
-                            setHoveredLeaf(node);
-                            const rect = containerRef.current?.getBoundingClientRect();
-                            const left = e.clientX - (rect?.left ?? 0);
-                            const top = e.clientY - (rect?.top ?? 0);
-                            showTooltip({
-                              tooltipData: { common_name: label, order },
-                              tooltipLeft: left,
-                              tooltipTop: top,
-                            });
-                          }}
-                          onMouseMove={(e: React.MouseEvent) => {
-                            const rect = containerRef.current?.getBoundingClientRect();
-                            const left = e.clientX - (rect?.left ?? 0);
-                            const top = e.clientY - (rect?.top ?? 0);
-                            showTooltip({
-                              tooltipData: { common_name: label, order },
-                              tooltipLeft: left,
-                              tooltipTop: top,
-                            });
-                          }}
-                          onMouseLeave={() => {
-                            setHoveredLeaf(null);
-                            hideTooltip();
-                          }}
-                        >
+                        <Group top={labelY} left={labelX}>
                           <text
                             fontSize={8}
                             fontFamily="Arial"
@@ -296,7 +241,7 @@ export default function PhyloTree({
                               transition: `opacity ${t}, stroke-width ${t}`,
                             }}
                           >
-                            {label}
+                            {label === "Human" ? `${label} \u2605\u2605\u2605` : label}
                           </text>
                           <circle
                             r={1.5}
@@ -316,12 +261,9 @@ export default function PhyloTree({
         </Group>
       </svg>
 
-      {tooltipData && (
+      {tooltipData && tooltipContents && (
         <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
-          <div style={{ fontSize: 12 }}>
-            <div style={{ fontWeight: 600 }}>{tooltipData.common_name}</div>
-            <div style={{ opacity: 0.8 }}>{tooltipData.order}</div>
-          </div>
+          {tooltipContents(tooltipData)}
         </TooltipWithBounds>
       )}
     </div>

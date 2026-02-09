@@ -1,0 +1,14 @@
+//Config for storybook files
+
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "stories",
+    "packages/**/*.stories.tsx",
+    ".storybook",
+    "global.d.ts"
+  ]
+}
