@@ -24,12 +24,6 @@ export type PhyloTreeProps = {
    */
   labelPadding?: number
   /**
-   * If true, use `branch_length` values to position nodes (cumulative from root).
-   * If false, layout uses uniform depth spacing.
-   * @default false
-   */
-  useBranchLengths?: boolean;
-  /**
    * @default 
    * (item: TreeItem) => item.id
    */

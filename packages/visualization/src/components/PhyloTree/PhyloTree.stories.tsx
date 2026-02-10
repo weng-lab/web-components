@@ -90,24 +90,10 @@ const getOrder = (item: TreeItem) => {
 };
 
 export const Mammals241: Story = {
-  render: (args) => {
-    const [useBranchLengths, setUseBranchLengths] = useState<boolean>(args.useBranchLengths ?? true);
-
-    return (
-      <div>
-        <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-          <input type="checkbox" checked={useBranchLengths} onChange={(e) => setUseBranchLengths(e.target.checked)} />
-          Use Branch Lengths
-        </label>
-        <PhyloTree {...args} useBranchLengths={useBranchLengths} />
-      </div>
-    );
-  },
   args: {
     data: formatNode(data),
     width: 1000,
     height: 1000,
-    useBranchLengths: true,
     getColor,
     getLabel,
     tooltipContents: (item) => (
@@ -120,25 +106,11 @@ export const Mammals241: Story = {
 };
 
 export const HighlightLeaves: Story = {
-  render: (args) => {
-    const [useBranchLengths, setUseBranchLengths] = useState<boolean>(args.useBranchLengths ?? true);
-
-    return (
-      <div>
-        <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-          <input type="checkbox" checked={useBranchLengths} onChange={(e) => setUseBranchLengths(e.target.checked)} />
-          Use Branch Lengths
-        </label>
-        <PhyloTree {...args} useBranchLengths={useBranchLengths} />
-      </div>
-    );
-  },
   args: {
     data: formatNode(data),
     highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla"],
     width: 1000,
     height: 1000,
-    useBranchLengths: true,
     getColor,
     getLabel,
     tooltipContents: (item) => (

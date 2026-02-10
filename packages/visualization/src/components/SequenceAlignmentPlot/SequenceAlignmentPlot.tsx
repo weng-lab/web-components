@@ -7,25 +7,25 @@ export type Nucleotide = "A" | "C" | "G" | "T" | "-";
 interface HeatmapProps {
   data: Nucleotide[][]; // [species][position]
   speciesLabels?: string[];
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
 }
 
 const NUCLEOTIDE_COLORS: Record<Nucleotide, string> = {
   A: "#228b22", // green
   C: "blue", // blue
   G: "orange", // orange
-  T: "#F44336", // red
+  T: "red", // red
   "-": "white", // gap / missing
 };
 
 const AXIS_HEIGHT = 30;
 
-export const Heatmap: React.FC<HeatmapProps> = ({
+export const SequenceAlignmentPlot: React.FC<HeatmapProps> = ({
   data,
   speciesLabels = [],
-  width = 500,
-  height = 240,
+  width,
+  height,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{
@@ -37,37 +37,41 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   const numSpecies = data.length;
   const numPositions = data[0]?.length ?? 0;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+useEffect(() => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+  const dpr = window.devicePixelRatio || 1;
 
-    // Bitmap resolution
-    canvas.width = numPositions * dpr;
-    canvas.height = numSpecies * dpr;
+  // Bitmap matches CSS size (scaled for DPR)
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
 
-    // CSS size
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
 
-    // Scale so 1 data unit = 1 cell in CSS space
-    const scaleX = (width / numPositions) * dpr;
-    const scaleY = (height / numSpecies) * dpr;
-    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+  // Clear + reset transform
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw
-    for (let y = 0; y < numSpecies; y++) {
-      for (let x = 0; x < numPositions; x++) {
-        const base = data[y][x];
-        ctx.fillStyle = NUCLEOTIDE_COLORS[base] ?? "#000";
-        ctx.fillRect(x, y, 1, 1);
-      }
+  // Map data space → bitmap space
+  const scaleX = (canvas.width) / numPositions;
+  const scaleY = (canvas.height) / numSpecies;
+
+  ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+
+  // Draw all data
+  for (let y = 0; y < numSpecies; y++) {
+    for (let x = 0; x < numPositions; x++) {
+      ctx.fillStyle = NUCLEOTIDE_COLORS[data[y][x]];
+      ctx.fillRect(x, y, 1, 1);
     }
-  }, [data, numSpecies, numPositions, width, height]);
+  }
+}, [data, width, height, numPositions, numSpecies]);
+
 
   // Hover mapping
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -114,6 +118,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
           left: 0,
           top: height,
           pointerEvents: "none",
+          overflow: 'visible'
         }}
       >
         <AxisBottom

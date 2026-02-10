@@ -22,3 +22,8 @@ export type {ProportionsBarProps} from './components/ProportionsBar'
  * @todo does exporting like this work?
  */
 export * from './components/PhyloTree'
+
+/**
+ * @todo does exporting like this work?
+ */
+export * from './components/SequenceAlignmentPlot'
