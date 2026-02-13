@@ -1,9 +1,21 @@
+import { TransformMatrix } from "@visx/zoom/lib/types";
 import { ReactNode } from "react";
+
+// Not great but needed to copy this type since visx doesn't export it
+export type ZoomState = {
+    initialTransformMatrix: TransformMatrix;
+    transformMatrix: TransformMatrix;
+    isDragging: boolean;
+};
 
 export type TreeItem = {
   id: string;
   branch_length: number | null,
   children?: TreeItem[]
+  /**
+   * placeholder for cumulative branch length to be put when creating root node
+   */
+  cumulative_branch_length?: number,
 }
 
 export type PhyloTreeProps = {
@@ -14,11 +26,6 @@ export type PhyloTreeProps = {
    * `id` of TreeItem(s) to be highlighted
    */
   highlighted?: string[]
-  /**
-   * @default 
-   * { top: 30, left: 30, right: 30, bottom: 30 };
-   */
-  margin?: { top: number; right: number; bottom: number; left: number };
   /**
    * @default 100
    */

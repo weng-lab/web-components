@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import PhyloTree from "./PhyloTree";
-import { data } from "./241_mammals_treedata";
+import { data } from "./example-data/241_mammals_treedata";
 import { TreeItem } from "./types";
-import metadataRaw from "./241-mammals-metadata-w-human.txt?raw";
+import metadataRaw from "./example-data/241-mammals-metadata-w-human.txt?raw";
 
 const meta = {
   title: "visualization/PhyloTree",
@@ -108,7 +108,7 @@ export const Mammals241: Story = {
 export const HighlightLeaves: Story = {
   args: {
     data: formatNode(data),
-    highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla"],
+    highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
     width: 1000,
     height: 1000,
     getColor,

@@ -1,110 +1,131 @@
 import { useMemo, useState, useRef, useCallback } from "react";
 import { Group } from "@visx/group";
-import { Cluster, hierarchy } from "@visx/hierarchy";
 import { ascending } from "@visx/vendor/d3-array";
-import { pointRadial } from "d3-shape";
+import { cluster as d3cluster, hierarchy as d3hierarchy } from "d3-hierarchy";
 import { PhyloTreeProps, TreeItem } from "./types";
-import { pathRadialStep } from "@visx/shape";
-import { HierarchyNode, HierarchyPointLink, HierarchyPointNode } from "@visx/hierarchy/lib/types";
+import { HierarchyPointLink, HierarchyPointNode } from "@visx/hierarchy/lib/types";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
-import { motion } from "framer-motion";
 import { Zoom } from "@visx/zoom";
-import { localPoint } from "@visx/event";
-import { Checkbox, FormControlLabel, IconButton, Tooltip } from "@mui/material";
-import { Add, Remove, SettingsBackupRestore, Timeline } from "@mui/icons-material";
+import { TreeLink } from "./TreeLink";
+import { ControlPanel } from "./ControlPanel";
+import { ZoomSurface } from "./ZoomSurface";
+import { LeafNode } from "./LeafNode";
+import { pointRadial } from "d3-shape";
 
-export type LinkTypesProps = {
-  width: number;
-  height: number;
-  margin?: { top: number; right: number; bottom: number; left: number };
-};
-
-const t = "0.2s ease-in-out";
-
-const highlightTransition = {
+export const hoverTransition = {
   duration: 0.2,
   ease: "easeInOut",
 } as const;
 
-const linkTransition = {
+export const useBranchLengthTransition = {
   duration: 0.3,
   ease: "easeInOut",
 } as const;
 
-const getPathRadialStep = pathRadialStep<HierarchyPointLink<TreeItem>, HierarchyPointNode<TreeItem>>({
-  source: (l) => l.source,
-  target: (l) => l.target,
-  x: (n) => n?.x || 0,
-  y: (n) => n?.y || 0,
-});
-
+// Keep spacing of all leaf nodes consistent
 const separationFn = () => 1
-
-const initialTransform = {
-  scaleX: 1,
-  scaleY: 1,
-  translateX: 0,
-  translateY: 0,
-  skewX: 0,
-  skewY: 0,
-};
 
 export default function PhyloTree({
   width: totalHeight,
   height: totalWidth,
-  margin = { top: 30, left: 30, right: 30, bottom: 30 },
   data,
   highlighted = [],
   getColor = () => "black",
   getLabel = (item: TreeItem) => item.id,
-  labelPadding = 120,
+  labelPadding = 135,
   tooltipContents,
 }: PhyloTreeProps) {
-  /* Hover State */
   const [hoveredLeaf, setHoveredLeaf] = useState<HierarchyPointNode<TreeItem> | null>(null);
   const [hoveredBranchTarget, setHoveredBranchTarget] = useState<HierarchyPointNode<TreeItem> | null>(null);
-
-  const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(true);
-
-  /* Tooltip Stuff */
+  const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(false);
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   /* Plot Math */
-  const innerWidth = totalWidth - margin.left - margin.right;
-  const innerHeight = totalHeight - margin.top - margin.bottom;
+  const innerWidth = totalWidth;
+  const innerHeight = totalHeight;
 
-  const origin = {
+  const origin = useMemo(() => ({
     x: innerWidth / 2,
     y: innerHeight / 2,
-  };
+  }), [innerWidth, innerHeight])
+
+  // const origin = {
+  //   x: innerWidth / 2,
+  //   y: innerHeight / 2,
+  // }
 
   const plotBoundedRadius = Math.min(innerWidth, innerHeight) / 2;
   const innerRadius = Math.max(0, plotBoundedRadius - labelPadding);
 
+  // This defines the arbitrary x/y coordinate system. For our radial layout X is the angle defined in radians, Y is radius. https://d3js.org/d3-hierarchy/cluster#cluster_size
   const size: [number, number] = useMemo(() => [2 * Math.PI, innerRadius], [innerRadius]);
 
-  /* Make Cluster Data */
+  /* Calculate Layout */
   const root = useMemo(() => {
-    const r = hierarchy(data, (d) => d.children)
+    const r = d3hierarchy(data, (d) => d.children)
+      // sorts first by least number of children, and then by branch length to create nice looking plot
       .sum((d) => (d.children ? 0 : 1))
-      .sort((a, b) =>
-        a?.value !== undefined && b?.value !== undefined
-          ? a.value - b.value || ascending(a.data.branch_length ?? undefined, b.data.branch_length ?? undefined)
-          : 0
-      );
+      .sort(
+        (a, b) =>
+          (a.value || 0) - (b.value || 0) ||
+          ascending(a.data.branch_length ?? undefined, b.data.branch_length ?? undefined)
+      )
+      //add cumulative_branch_length to each node
+      .eachBefore((node) => {
+        const parentLen = node.parent?.data?.cumulative_branch_length ?? 0;
+        // We cast to any or extend the HierarchyNode type to avoid TS errors
+        node.data.cumulative_branch_length = parentLen + (node.data.branch_length ?? 0);
+      });
     return r;
   }, [data]);
 
-  /* Map for looking up cumulative branch length for given node */
-  const lengthMap = useMemo(() => {
-    const map = new WeakMap<HierarchyNode<TreeItem>, number>();
-    root.each((node) => {
-      const parentLen = node.parent ? (map.get(node.parent) ?? 0) : 0;
-      map.set(node, parentLen + (node.data.branch_length ?? 0));
-    });
-    return map;
-  }, [root]);
+  const { links, leaves } = useMemo(() => {
+    const cluster = d3cluster<TreeItem>();
+    cluster.size(size);
+    cluster.separation(separationFn);
+    const clusterData = cluster(root);
+
+    return {
+      links: clusterData.links(),
+      leaves: clusterData.leaves(),
+    };
+  }, [data, size, root]);
+
+  const maxBranchLength = useMemo(
+    () => Math.max(...root.leaves().map((n) => n.data.cumulative_branch_length ?? 0), 0),
+    [root]
+  );
+  
+  /**
+   * Use this instead of node.y when scaling by branch length.
+   * Both this function and node.y are calculated using innerRadius, this function explicitly and node.y by defining size as [2 * Math.PI, innerRadius]
+  */
+ const getBranchLengthScaledY = useCallback(
+   (cumulativeBranchLength: number) => (maxBranchLength === 0 ? 0 : (cumulativeBranchLength / maxBranchLength) * innerRadius),
+   [maxBranchLength, innerRadius]
+  );
+
+  //Appends for x/y coordinates used by leaf nodes. Defined here to avoid recalculating with pointRadial on every render (since LeafNode needs to rerender on hover state change)
+  const leafNodeWithPositions = useMemo(
+    () =>
+      leaves.map((leaf) => {
+        const [baseNodeX, baseNodeY] = pointRadial(leaf.x, leaf.y);
+        const [scaledNodeX, scaledNodeY] = pointRadial(
+          leaf.x,
+          getBranchLengthScaledY(leaf.data.cumulative_branch_length ?? 0)
+        );
+
+        return {
+          node: leaf,
+          baseNodeX,
+          baseNodeY,
+          scaledNodeX,
+          scaledNodeY,
+        };
+      }),
+    [leaves, getBranchLengthScaledY]
+  );
 
   const getLeafNodeState = useCallback(
     (node: HierarchyPointNode<TreeItem>) => {
@@ -122,35 +143,61 @@ export default function PhyloTree({
     [hoveredLeaf, hoveredBranchTarget, highlighted]
   );
 
-  const getLinkStrokeAndWidth = useCallback(
+  const getLinkIsHighlighted = useCallback(
     (link: HierarchyPointLink<TreeItem>) => {
       const targetLeafIsHovered = link.target.leaves().some((leafNode) => leafNode === hoveredLeaf);
-      const hoveredLeafColor = hoveredLeaf && targetLeafIsHovered ? getColor(hoveredLeaf.data) : null;
       const targetAncestorLinkIsHovered = link.target.ancestors().some((node) => node === hoveredBranchTarget);
       const targetLeafIsHighlighted = link.target.leaves().some((leafNode) => highlighted.includes(leafNode.data.id));
       const somethingIsHovered = hoveredLeaf !== null || hoveredBranchTarget !== null;
 
-      const stroke = hoveredLeafColor ?? "#999";
-      const strokeWidth =
-        targetAncestorLinkIsHovered || targetLeafIsHovered || (!somethingIsHovered && targetLeafIsHighlighted)
-          ? 2.5
-          : 1;
-
-      return { stroke, strokeWidth };
+      return targetAncestorLinkIsHovered || targetLeafIsHovered || (!somethingIsHovered && targetLeafIsHighlighted);
     },
     [hoveredLeaf, hoveredBranchTarget, highlighted]
   );
+
+  const getLinkColor = useCallback(
+    (link: HierarchyPointLink<TreeItem>) => {
+      const targetLeafIsHovered = link.target.leaves().some((leafNode) => leafNode === hoveredLeaf);
+      const hoveredLeafColor = hoveredLeaf && targetLeafIsHovered ? getColor(hoveredLeaf.data) : null;
+
+      return hoveredLeafColor ?? "#999";
+    },
+    [hoveredLeaf, hoveredBranchTarget, highlighted]
+  );
+
+  const handleLinkOnMouseEnter = useCallback((l: HierarchyPointLink<TreeItem>) => setHoveredBranchTarget(l.target), [])
+  const handleLinkOnMouseLeave = useCallback(() => setHoveredBranchTarget(null), [])
+  const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), [])
+
+  const handleLeafOnMouseMove = useCallback((e: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => {
+    setHoveredLeaf(node);
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    const left = e.clientX - (rect?.left ?? 0);
+    const top = e.clientY - (rect?.top ?? 0);
+
+    showTooltip({
+      tooltipData: node.data,
+      tooltipLeft: left,
+      tooltipTop: top,
+    });
+  }, []);
+
+  const handleLeafOnMouseLeave = useCallback(() => {
+    setHoveredLeaf(null);
+    hideTooltip();
+  }, []);
 
   return totalWidth < 10 ? null : (
     <Zoom<SVGSVGElement>
       width={totalWidth}
       height={totalHeight}
-      scaleXMin={1}
+      scaleXMin={0.8}
       scaleXMax={4}
-      scaleYMin={1}
+      scaleYMin={0.8}
       scaleYMax={4}
-      initialTransformMatrix={initialTransform}
     >
+      {/* This here needs to be stable */}
       {(zoom) => (
         <div
           ref={containerRef}
@@ -162,210 +209,56 @@ export default function PhyloTree({
             boxSizing: "content-box",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              margin: '4px',
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-            }}
-          >
-            <Tooltip title="Zoom In" placement="right">
-              <IconButton onClick={() => zoom.scale({ scaleX: 1.2, scaleY: 1.2 })}>
-                <Add fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Zoom Out" placement="right">
-              <IconButton onClick={() => zoom.scale({ scaleX: 1 / 1.2, scaleY: 1 / 1.2 })}>
-                <Remove fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Reset" placement="right">
-              <IconButton onClick={zoom.reset}>
-                <SettingsBackupRestore fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Toggle Evolutionary Distance" placement="right">
-              <IconButton onClick={() => setEnableBranchLengths((prev) => !prev)}>
-                <Timeline fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </div>
+          <ControlPanel scaleZoom={zoom.scale} resetZoom={zoom.reset} toggleBranchLength={toggleBranchLength} />
           <svg
             width={totalWidth}
             height={totalHeight}
             style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
             ref={zoom.containerRef}
           >
-            {/* Surface to capture mouse events for zooming */}
-            <rect
-              width={totalWidth}
-              height={totalHeight}
-              rx={14}
-              fill="transparent"
-              onTouchStart={zoom.dragStart}
-              onTouchMove={zoom.dragMove}
-              onTouchEnd={zoom.dragEnd}
-              onMouseDown={zoom.dragStart}
-              onMouseMove={zoom.dragMove}
-              onMouseUp={zoom.dragEnd}
-              onMouseLeave={() => {
-                if (zoom.isDragging) zoom.dragEnd();
-              }}
-              onDoubleClick={(event) => {
-                const point = localPoint(event) || { x: 0, y: 0 };
-                zoom.scale({ scaleX: 1.1, scaleY: 1.1, point });
-              }}
+            <ZoomSurface
+              dragStart={zoom.dragStart}
+              dragEnd={zoom.dragEnd}
+              dragMove={zoom.dragMove}
+              scale={zoom.scale}
+              isDragging={zoom.isDragging}
             />
-            <Group top={margin.top} left={margin.left} transform={zoom.toString()}>
-              <Cluster
-                root={root}
-                // This defines the arbitrary x/y coordinate system. For our radial layout X is defined in radians, Y is node depth.
-                // https://d3js.org/d3-hierarchy/cluster#cluster_size
-                size={size}
-                // Keep spacing of all leaf nodes consistent (could separate leaf nodes with different parents)
-                separation={separationFn}
-              >
-                {(cluster) => {
-                  // if requested, compute a scale mapping cumulative branch length -> layout radius
-                  const maxLen = enableBranchLengths
-                    ? Math.max(...cluster.descendants().map((n) => lengthMap.get(n) ?? 0), 0)
-                    : 0;
-                  const scaleLengthToRadius = (v: number) => (maxLen === 0 ? 0 : (v / maxLen) * innerRadius);
-                  //So the link extension always exists so that it can be transitioned too and from cleanly... interesting
-                  //So it's always an element disinct for the purposes of coloring and transitioning
+            <Group transform={zoom.toString()}>
+              <Group top={origin.y} left={origin.x}>
+                {links.map((link, i) => {
                   return (
-                    <Group top={origin.y} left={origin.x}>
-                      {/* In this coordinate system, x is the angle and y is the radius */}
-                      {cluster.links().map((link, i) => {
-                        const dConstant = getPathRadialStep(link);
-                        const dScaled = getPathRadialStep({
-                          source: {
-                            ...link.source,
-                            y: scaleLengthToRadius(lengthMap.get(link.source) ?? 0),
-                          },
-                          target: {
-                            ...link.target,
-                            y: scaleLengthToRadius(lengthMap.get(link.target) ?? 0),
-                          },
-                        });
-
-                        //When it's the branch that's hovered, need to find depth relative to hovered link
-                        const depthOffset = hoveredBranchTarget ? hoveredBranchTarget.depth : 0;
-                        const delay = (link.target.depth - depthOffset) * 0.015;
-
-                        return (
-                          <motion.path
-                            key={i}
-                            onMouseEnter={() => setHoveredBranchTarget(link.target)}
-                            onMouseLeave={() => setHoveredBranchTarget(null)}
-                            fill="none"
-                            initial={false}
-                            animate={{
-                              d: enableBranchLengths ? dScaled : dConstant,
-                              ...getLinkStrokeAndWidth(link),
-                            }}
-                            transition={{
-                              d: { ...linkTransition, duration: 0.3 },
-                              stroke: {
-                                ...highlightTransition,
-                                delay,
-                              },
-                              strokeWidth: {
-                                ...highlightTransition,
-                                delay,
-                              },
-                            }}
-                          />
-                        );
-                      })}
-                      {cluster.leaves().map((node, i) => {
-                        const nodeRadius = enableBranchLengths ? scaleLengthToRadius(lengthMap.get(node) ?? 0) : node.y;
-                        const [nodeX, nodeY] = pointRadial(node.x, nodeRadius);
-                        const [labelX, labelY] = pointRadial(node.x, node.y);
-
-                        const angleDeg = (node.x * 180) / Math.PI - 90;
-                        const flip = angleDeg > 90 || angleDeg < -90;
-                        const rotation = flip ? angleDeg + 180 : angleDeg;
-                        const textAnchor: "start" | "end" = flip ? "end" : "start";
-                        const xOffset = flip ? -6 : 6;
-
-                        const label = getLabel(node.data);
-                        const color = getColor(node.data);
-
-                        const state = getLeafNodeState(node);
-
-                        return (
-                          <Group
-                            key={i}
-                            onMouseMove={(e: React.MouseEvent) => {
-                              if (node !== hoveredLeaf) setHoveredLeaf(node);
-                              const rect = containerRef.current?.getBoundingClientRect();
-                              const left = e.clientX - (rect?.left ?? 0);
-                              const top = e.clientY - (rect?.top ?? 0);
-                              showTooltip({
-                                tooltipData: node.data,
-                                tooltipLeft: left,
-                                tooltipTop: top,
-                              });
-                            }}
-                            onMouseLeave={() => {
-                              setHoveredLeaf(null);
-                              hideTooltip();
-                            }}
-                          >
-                            <motion.line
-                              initial={false}
-                              animate={{
-                                x1: nodeX,
-                                y1: nodeY,
-                                x2: labelX,
-                                y2: labelY,
-                                opacity: state === "highlighted" ? 1 : 0.2,
-                              }}
-                              stroke={color}
-                              transition={{
-                                x1: linkTransition,
-                                y1: linkTransition,
-                                x2: linkTransition,
-                                y2: linkTransition,
-                                opacity: highlightTransition,
-                              }}
-                            />
-                            <Group top={labelY} left={labelX}>
-                              <text
-                                fontSize={8}
-                                fontFamily="Arial"
-                                fill={color}
-                                opacity={state === "dimmed" ? 0.5 : 1}
-                                stroke={state === "highlighted" ? color : "none"}
-                                strokeWidth={state === "highlighted" ? 0.5 : 0}
-                                paintOrder="stroke"
-                                transform={`rotate(${rotation}) translate(0, 2.4)`}
-                                textAnchor={textAnchor}
-                                x={xOffset}
-                                style={{
-                                  transition: `opacity ${t}, stroke-width ${t}`,
-                                }}
-                              >
-                                {label === "Human" ? `${label} \u2605\u2605\u2605` : label}
-                              </text>
-                              <circle
-                                r={1.5}
-                                transform={state === "highlighted" ? "scale(1.5)" : "scale(1)"}
-                                style={{ transition: `transform ${t}, opacity ${t}` }}
-                                fill={color}
-                                opacity={state === "dimmed" ? 0.5 : 1}
-                              />
-                            </Group>
-                          </Group>
-                        );
-                      })}
-                    </Group>
+                    <TreeLink
+                      key={i}
+                      link={link}
+                      enableBranchLengths={enableBranchLengths}
+                      stroke={getLinkColor(link)}
+                      strokeWidth={getLinkIsHighlighted(link) ? 2 : 1}
+                      getBranchLengthScaledY={getBranchLengthScaledY}
+                      onMouseEnter={handleLinkOnMouseEnter}
+                      onMouseLeave={handleLinkOnMouseLeave}
+                    />
                   );
-                }}
-              </Cluster>
+                })}
+                {leafNodeWithPositions.map((leaf, i) => {
+                  return (
+                    <LeafNode
+                      key={i}
+                      node={leaf.node}
+                      baseNodeX={leaf.baseNodeX}
+                      baseNodeY={leaf.baseNodeY}
+                      scaledNodeX={leaf.scaledNodeX}
+                      scaledNodeY={leaf.scaledNodeY}
+                      label={getLabel(leaf.node.data)}
+                      color={getColor(leaf.node.data)}
+                      variant={getLeafNodeState(leaf.node)}
+                      mode={enableBranchLengths ? "scaled" : "base"}
+                      getBranchLengthScaledY={getBranchLengthScaledY}
+                      onMouseMove={handleLeafOnMouseMove}
+                      onMouseLeave={handleLeafOnMouseLeave}
+                    />
+                  );
+                })}
+              </Group>
             </Group>
           </svg>
           {/* @todo this will probably break? */}
