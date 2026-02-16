@@ -1,0 +1,29 @@
+.tree:hover .leaf {
+fill-opacity: 0.2;
+stroke-opacity: 0.2;
+transition: all 200ms ease-in-out;
+}
+
+/* This now works since it has higher specificity than the above rule when hovered  */
+.tree:hover .leaf:hover {
+  fill-opacity: 1;
+  stroke-opacity: 1;
+}
+
+.tree:hover .link {
+  stroke-opacity: 0.2;
+  transition: all 200ms ease-in-out;
+}
+
+.node:hover > .link {
+  stroke-opacity: 1;
+}
+
+
+
+
+/* Now I want to target leaf nodes that have a parent node hovered */
+
+.leaf.selected {
+  stroke-width: 2;
+}

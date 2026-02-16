@@ -1,9 +1,11 @@
-import { HierarchyPointLink, HierarchyPointNode } from "@visx/hierarchy/lib/types";
+import { HierarchyPointLink } from "d3-hierarchy";
+import { HierarchyPointNode as visxHierarchyPointNode, HierarchyPointLink as visxHierarchyPointLink } from "@visx/hierarchy/lib/types";
 import { TreeItem } from "./types";
 import { pathRadialStep } from "@visx/shape";
 import { motion } from "framer-motion";
 import { hoverTransition, useBranchLengthTransition } from "./PhyloTree";
 import { memo } from "react";
+import styles from "./PhyloTree.module.css";
 
 export type TreeLinkProps = {
   link: HierarchyPointLink<TreeItem>;
@@ -11,8 +13,8 @@ export type TreeLinkProps = {
   strokeWidth: number;
   getBranchLengthScaledY: (cumulativeBranchLength: number) => number;
   enableBranchLengths: boolean;
-  onMouseEnter: (link: HierarchyPointLink<TreeItem>) => void;
-  onMouseLeave: (link: HierarchyPointLink<TreeItem>) => void;
+  // onMouseEnter: (link: HierarchyPointLink<TreeItem>) => void;
+  // onMouseLeave: (link: HierarchyPointLink<TreeItem>) => void;
 };
 
 // Framer motion had issues with e notation 
@@ -31,23 +33,24 @@ const rmSciNotation = (pathString: string) => {
   });
 };
 
-const getPathRadialStep = pathRadialStep<HierarchyPointLink<TreeItem>, HierarchyPointNode<TreeItem>>({
+const getPathRadialStep = pathRadialStep<visxHierarchyPointLink<TreeItem>, visxHierarchyPointNode<TreeItem>>({
   source: (l) => l.source,
   target: (l) => l.target,
   x: (n) => n?.x || 0,
   y: (n) => n?.y || 0,
 });
 
-export const TreeLink = memo(({
+export const TreeLink = memo(function TreeLink({
   link,
   stroke,
   strokeWidth,
   enableBranchLengths,
   getBranchLengthScaledY,
-  onMouseEnter,
-  onMouseLeave,
-}: TreeLinkProps) => {
+  // onMouseEnter,
+  // onMouseLeave,
+}: TreeLinkProps) {
   const dConstant = rmSciNotation(getPathRadialStep(link));
+
   const dScaled = rmSciNotation(
     getPathRadialStep({
       source: {
@@ -63,8 +66,9 @@ export const TreeLink = memo(({
 
   return (
     <motion.path
-      onMouseEnter={() => onMouseEnter(link)}
-      onMouseLeave={() => onMouseLeave(link)}
+      // onMouseEnter={() => onMouseEnter(link)}
+      // onMouseLeave={() => onMouseLeave(link)}
+      className={styles.link}
       fill="none"
       initial={false}
       strokeLinecap={"square"}

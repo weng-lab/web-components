@@ -1,9 +1,10 @@
 import { TreeItem } from "./types";
-import { HierarchyPointNode } from "@visx/hierarchy/lib/types";
+import { HierarchyPointNode } from "d3-hierarchy";
 import { Group } from "@visx/group";
 import { motion } from "framer-motion";
 import { useBranchLengthTransition } from "./PhyloTree";
 import { memo } from "react";
+import styles from "./PhyloTree.module.css";
 
 export type LeafNodeProps = {
   node: HierarchyPointNode<TreeItem>;
@@ -13,16 +14,16 @@ export type LeafNodeProps = {
   scaledNodeY: number;
   label: string;
   color: string;
-  variant: "highlighted" | "dimmed" | "normal" 
+  selected: boolean;
+  // variant: "highlighted" | "dimmed" | "normal";
   mode: "base" | "scaled";
-  getBranchLengthScaledY: (cumulativeBranchLength: number) => number;
-  onMouseMove: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
-  onMouseLeave: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
+  // onMouseMove: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
+  // onMouseLeave: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
 };
 
 const t = "0.2s ease-in-out";
 
-export const LeafNode = memo(
+export const LeafNode = memo(function LeafNode
   ({
     node,
     mode,
@@ -32,10 +33,11 @@ export const LeafNode = memo(
     scaledNodeX,
     scaledNodeY,
     label,
-    variant,
-    onMouseMove,
-    onMouseLeave,
-  }: LeafNodeProps) => {
+    selected
+    // variant,
+    // onMouseMove,
+    // onMouseLeave,
+  }: LeafNodeProps) {
     const angleDeg = (node.x * 180) / Math.PI - 90;
     const flip = angleDeg > 90 || angleDeg < -90;
     const rotation = flip ? angleDeg + 180 : angleDeg;
@@ -47,10 +49,13 @@ export const LeafNode = memo(
       scaled: { x1: scaledNodeX, x2: baseNodeX, y1: scaledNodeY, y2: baseNodeY },
     };
 
+    const variant = "normal" as string
+
     return (
       <Group
-        onMouseMove={(e: React.MouseEvent) => onMouseMove(e, node)}
-        onMouseLeave={(e: React.MouseEvent) => onMouseLeave(e, node)}
+        // onMouseMove={(e: React.MouseEvent) => onMouseMove(e, node)}
+        // onMouseLeave={(e: React.MouseEvent) => onMouseLeave(e, node)}
+        className={`${styles.node} ${styles.leaf} ${selected ? styles.selected : ""}`}
       >
         <motion.line
           initial={false}

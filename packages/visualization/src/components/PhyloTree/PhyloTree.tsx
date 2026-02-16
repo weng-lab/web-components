@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useCallback } from "react";
 import { Group } from "@visx/group";
 import { ascending } from "@visx/vendor/d3-array";
 import { cluster as d3cluster, hierarchy as d3hierarchy } from "d3-hierarchy";
-import { PhyloTreeProps, TreeItem } from "./types";
+import { PhyloTreeProps, TreeItem, ZoomState } from "./types";
 import { HierarchyPointLink, HierarchyPointNode } from "@visx/hierarchy/lib/types";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { Zoom } from "@visx/zoom";
@@ -11,6 +11,11 @@ import { ControlPanel } from "./ControlPanel";
 import { ZoomSurface } from "./ZoomSurface";
 import { LeafNode } from "./LeafNode";
 import { pointRadial } from "d3-shape";
+import { ProvidedZoom } from "@visx/zoom/lib/types";
+import { ZoomFrame } from "./ZoomFrame";
+import { TreeContent } from "./TreeContent";
+import { RenderTree } from "./RenderTree";
+import styles from "./PhyloTree.module.css";
 
 export const hoverTransition = {
   duration: 0.2,
@@ -23,7 +28,7 @@ export const useBranchLengthTransition = {
 } as const;
 
 // Keep spacing of all leaf nodes consistent
-const separationFn = () => 1
+const separationFn = () => 1;
 
 export default function PhyloTree({
   width: totalHeight,
@@ -35,25 +40,19 @@ export default function PhyloTree({
   labelPadding = 135,
   tooltipContents,
 }: PhyloTreeProps) {
-  const [hoveredLeaf, setHoveredLeaf] = useState<HierarchyPointNode<TreeItem> | null>(null);
-  const [hoveredBranchTarget, setHoveredBranchTarget] = useState<HierarchyPointNode<TreeItem> | null>(null);
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(false);
-  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   /* Plot Math */
   const innerWidth = totalWidth;
   const innerHeight = totalHeight;
 
-  const origin = useMemo(() => ({
-    x: innerWidth / 2,
-    y: innerHeight / 2,
-  }), [innerWidth, innerHeight])
-
-  // const origin = {
-  //   x: innerWidth / 2,
-  //   y: innerHeight / 2,
-  // }
+  const origin = useMemo(
+    () => ({
+      x: innerWidth / 2,
+      y: innerHeight / 2,
+    }),
+    [innerWidth, innerHeight]
+  );
 
   const plotBoundedRadius = Math.min(innerWidth, innerHeight) / 2;
   const innerRadius = Math.max(0, plotBoundedRadius - labelPadding);
@@ -92,22 +91,31 @@ export default function PhyloTree({
     };
   }, [data, size, root]);
 
+  const rootNode = useMemo(() => {
+    const cluster = d3cluster<TreeItem>();
+    cluster.size(size);
+    cluster.separation(separationFn);
+
+    return cluster(root);
+  }, [data, size, root]);
+
   const maxBranchLength = useMemo(
     () => Math.max(...root.leaves().map((n) => n.data.cumulative_branch_length ?? 0), 0),
     [root]
   );
-  
+
   /**
    * Use this instead of node.y when scaling by branch length.
    * Both this function and node.y are calculated using innerRadius, this function explicitly and node.y by defining size as [2 * Math.PI, innerRadius]
-  */
- const getBranchLengthScaledY = useCallback(
-   (cumulativeBranchLength: number) => (maxBranchLength === 0 ? 0 : (cumulativeBranchLength / maxBranchLength) * innerRadius),
-   [maxBranchLength, innerRadius]
+   */
+  const getBranchLengthScaledY = useCallback(
+    (cumulativeBranchLength: number) =>
+      maxBranchLength === 0 ? 0 : (cumulativeBranchLength / maxBranchLength) * innerRadius,
+    [maxBranchLength, innerRadius]
   );
 
   //Appends for x/y coordinates used by leaf nodes. Defined here to avoid recalculating with pointRadial on every render (since LeafNode needs to rerender on hover state change)
-  const leafNodeWithPositions = useMemo(
+  const leafNodesWithPositions = useMemo(
     () =>
       leaves.map((leaf) => {
         const [baseNodeX, baseNodeY] = pointRadial(leaf.x, leaf.y);
@@ -127,66 +135,41 @@ export default function PhyloTree({
     [leaves, getBranchLengthScaledY]
   );
 
-  const getLeafNodeState = useCallback(
-    (node: HierarchyPointNode<TreeItem>) => {
-      const thisLeafIsHovered = hoveredLeaf === node;
-      const ancestorLinkIsHovered = node.ancestors().some((node) => node === hoveredBranchTarget);
-      const somethingIsHovered = hoveredLeaf !== null || hoveredBranchTarget !== null;
-      const thisLeafIsHighlighted = highlighted.includes(node.data.id);
+  const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), []);
 
-      const shouldHighlight = somethingIsHovered ? thisLeafIsHovered || ancestorLinkIsHovered : thisLeafIsHighlighted;
-
-      const state = shouldHighlight ? "highlighted" : somethingIsHovered ? "dimmed" : "normal";
-
-      return state;
+  const renderZoom = useCallback(
+    (zoom: ProvidedZoom<SVGSVGElement> & ZoomState) => {
+      return (
+        <ZoomFrame
+          zoom={zoom}
+          totalWidth={totalWidth}
+          totalHeight={totalHeight}
+          toggleBranchLength={toggleBranchLength}
+        >
+          <Group top={origin.y} left={origin.x} className={styles.tree}>
+            <RenderTree
+              node={rootNode}
+              enableBranchLengths={enableBranchLengths}
+              highlighted={highlighted}
+              getBranchLengthScaledY={getBranchLengthScaledY}
+              getColor={getColor}
+              getLabel={getLabel}
+            />
+          </Group>
+        </ZoomFrame>
+      );
     },
-    [hoveredLeaf, hoveredBranchTarget, highlighted]
+    [
+      totalWidth,
+      totalHeight,
+      origin,
+      enableBranchLengths,
+      highlighted,
+      getBranchLengthScaledY,
+      getColor,
+      getLabel,
+    ]
   );
-
-  const getLinkIsHighlighted = useCallback(
-    (link: HierarchyPointLink<TreeItem>) => {
-      const targetLeafIsHovered = link.target.leaves().some((leafNode) => leafNode === hoveredLeaf);
-      const targetAncestorLinkIsHovered = link.target.ancestors().some((node) => node === hoveredBranchTarget);
-      const targetLeafIsHighlighted = link.target.leaves().some((leafNode) => highlighted.includes(leafNode.data.id));
-      const somethingIsHovered = hoveredLeaf !== null || hoveredBranchTarget !== null;
-
-      return targetAncestorLinkIsHovered || targetLeafIsHovered || (!somethingIsHovered && targetLeafIsHighlighted);
-    },
-    [hoveredLeaf, hoveredBranchTarget, highlighted]
-  );
-
-  const getLinkColor = useCallback(
-    (link: HierarchyPointLink<TreeItem>) => {
-      const targetLeafIsHovered = link.target.leaves().some((leafNode) => leafNode === hoveredLeaf);
-      const hoveredLeafColor = hoveredLeaf && targetLeafIsHovered ? getColor(hoveredLeaf.data) : null;
-
-      return hoveredLeafColor ?? "#999";
-    },
-    [hoveredLeaf, hoveredBranchTarget, highlighted]
-  );
-
-  const handleLinkOnMouseEnter = useCallback((l: HierarchyPointLink<TreeItem>) => setHoveredBranchTarget(l.target), [])
-  const handleLinkOnMouseLeave = useCallback(() => setHoveredBranchTarget(null), [])
-  const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), [])
-
-  const handleLeafOnMouseMove = useCallback((e: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => {
-    setHoveredLeaf(node);
-
-    const rect = containerRef.current?.getBoundingClientRect();
-    const left = e.clientX - (rect?.left ?? 0);
-    const top = e.clientY - (rect?.top ?? 0);
-
-    showTooltip({
-      tooltipData: node.data,
-      tooltipLeft: left,
-      tooltipTop: top,
-    });
-  }, []);
-
-  const handleLeafOnMouseLeave = useCallback(() => {
-    setHoveredLeaf(null);
-    hideTooltip();
-  }, []);
 
   return totalWidth < 10 ? null : (
     <Zoom<SVGSVGElement>
@@ -197,8 +180,8 @@ export default function PhyloTree({
       scaleYMin={0.8}
       scaleYMax={4}
     >
-      {/* This here needs to be stable */}
-      {(zoom) => (
+      {renderZoom}
+      {/* {(zoom) => (
         <div
           ref={containerRef}
           style={{
@@ -239,7 +222,7 @@ export default function PhyloTree({
                     />
                   );
                 })}
-                {leafNodeWithPositions.map((leaf, i) => {
+                {leafNodesWithPositions.map((leaf, i) => {
                   return (
                     <LeafNode
                       key={i}
@@ -261,14 +244,13 @@ export default function PhyloTree({
               </Group>
             </Group>
           </svg>
-          {/* @todo this will probably break? */}
           {tooltipData && tooltipContents && (
             <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
               {tooltipContents(tooltipData)}
             </TooltipWithBounds>
           )}
         </div>
-      )}
+      )} */}
     </Zoom>
   );
 }

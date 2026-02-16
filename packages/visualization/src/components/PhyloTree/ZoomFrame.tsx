@@ -1,0 +1,52 @@
+import { ProvidedZoom } from "@visx/zoom/lib/types";
+import { memo, ReactNode, useState } from "react";
+import { ZoomState } from "./types";
+import { ControlPanel } from "./ControlPanel";
+import { ZoomSurface } from "./ZoomSurface";
+import { Group } from "@visx/group";
+
+export type ZoomFrameProps = {
+  /**
+   * does this need to be separated out into the scale and reset functions?
+   */
+  zoom: ProvidedZoom<SVGSVGElement> & ZoomState;
+  totalHeight: number;
+  totalWidth: number;
+  toggleBranchLength: () => void;
+  children: ReactNode
+};
+
+export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children, toggleBranchLength }: ZoomFrameProps) {
+  return (
+    <div
+      // ref={containerRef}
+      style={{
+        position: "relative",
+        border: "1px solid black",
+        width: totalWidth,
+        height: totalHeight,
+        boxSizing: "content-box",
+      }}
+    >
+      {/* @todo can I have this in a different location? This feels not right and creates scope creep for this component */}
+      <ControlPanel scaleZoom={zoom.scale} resetZoom={zoom.reset} toggleBranchLength={toggleBranchLength} />
+      <svg
+        width={totalWidth}
+        height={totalHeight}
+        style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
+        ref={zoom.containerRef}
+      >
+        <ZoomSurface
+          dragStart={zoom.dragStart}
+          dragEnd={zoom.dragEnd}
+          dragMove={zoom.dragMove}
+          scale={zoom.scale}
+          isDragging={zoom.isDragging}
+        />
+        <Group transform={zoom.toString()}>
+          {children}
+        </Group>
+      </svg>
+    </div>
+  );
+});
