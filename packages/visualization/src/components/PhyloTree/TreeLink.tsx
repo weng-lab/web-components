@@ -68,6 +68,12 @@ export const TreeLink = memo(function TreeLink({
     <motion.path
       // onMouseEnter={() => onMouseEnter(link)}
       // onMouseLeave={() => onMouseLeave(link)}
+      onMouseEnter={(e) => {
+        e.currentTarget.closest(`.${styles.branch}`)?.classList.add(styles.branchActive);
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.closest(`.${styles.branch}`)?.classList.remove(styles.branchActive);
+      }}
       className={className}
       fill="none"
       stroke={stroke}

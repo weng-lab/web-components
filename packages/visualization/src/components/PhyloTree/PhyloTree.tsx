@@ -41,6 +41,7 @@ export default function PhyloTree({
   tooltipContents,
 }: PhyloTreeProps) {
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(false);
+  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
 
   /* Plot Math */
   const innerWidth = totalWidth;
@@ -113,31 +114,21 @@ export default function PhyloTree({
       maxBranchLength === 0 ? 0 : (cumulativeBranchLength / maxBranchLength) * innerRadius,
     [maxBranchLength, innerRadius]
   );
-
-  //Appends for x/y coordinates used by leaf nodes. Defined here to avoid recalculating with pointRadial on every render (since LeafNode needs to rerender on hover state change)
-  const leafNodesWithPositions = useMemo(
-    () =>
-      leaves.map((leaf) => {
-        const [baseNodeX, baseNodeY] = pointRadial(leaf.x, leaf.y);
-        const [scaledNodeX, scaledNodeY] = pointRadial(
-          leaf.x,
-          getBranchLengthScaledY(leaf.data.cumulative_branch_length ?? 0)
-        );
-
-        return {
-          node: leaf,
-          baseNodeX,
-          baseNodeY,
-          scaledNodeX,
-          scaledNodeY,
-        };
-      }),
-    [leaves, getBranchLengthScaledY]
-  );
-
   const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), []);
 
-  const renderZoom = useCallback(
+  const handleLeafOnMouseEnter = useCallback((e: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => {
+    showTooltip({
+      tooltipData: node.data,
+      tooltipLeft: e.clientX,
+      tooltipTop: e.clientY,
+    });
+  }, []);
+
+  const handleLeafOnMouseLeave = useCallback(() => {
+    hideTooltip();
+  }, []);
+
+  const renderTree = useCallback(
     (zoom: ProvidedZoom<SVGSVGElement> & ZoomState) => {
       return (
         <ZoomFrame
@@ -154,6 +145,8 @@ export default function PhyloTree({
               getBranchLengthScaledY={getBranchLengthScaledY}
               getColor={getColor}
               getLabel={getLabel}
+              onLeafMouseEnter={handleLeafOnMouseEnter}
+              onLeafMouseLeave={handleLeafOnMouseLeave}
             />
           </Group>
         </ZoomFrame>
@@ -164,93 +157,33 @@ export default function PhyloTree({
       totalHeight,
       origin,
       enableBranchLengths,
+      toggleBranchLength,
       highlighted,
       getBranchLengthScaledY,
       getColor,
       getLabel,
+      handleLeafOnMouseEnter,
+      handleLeafOnMouseLeave,
     ]
   );
 
   return totalWidth < 10 ? null : (
-    <Zoom<SVGSVGElement>
-      width={totalWidth}
-      height={totalHeight}
-      scaleXMin={0.8}
-      scaleXMax={4}
-      scaleYMin={0.8}
-      scaleYMax={4}
-    >
-      {renderZoom}
-      {/* {(zoom) => (
-        <div
-          ref={containerRef}
-          style={{
-            position: "relative",
-            border: "1px solid black",
-            width: totalWidth,
-            height: totalHeight,
-            boxSizing: "content-box",
-          }}
-        >
-          <ControlPanel scaleZoom={zoom.scale} resetZoom={zoom.reset} toggleBranchLength={toggleBranchLength} />
-          <svg
-            width={totalWidth}
-            height={totalHeight}
-            style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
-            ref={zoom.containerRef}
-          >
-            <ZoomSurface
-              dragStart={zoom.dragStart}
-              dragEnd={zoom.dragEnd}
-              dragMove={zoom.dragMove}
-              scale={zoom.scale}
-              isDragging={zoom.isDragging}
-            />
-            <Group transform={zoom.toString()}>
-              <Group top={origin.y} left={origin.x}>
-                {links.map((link, i) => {
-                  return (
-                    <TreeLink
-                      key={i}
-                      link={link}
-                      enableBranchLengths={enableBranchLengths}
-                      stroke={getLinkColor(link)}
-                      strokeWidth={getLinkIsHighlighted(link) ? 2 : 1}
-                      getBranchLengthScaledY={getBranchLengthScaledY}
-                      onMouseEnter={handleLinkOnMouseEnter}
-                      onMouseLeave={handleLinkOnMouseLeave}
-                    />
-                  );
-                })}
-                {leafNodesWithPositions.map((leaf, i) => {
-                  return (
-                    <LeafNode
-                      key={i}
-                      node={leaf.node}
-                      baseNodeX={leaf.baseNodeX}
-                      baseNodeY={leaf.baseNodeY}
-                      scaledNodeX={leaf.scaledNodeX}
-                      scaledNodeY={leaf.scaledNodeY}
-                      label={getLabel(leaf.node.data)}
-                      color={getColor(leaf.node.data)}
-                      variant={getLeafNodeState(leaf.node)}
-                      mode={enableBranchLengths ? "scaled" : "base"}
-                      getBranchLengthScaledY={getBranchLengthScaledY}
-                      onMouseMove={handleLeafOnMouseMove}
-                      onMouseLeave={handleLeafOnMouseLeave}
-                    />
-                  );
-                })}
-              </Group>
-            </Group>
-          </svg>
-          {tooltipData && tooltipContents && (
-            <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
-              {tooltipContents(tooltipData)}
-            </TooltipWithBounds>
-          )}
-        </div>
-      )} */}
-    </Zoom>
+    <div>
+      <Zoom<SVGSVGElement>
+        width={totalWidth}
+        height={totalHeight}
+        scaleXMin={0.8}
+        scaleXMax={4}
+        scaleYMin={0.8}
+        scaleYMax={4}
+      >
+        {renderTree}
+      </Zoom>
+      {tooltipData && tooltipContents && (
+        <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
+          {tooltipContents(tooltipData)}
+        </TooltipWithBounds>
+      )}
+    </div>
   );
 }

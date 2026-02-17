@@ -13,17 +13,21 @@ export type RenderTreeProps = {
   getBranchLengthScaledY: (cumulativeBranchLength: number) => number;
   getColor: PhyloTreeProps["getColor"];
   getLabel: PhyloTreeProps["getLabel"];
+  // Instead of prop drilling is context more performant?
+  onLeafMouseEnter: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void
+  onLeafMouseLeave: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void
 };
 
-/**
- * This takes in the root node, and renders all links and leaf nodes
- */
+//Now our issue is that the math is being rerun every single time
+
 export const RenderTree = memo(function RenderTree({
   node,
   enableBranchLengths,
   getBranchLengthScaledY,
   getColor = () => "black",
   getLabel = (item) => item.id,
+  onLeafMouseEnter,
+  onLeafMouseLeave,
   highlighted,
 }: RenderTreeProps) {
   const isLeaf = !node.children?.length;
@@ -38,10 +42,11 @@ export const RenderTree = memo(function RenderTree({
     getBranchLengthScaledY(node.data.cumulative_branch_length ?? 0)
   );
 
-  console.log("rerendering")
+  // console.log("rerendering")
 
   const branchIsHighlighted = node.leaves().some(leaf => highlighted?.includes(leaf.data.id))
 
+  // Should we move to rendering links to children instead of links to parents? It would remove the link ternary
   return (
     <g className={styles.node}>
       {link ? (
@@ -54,10 +59,10 @@ export const RenderTree = memo(function RenderTree({
             enableBranchLengths={enableBranchLengths}
           />
 
-          {/* SUBTREE MOVED INSIDE BRANCH */}
-          {node.children && (
-            <g className={styles.subtree}>
-              {node.children.map((child) => (
+          <g className={styles.subtree}>
+            {/* SUBTREE MOVED INSIDE BRANCH */}
+            {node.children &&
+              node.children.map((child) => (
                 <RenderTree
                   key={child.data.id}
                   node={child}
@@ -66,10 +71,26 @@ export const RenderTree = memo(function RenderTree({
                   highlighted={highlighted}
                   getColor={getColor}
                   getLabel={getLabel}
+                  onLeafMouseEnter={onLeafMouseEnter}
+                  onLeafMouseLeave={onLeafMouseLeave}
                 />
               ))}
-            </g>
-          )}
+            {isLeaf && (
+              <LeafNode
+                node={node}
+                className={`${styles.leaf} ${highlighted?.includes(node.data.id) ? styles.highlighted : ""}`}
+                baseNodeX={baseNodeX}
+                baseNodeY={baseNodeY}
+                scaledNodeX={scaledNodeX}
+                scaledNodeY={scaledNodeY}
+                label={getLabel(node.data)}
+                color={getColor(node.data)}
+                mode={enableBranchLengths ? "scaled" : "base"}
+                onMouseEnter={onLeafMouseEnter}
+                onMouseLeave={onLeafMouseLeave}
+              />
+            )}
+          </g>
         </g>
       ) : (
         // ROOT NODE (no parent link)
@@ -82,24 +103,10 @@ export const RenderTree = memo(function RenderTree({
             highlighted={highlighted}
             getColor={getColor}
             getLabel={getLabel}
+            onLeafMouseEnter={onLeafMouseEnter}
+            onLeafMouseLeave={onLeafMouseLeave}
           />
         ))
-      )}
-
-      {isLeaf && (
-        <LeafNode
-          node={node}
-          className={`${styles.leaf} ${
-            highlighted?.includes(node.data.id) ? styles.highlighted : ""
-          }`}
-          baseNodeX={baseNodeX}
-          baseNodeY={baseNodeY}
-          scaledNodeX={scaledNodeX}
-          scaledNodeY={scaledNodeY}
-          label={getLabel(node.data)}
-          color={getColor(node.data)}
-          mode={enableBranchLengths ? "scaled" : "base"}
-        />
       )}
     </g>
   );

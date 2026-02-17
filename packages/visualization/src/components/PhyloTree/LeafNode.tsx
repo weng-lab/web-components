@@ -4,7 +4,6 @@ import { Group } from "@visx/group";
 import { motion } from "framer-motion";
 import { useBranchLengthTransition } from "./PhyloTree";
 import { memo } from "react";
-import styles from "./PhyloTree.module.css";
 
 export type LeafNodeProps = {
   node: HierarchyPointNode<TreeItem>;
@@ -16,8 +15,8 @@ export type LeafNodeProps = {
   color: string;
   // variant: "highlighted" | "dimmed" | "normal";
   mode: "base" | "scaled";
-  // onMouseMove: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
-  // onMouseLeave: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
+  onMouseEnter: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
+  onMouseLeave: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
   className?: string
 };
 
@@ -33,10 +32,9 @@ export const LeafNode = memo(function LeafNode
     scaledNodeX,
     scaledNodeY,
     label,
-    className
-    // variant,
-    // onMouseMove,
-    // onMouseLeave,
+    className,
+    onMouseEnter,
+    onMouseLeave,
   }: LeafNodeProps) {
     const angleDeg = (node.x * 180) / Math.PI - 90;
     const flip = angleDeg > 90 || angleDeg < -90;
@@ -49,12 +47,15 @@ export const LeafNode = memo(function LeafNode
       scaled: { x1: scaledNodeX, x2: baseNodeX, y1: scaledNodeY, y2: baseNodeY },
     };
 
+    /**
+     * @todo fix this thing, move all to css file versus mixing
+     */
     const variant = "normal" as string
 
     return (
       <Group
-        // onMouseMove={(e: React.MouseEvent) => onMouseMove(e, node)}
-        // onMouseLeave={(e: React.MouseEvent) => onMouseLeave(e, node)}
+        onMouseEnter={(e: React.MouseEvent) => onMouseEnter(e, node)}
+        onMouseLeave={(e: React.MouseEvent) => onMouseLeave(e, node)}
         className={className}
       >
         <motion.line
@@ -97,4 +98,17 @@ export const LeafNode = memo(function LeafNode
       </Group>
     );
   }
-);
+, (prevProps, nextProps) => {
+  const allKeys = Object.keys({ ...prevProps, ...nextProps })
+
+  allKeys.forEach(key => {
+    if (prevProps[key] !== nextProps[key]) {
+      console.log(`Prop changed: ${key}`, {
+        prev: prevProps[key],
+        next: nextProps[key],
+      })
+    }
+  })
+
+  return false // force re-render for debugging
+});

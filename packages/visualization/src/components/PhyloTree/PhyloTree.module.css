@@ -1,42 +1,55 @@
+/* Base styles, normal and highlighted */
 .link, .leaf {
   transition: all 200ms ease-in-out;
 }
 
-.tree:hover .link {
-  stroke-opacity: 0.2;
-
-}
-
-.tree:hover .leaf {
-  fill-opacity: 0.2;
-  stroke-opacity: 0.2;
-}
-
-.tree:hover .leaf:hover{
-  fill-opacity: 1;
-  stroke-opacity: 1;
-}
-
-/* restore on links up to root */
-.node:hover > .branch > .link {
-  stroke-opacity: 1;
-}
-
-/* normal 0 stroke */
 .leaf {
   stroke-width: 0;
 }
-/* 0.5 if leaf selected */
+
 .highlighted.leaf {
   stroke-width: 0.6;
 }
 
-.link, .tree:hover .link {
+.link {
   stroke-width: 1;
 }
 
 .highlighted.link {
   stroke-width: 2;
+}
+
+/* Hover logic */
+/* When tree hovered, dim all links and leaves */
+.tree:hover .link,
+.tree:hover .leaf {
+  stroke-opacity: 0.2;
+  fill-opacity: 0.2;
+}
+
+/* Restore hovered leaf */
+.tree:hover .leaf:hover{
+  fill-opacity: 1;
+  stroke-opacity: 1;
+}
+
+/* On hover restore links up to root */
+.node:hover > .branch > .link {
+  stroke-opacity: 1;
+  stroke-width: 2;
+}
+
+
+.branchActive .subtree .leaf {
+  stroke-opacity: 1;
+  fill-opacity: 1;
+}
+
+.branchActive .link,
+.branchActive .subtree .link {
+  stroke-width: 2;
+  stroke-opacity: 1;
+  fill-opacity: 1;
 }
 
 /* need to undo link highlighting when tree hovered */
