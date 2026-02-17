@@ -2,7 +2,7 @@ import { HierarchyPointLink } from "d3-hierarchy";
 import { HierarchyPointNode as visxHierarchyPointNode, HierarchyPointLink as visxHierarchyPointLink } from "@visx/hierarchy/lib/types";
 import { TreeItem } from "./types";
 import { pathRadialStep } from "@visx/shape";
-import { motion } from "framer-motion";
+import { motion, MotionProps } from "framer-motion";
 import { hoverTransition, useBranchLengthTransition } from "./PhyloTree";
 import { memo } from "react";
 import styles from "./PhyloTree.module.css";
@@ -10,9 +10,9 @@ import styles from "./PhyloTree.module.css";
 export type TreeLinkProps = {
   link: HierarchyPointLink<TreeItem>;
   stroke: string;
-  strokeWidth: number;
   getBranchLengthScaledY: (cumulativeBranchLength: number) => number;
   enableBranchLengths: boolean;
+  className?: string
   // onMouseEnter: (link: HierarchyPointLink<TreeItem>) => void;
   // onMouseLeave: (link: HierarchyPointLink<TreeItem>) => void;
 };
@@ -43,9 +43,9 @@ const getPathRadialStep = pathRadialStep<visxHierarchyPointLink<TreeItem>, visxH
 export const TreeLink = memo(function TreeLink({
   link,
   stroke,
-  strokeWidth,
   enableBranchLengths,
   getBranchLengthScaledY,
+  className
   // onMouseEnter,
   // onMouseLeave,
 }: TreeLinkProps) {
@@ -68,19 +68,16 @@ export const TreeLink = memo(function TreeLink({
     <motion.path
       // onMouseEnter={() => onMouseEnter(link)}
       // onMouseLeave={() => onMouseLeave(link)}
-      className={styles.link}
+      className={className}
       fill="none"
+      stroke={stroke}
       initial={false}
       strokeLinecap={"square"}
       animate={{
         d: enableBranchLengths ? dScaled : dConstant,
-        stroke,
-        strokeWidth,
       }}
       transition={{
         d: useBranchLengthTransition,
-        stroke: hoverTransition,
-        strokeWidth: hoverTransition,
       }}
     />
   );

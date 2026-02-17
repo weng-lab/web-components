@@ -14,11 +14,11 @@ export type LeafNodeProps = {
   scaledNodeY: number;
   label: string;
   color: string;
-  selected: boolean;
   // variant: "highlighted" | "dimmed" | "normal";
   mode: "base" | "scaled";
   // onMouseMove: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
   // onMouseLeave: (event: React.MouseEvent, node: HierarchyPointNode<TreeItem>) => void;
+  className?: string
 };
 
 const t = "0.2s ease-in-out";
@@ -33,7 +33,7 @@ export const LeafNode = memo(function LeafNode
     scaledNodeX,
     scaledNodeY,
     label,
-    selected
+    className
     // variant,
     // onMouseMove,
     // onMouseLeave,
@@ -55,7 +55,7 @@ export const LeafNode = memo(function LeafNode
       <Group
         // onMouseMove={(e: React.MouseEvent) => onMouseMove(e, node)}
         // onMouseLeave={(e: React.MouseEvent) => onMouseLeave(e, node)}
-        className={`${styles.node} ${styles.leaf} ${selected ? styles.selected : ""}`}
+        className={className}
       >
         <motion.line
           initial={false}
@@ -74,8 +74,8 @@ export const LeafNode = memo(function LeafNode
             fontFamily="Arial"
             fill={color}
             opacity={variant === "dimmed" ? 0.5 : 1}
-            stroke={variant === "highlighted" ? color : "none"}
-            strokeWidth={variant === "highlighted" ? 0.5 : 0}
+            stroke={color}
+            // strokeWidth={0}
             paintOrder="stroke"
             transform={`rotate(${rotation}) translate(0, 2.4)`}
             textAnchor={textAnchor}

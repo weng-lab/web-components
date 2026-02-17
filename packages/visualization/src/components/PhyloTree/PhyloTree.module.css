@@ -1,29 +1,42 @@
-.tree:hover .leaf {
-fill-opacity: 0.2;
-stroke-opacity: 0.2;
-transition: all 200ms ease-in-out;
-}
-
-/* This now works since it has higher specificity than the above rule when hovered  */
-.tree:hover .leaf:hover {
-  fill-opacity: 1;
-  stroke-opacity: 1;
+.link, .leaf {
+  transition: all 200ms ease-in-out;
 }
 
 .tree:hover .link {
   stroke-opacity: 0.2;
-  transition: all 200ms ease-in-out;
+
 }
 
-.node:hover > .link {
+.tree:hover .leaf {
+  fill-opacity: 0.2;
+  stroke-opacity: 0.2;
+}
+
+.tree:hover .leaf:hover{
+  fill-opacity: 1;
   stroke-opacity: 1;
 }
 
+/* restore on links up to root */
+.node:hover > .branch > .link {
+  stroke-opacity: 1;
+}
 
+/* normal 0 stroke */
+.leaf {
+  stroke-width: 0;
+}
+/* 0.5 if leaf selected */
+.highlighted.leaf {
+  stroke-width: 0.6;
+}
 
+.link, .tree:hover .link {
+  stroke-width: 1;
+}
 
-/* Now I want to target leaf nodes that have a parent node hovered */
-
-.leaf.selected {
+.highlighted.link {
   stroke-width: 2;
 }
+
+/* need to undo link highlighting when tree hovered */

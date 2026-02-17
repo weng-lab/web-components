@@ -28,12 +28,9 @@ export const RenderTree = memo(function RenderTree({
 }: RenderTreeProps) {
   const isLeaf = !node.children?.length;
 
-  const link = node.parent ? {
-    source: node.parent,
-    target: node
-  } : null
-
-  //Where should the tooltip live?
+  const link = node.parent
+    ? { source: node.parent, target: node }
+    : null;
 
   const [baseNodeX, baseNodeY] = pointRadial(node.x, node.y);
   const [scaledNodeX, scaledNodeY] = pointRadial(
@@ -41,23 +38,60 @@ export const RenderTree = memo(function RenderTree({
     getBranchLengthScaledY(node.data.cumulative_branch_length ?? 0)
   );
 
+  console.log("rerendering")
+
+  const branchIsHighlighted = node.leaves().some(leaf => highlighted?.includes(leaf.data.id))
+
   return (
     <g className={styles.node}>
-      {link && (
-        <TreeLink
-          link={link}
-          // To be changed
-          stroke={"#999"}
-          strokeWidth={1}
-          getBranchLengthScaledY={getBranchLengthScaledY}
-          enableBranchLengths={enableBranchLengths}
-        />
+      {link ? (
+        <g className={styles.branch}>
+          <TreeLink
+            link={link}
+            className={`${styles.link} ${branchIsHighlighted ? styles.highlighted : ""}`}
+            stroke="#999"
+            getBranchLengthScaledY={getBranchLengthScaledY}
+            enableBranchLengths={enableBranchLengths}
+          />
+
+          {/* SUBTREE MOVED INSIDE BRANCH */}
+          {node.children && (
+            <g className={styles.subtree}>
+              {node.children.map((child) => (
+                <RenderTree
+                  key={child.data.id}
+                  node={child}
+                  enableBranchLengths={enableBranchLengths}
+                  getBranchLengthScaledY={getBranchLengthScaledY}
+                  highlighted={highlighted}
+                  getColor={getColor}
+                  getLabel={getLabel}
+                />
+              ))}
+            </g>
+          )}
+        </g>
+      ) : (
+        // ROOT NODE (no parent link)
+        node.children?.map((child) => (
+          <RenderTree
+            key={child.data.id}
+            node={child}
+            enableBranchLengths={enableBranchLengths}
+            getBranchLengthScaledY={getBranchLengthScaledY}
+            highlighted={highlighted}
+            getColor={getColor}
+            getLabel={getLabel}
+          />
+        ))
       )}
-      {/* Should separate out the connector line from the leaf node to separate */}
+
       {isLeaf && (
         <LeafNode
           node={node}
-          selected={!!highlighted?.includes(node.data.id)}
+          className={`${styles.leaf} ${
+            highlighted?.includes(node.data.id) ? styles.highlighted : ""
+          }`}
           baseNodeX={baseNodeX}
           baseNodeY={baseNodeY}
           scaledNodeX={scaledNodeX}
@@ -67,17 +101,6 @@ export const RenderTree = memo(function RenderTree({
           mode={enableBranchLengths ? "scaled" : "base"}
         />
       )}
-      {node.children?.map((child) => (
-        <RenderTree
-          key={child.data.id}
-          node={child}
-          enableBranchLengths={enableBranchLengths}
-          getBranchLengthScaledY={getBranchLengthScaledY}
-          highlighted={highlighted}
-          getColor={getColor}
-          getLabel={getLabel}
-        />
-      ))}
     </g>
   );
-})
+});
