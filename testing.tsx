@@ -76,7 +76,8 @@ const getOrder = (item: TreeItem) => {
 
 const args = {
   data: formatNode(data),
-  highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
+  highlighted: ["Homo_sapiens"],
+  // highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
   width: 1000,
   height: 1000,
   getColor,

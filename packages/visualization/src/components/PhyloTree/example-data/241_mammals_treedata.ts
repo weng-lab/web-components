@@ -423,7 +423,7 @@ export const data = {
                                                 {
                                                   "name": "Homo_sapiens",
                                                   "branch_length": 0.00596652
-                                                }
+                                                },
                                               ]
                                             }
                                           ]
