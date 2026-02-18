@@ -65,7 +65,6 @@ export const RenderTree = memo(function RenderTree({
             <TreeLink
               link={link}
               className={styles.link}
-              stroke="#999"
               getBranchLengthScaledY={getBranchLengthScaledY}
               enableBranchLengths={enableBranchLengths}
             />
@@ -160,9 +159,3 @@ const mock = () => {
     </Branch>
   );
 };
-
-// .branch:hover > .node .link // I want this to select all in the path to root, and then select any links below those items
-// the above does not work since the link is not a direct child of another link. Its a child of the wrapper <branch>
-//link in node that is sibling to hovered 
-// .link:hovered ~ .node .link
-// .link:hovered + .node .link

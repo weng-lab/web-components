@@ -2,14 +2,13 @@ import { HierarchyPointLink } from "d3-hierarchy";
 import { HierarchyPointNode as visxHierarchyPointNode, HierarchyPointLink as visxHierarchyPointLink } from "@visx/hierarchy/lib/types";
 import { TreeItem } from "./types";
 import { pathRadialStep } from "@visx/shape";
-import { motion, MotionProps } from "framer-motion";
-import { hoverTransition, useBranchLengthTransition } from "./PhyloTree";
+import { motion } from "framer-motion";
+import { useBranchLengthTransition } from "./PhyloTree";
 import { memo } from "react";
 import styles from "./PhyloTree.module.css";
 
 export type TreeLinkProps = {
   link: HierarchyPointLink<TreeItem>;
-  stroke: string;
   getBranchLengthScaledY: (cumulativeBranchLength: number) => number;
   enableBranchLengths: boolean;
   className?: string
@@ -42,7 +41,6 @@ const getPathRadialStep = pathRadialStep<visxHierarchyPointLink<TreeItem>, visxH
 
 export const TreeLink = memo(function TreeLink({
   link,
-  stroke,
   enableBranchLengths,
   getBranchLengthScaledY,
   className
@@ -76,7 +74,6 @@ export const TreeLink = memo(function TreeLink({
       }}
       className={className}
       fill="none"
-      stroke={stroke}
       initial={false}
       strokeLinecap={"square"}
       animate={{

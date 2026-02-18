@@ -1,19 +1,13 @@
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Group } from "@visx/group";
 import { ascending } from "@visx/vendor/d3-array";
 import { cluster as d3cluster, hierarchy as d3hierarchy } from "d3-hierarchy";
 import { PhyloTreeProps, TreeItem, ZoomState } from "./types";
-import { HierarchyPointLink, HierarchyPointNode } from "@visx/hierarchy/lib/types";
+import { HierarchyPointNode } from "@visx/hierarchy/lib/types";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { Zoom } from "@visx/zoom";
-import { TreeLink } from "./TreeLink";
-import { ControlPanel } from "./ControlPanel";
-import { ZoomSurface } from "./ZoomSurface";
-import { LeafNode } from "./LeafNode";
-import { pointRadial } from "d3-shape";
 import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ZoomFrame } from "./ZoomFrame";
-import { TreeContent } from "./TreeContent";
 import { RenderTree } from "./RenderTree";
 import styles from "./PhyloTree.module.css";
 
@@ -79,18 +73,6 @@ export default function PhyloTree({
       });
     return r;
   }, [data]);
-
-  const { links, leaves } = useMemo(() => {
-    const cluster = d3cluster<TreeItem>();
-    cluster.size(size);
-    cluster.separation(separationFn);
-    const clusterData = cluster(root);
-
-    return {
-      links: clusterData.links(),
-      leaves: clusterData.leaves(),
-    };
-  }, [data, size, root]);
 
   const rootNode = useMemo(() => {
     const cluster = d3cluster<TreeItem>();

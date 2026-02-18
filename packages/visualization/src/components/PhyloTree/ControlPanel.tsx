@@ -24,7 +24,7 @@ export const ControlPanel = ({scaleZoom, resetZoom, toggleBranchLength}: Control
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
       }}
     >
-      <Tooltip id={"test"} title="Zoom In" placement="right">
+      <Tooltip title="Zoom In" placement="right">
         <IconButton onClick={() => scaleZoom({ scaleX: 1.2, scaleY: 1.2 })}>
           <Add fontSize="small" />
         </IconButton>
@@ -34,7 +34,7 @@ export const ControlPanel = ({scaleZoom, resetZoom, toggleBranchLength}: Control
           <Remove fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Tooltip title="Reset" placement="right">
+      <Tooltip title="Reset Zoom" placement="right">
         <IconButton onClick={resetZoom}>
           <SettingsBackupRestore fontSize="small" />
         </IconButton>

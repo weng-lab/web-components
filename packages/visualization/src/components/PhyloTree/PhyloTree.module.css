@@ -1,4 +1,8 @@
 /* Base styles, normal and highlighted */
+
+/* --------------------------------------------- */
+/* Base styles */
+/* --------------------------------------------- */
 .link,
 .leaf {
   transition: 
@@ -8,29 +12,32 @@
 }
 .leaf {
   stroke-width: 0;
-}
-
-.leaf.highlighted {
-  stroke-width: 0.6;
-}
-
-.tree:hover .leaf.highlighted {
-  stroke-width: 0;
+  /* color of leaf defined by node.data in RenderTree */
 }
 
 .link {
   stroke-width: 1;
+  stroke: #999;
 }
+
+/* --------------------------------------------- */
+/* Highlighted styles (from prop `highlighted`) */
+/* --------------------------------------------- */
+
+.leaf.highlighted {
+  stroke-width: 0.7;
+}
+
 
 .branch:has(.leaf.highlighted) > .link{
   stroke-width: 2;
+  stroke: #666;
 }
 
-.tree:hover .link.highlighted {
-  stroke-width: 1;
-}
+/* --------------------------------------------- */
+/* Hover styles */
+/* --------------------------------------------- */
 
-/* Hover logic */
 /* When tree hovered, dim all links and leaves */
 .tree:hover .link,
 .tree:hover .leaf {
@@ -49,5 +56,5 @@
 .branch:hover > .link,
 .link:hover + .node .link {
   stroke-opacity: 1;
-  stroke-width: 2;
+  /* stroke-width: 2; */
 }
