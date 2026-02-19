@@ -9,11 +9,9 @@ import styles from "./PhyloTree.module.css";
 
 export type TreeLinkProps = {
   link: HierarchyPointLink<TreeItem>;
-  getBranchLengthScaledY: (cumulativeBranchLength: number) => number;
   enableBranchLengths: boolean;
-  className?: string
-  // onMouseEnter: (link: HierarchyPointLink<TreeItem>) => void;
-  // onMouseLeave: (link: HierarchyPointLink<TreeItem>) => void;
+  className: string
+  stroke: string,
 };
 
 // Framer motion had issues with e notation 
@@ -42,10 +40,8 @@ const getPathRadialStep = pathRadialStep<visxHierarchyPointLink<TreeItem>, visxH
 export const TreeLink = memo(function TreeLink({
   link,
   enableBranchLengths,
-  getBranchLengthScaledY,
-  className
-  // onMouseEnter,
-  // onMouseLeave,
+  className,
+  stroke
 }: TreeLinkProps) {
   const dConstant = rmSciNotation(getPathRadialStep(link));
 
@@ -53,19 +49,19 @@ export const TreeLink = memo(function TreeLink({
     getPathRadialStep({
       source: {
         ...link.source,
-        y: getBranchLengthScaledY(link.source.data.cumulative_branch_length ?? 0),
+        //This doesn't work as it needs to be scaled and not put through the pointRadial
+        y: link.source.data.branchLengthScaledRadius ?? 0,
       },
       target: {
         ...link.target,
-        y: getBranchLengthScaledY(link.target.data.cumulative_branch_length ?? 0),
+        y: link.target.data.branchLengthScaledRadius ?? 0,
       },
     })
   );
 
   return (
     <motion.path
-      // onMouseEnter={() => onMouseEnter(link)}
-      // onMouseLeave={() => onMouseLeave(link)}
+      stroke={stroke}
       onMouseEnter={(e) => {
         e.currentTarget.closest(`.${styles.branch}`)?.classList.add(styles.branchActive);
       }}

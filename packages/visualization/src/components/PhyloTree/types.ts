@@ -16,6 +16,22 @@ export type TreeItem = {
    * placeholder for cumulative branch length to be put when creating root node
    */
   cumulative_branch_length?: number,
+  /**
+   * 
+   */
+  uniform_leaf_color?: string | null
+  baseNodeX?: number;
+  baseNodeY?: number;
+  scaledNodeX?: number;
+  scaledNodeY?: number;
+  branchLengthScaledRadius?: number;
+}
+/**
+ * @todo figure out how to use this type within the component to not expose branch length and leaf colot
+ */
+type TreeItemInternal = TreeItem & {
+  cumulativeBranchLength: number,
+  uniformLeafColor?: string | null
 }
 
 export type PhyloTreeProps = {
@@ -27,7 +43,7 @@ export type PhyloTreeProps = {
    */
   highlighted?: string[]
   /**
-   * @default 100
+   * @default 135
    */
   labelPadding?: number
   /**
@@ -44,4 +60,16 @@ export type PhyloTreeProps = {
    * Optionally define tooltip for hover over leaf nodes
    */
   tooltipContents?: (item: TreeItem) => ReactNode
+  /**
+   * @default 8
+   */
+  leafFontSize?: number
+  /**
+   * @default 'Arial'
+   */
+  leafFontFamily?: string
+  /**
+   * @default 1
+   */
+  linkStrokeWidth?: number
 };

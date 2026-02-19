@@ -1,14 +1,12 @@
-/* Base styles, normal and highlighted */
-
 /* --------------------------------------------- */
 /* Base styles */
 /* --------------------------------------------- */
 .link,
 .leaf {
   transition: 
-    stroke-opacity 200ms ease,
-    fill-opacity 200ms ease,
-    stroke-width 200ms ease;
+    stroke-opacity 200ms ease-in-out,
+    fill-opacity 200ms ease-in-out,
+    stroke-width 200ms ease-in-out;
 }
 .leaf {
   stroke-width: 0;
@@ -16,8 +14,7 @@
 }
 
 .link {
-  stroke-width: 1;
-  stroke: #999;
+  stroke-width: var(--link-stroke-width, 1px);
 }
 
 /* --------------------------------------------- */
@@ -28,10 +25,9 @@
   stroke-width: 0.7;
 }
 
-
+/* This was the important property to save on compute by avoiding traversing node.leaves() for each link using js */
 .branch:has(.leaf.highlighted) > .link{
-  stroke-width: 2;
-  stroke: #666;
+   stroke-width: calc(var(--link-stroke-width, 1px) * 2);
 }
 
 /* --------------------------------------------- */
@@ -48,6 +44,7 @@
 /* Restore hovered leaf, or all descendant leaves */
 .tree:hover .leaf:hover,
 .link:hover + .node .leaf {
+  opacity: 1;
   fill-opacity: 1;
   stroke-opacity: 1;
 }
@@ -55,6 +52,6 @@
 /* On hover restore links back up to root, and any descendant link */
 .branch:hover > .link,
 .link:hover + .node .link {
+  opacity: 1;
   stroke-opacity: 1;
-  /* stroke-width: 2; */
 }
