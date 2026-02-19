@@ -1,8 +1,23 @@
-import ReactDOM from 'react-dom/client';
-import {PhyloTree, TreeItem} from './packages/visualization/src/components/PhyloTree'
-import metadataRaw from "./packages/visualization/src/components/PhyloTree/example-data/241-mammals-metadata-w-human.txt?raw";
-import { data } from "./packages/visualization/src/components/PhyloTree/example-data/241_mammals_treedata";
+import { useState } from "react";
+import { Meta, StoryObj } from "@storybook/react-vite";
+import PhyloTree from "./PhyloTree";
+import { data } from "./example-data/241_mammals_treedata";
+import { TreeItem } from "./types";
+import metadataRaw from "./example-data/241-mammals-metadata-w-human.txt?raw";
 
+const meta = {
+  title: "visualization/PhyloTree",
+  component: PhyloTree,
+  tags: ["autodocs"],
+  argTypes: {},
+  parameters: {
+    controls: { expanded: true },
+  },
+  decorators: [(Story) => <Story />],
+} satisfies Meta<typeof PhyloTree>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 type TestDataNode = { name: string; branch_length: number | null; children?: TestDataNode[] };
 
@@ -74,28 +89,35 @@ const getOrder = (item: TreeItem) => {
   return order;
 };
 
-const args = {
-  data: formatNode(data),
-  highlighted: ["Homo_sapiens"],
-  // highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
-  width: 1000,
-  height: 1000,
-  getColor,
-  getLabel,
-  tooltipContents: (item: TreeItem) => (
-    <div style={{ fontSize: 12 }}>
-      <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
-      <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
-    </div>
-  ),
+export const Mammals241: Story = {
+  args: {
+    data: formatNode(data),
+    width: 1000,
+    height: 1000,
+    getColor,
+    getLabel,
+    tooltipContents: (item) => (
+      <div style={{ fontSize: 12 }}>
+        <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
+      </div>
+    ),
+  },
 };
 
-function TestingPage() {
-    return (
-      <div>
-        <PhyloTree {...args} width={1000} height={1000} />
+export const HighlightLeaves: Story = {
+  args: {
+    data: formatNode(data),
+    highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
+    width: 1000,
+    height: 1000,
+    getColor,
+    getLabel,
+    tooltipContents: (item) => (
+      <div style={{ fontSize: 12 }}>
+        <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
       </div>
-    );
-}
-
-ReactDOM.createRoot(document.getElementById('root')!).render(<TestingPage />);
+    ),
+  },
+};
