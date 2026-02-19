@@ -174,25 +174,25 @@ export const OmesList: OmeOption[] = [
   },
   {
     label: "WGS",
-    value: "wgs",
+    value: "WGS",
     keywords: ["whole genome sequencing", "genome sequencing", "genomics"],
     description: "Whole Genome Sequencing"
   },
   {
     label: "WGBS",
-    value: "wgbs",
+    value: "WGBS",
     keywords: ["whole genome bisulfite sequencing", "epigenomics", "methylation"],
     description: "Whole Genome Bisulfite Sequencing"
   },
   {
     label: "ATAC",
-    value: "atac",
+    value: "ATAC",
     keywords: ["chromatin accessibility", "atac-seq"],
     description: "ATAC-seq"
   },
   {
     label: "RNA",
-    value: "rna",
+    value: "RNA",
     keywords: ["rna-seq", "transcriptomics", "gene expression"],
     description: "RNA-seq"
   },
