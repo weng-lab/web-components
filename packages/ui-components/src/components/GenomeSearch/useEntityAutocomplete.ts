@@ -9,6 +9,8 @@ import {
   studyResultList,
   isDomain,
   legacyCcreResultList,
+  OmesList,
+  omeResultsList,
 } from "./utils";
 import { GenomeSearchProps, Result, ResultType } from "./types";
 
@@ -19,6 +21,7 @@ type Limits = {
   ccre?: number;
   legacyCcre?: number;
   study?: number;
+  ome?: number;
 };
 
 type HookOptions = {
@@ -92,6 +95,7 @@ export function useEntityAutocomplete(
               const qLegacyCcre = queries.includes("Legacy cCRE");
               const qCoordinate = queries.includes("Coordinate");
               const qStudy = queries.includes("Study");
+              const qOme = queries.includes("Ome");
 
               // array for fetch promises (so that we can Promise.all them in parallel)
               const fetchPromises: Promise<Result[]>[] = [];
@@ -164,6 +168,23 @@ export function useEntityAutocomplete(
                         ? studyResultList(studyData.data.getGWASStudiesMetadata, studyLimit)
                         : []
                     )
+                  );
+                }
+
+                if (qOme && !isDomain(input) && input !== "") {
+                  const omeLimit = limits?.ome ?? 3;
+
+                  const filtered = OmesList.filter((ome) => {
+                    const search = input.toLowerCase();
+
+                    return (
+                      ome.label.toLowerCase().includes(search) ||
+                      ome.keywords?.some((k) => k.toLowerCase().includes(search))
+                    );
+                  }).slice(0, omeLimit);
+
+                  fetchPromises.push(
+                    Promise.resolve(omeResultsList(filtered))
                   );
                 }
               }
