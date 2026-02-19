@@ -107,6 +107,16 @@ export function studyResultList(results: StudyResponse[], limit: number): Result
   }));
 }
 
+export function omeResultsList(results: OmeOption[]): Result[] {
+  return results.map((ome) => ({
+    title: ome.label,
+    description: ome.description ?? "",
+    domain: undefined,
+    id: ome.value,
+    type: "Ome",
+  }));
+}
+
 export function icreResultList(results: ICREResponse[], limit: number): Result[] {
   return formatResults(results, limit, {
     getTitle: (result) => result.accession,
@@ -147,6 +157,62 @@ export function legacyCcreResultList(results: LegacyCcreResponse[], limit: numbe
       };
     });
 }
+
+export interface OmeOption {
+  label: string;
+  value: string;
+  keywords?: string[];
+  description?: string;
+}
+//allows the user to search more freely and get the result they are looking for
+//will look at label as well as keywords
+export const OmesList: OmeOption[] = [
+  {
+    label: "Proteomics",
+    value: "proteomics",
+    keywords: ["protein", "mass spec"],
+  },
+  {
+    label: "WGS",
+    value: "wgs",
+    keywords: ["whole genome sequencing", "genome sequencing", "genomics"],
+    description: "Whole Genome Sequencing"
+  },
+  {
+    label: "WGBS",
+    value: "wgbs",
+    keywords: ["whole genome bisulfite sequencing", "epigenomics", "methylation"],
+    description: "Whole Genome Bisulfite Sequencing"
+  },
+  {
+    label: "ATAC",
+    value: "atac",
+    keywords: ["chromatin accessibility", "atac-seq"],
+    description: "ATAC-seq"
+  },
+  {
+    label: "RNA",
+    value: "rna",
+    keywords: ["rna-seq", "transcriptomics", "gene expression"],
+    description: "RNA-seq"
+  },
+  {
+    label: "Metabolomics",
+    value: "metabolomics",
+  },
+  {
+    label: "Lipidomics",
+    value: "lipidomics",
+  },
+  {
+    label: "Metallomics",
+    value: "metallomics",
+  },
+  {
+    label: "Exposomics",
+    value: "exposomics",
+  },
+];
 
 // Object to store chromosome lengths for GRCh38 and mm10
 const chromosomeLengths: { [key: string]: { [key: string]: number } } = {
