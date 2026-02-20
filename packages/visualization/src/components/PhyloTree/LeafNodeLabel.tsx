@@ -1,20 +1,20 @@
-import { PhyloTreeProps, TreeItem } from "./types";
-import { HierarchyPointNode } from "d3-hierarchy";
+import { PhyloTreeProps, TreeNode } from "./types";
 import { Group } from "@visx/group";
 import { memo } from "react";
+import styles from "./PhyloTree.module.css";
+
 
 export type LeafNodeLabelProps = {
   // node.x is the angle the node is at in radial layout while base/scaled are true x/y position in svg
   nodeX: number;
-  baseNodeX: number;
-  baseNodeY: number;
-  label: string;
-  color: string;
+  baseNodeX: TreeNode["baseNodeX"];
+  baseNodeY: TreeNode["baseNodeY"];
+  label: TreeNode["label"];
+  color: TreeNode["color"];
   fontSize: PhyloTreeProps["leafFontSize"];
   fontFamily: PhyloTreeProps["leafFontFamily"];
+  strokeWidth: TreeNode["labelStrokeWidth"]
 };
-
-const t = "0.2s ease-in-out";
 
 export const LeafNodeLabel = memo(function LeafNodeLabel({
   nodeX,
@@ -24,6 +24,7 @@ export const LeafNodeLabel = memo(function LeafNodeLabel({
   label,
   fontSize,
   fontFamily,
+  strokeWidth
 }: LeafNodeLabelProps) {
   const angleDeg = (nodeX * 180) / Math.PI - 90;
   const flip = angleDeg > 90 || angleDeg < -90;
@@ -31,38 +32,28 @@ export const LeafNodeLabel = memo(function LeafNodeLabel({
   const textAnchor: "start" | "end" = flip ? "end" : "start";
   const xOffset = flip ? -6 : 6;
 
-  /**
-   * @todo fix this thing, move all to css file versus mixing
-   */
-  const variant = "normal" as string;
-
   return (
     <Group
       top={baseNodeY}
       left={baseNodeX}
+      className={styles.leafLabel}
     >
       <text
         fontSize={fontSize}
         fontFamily={fontFamily}
         fill={color}
-        opacity={variant === "dimmed" ? 0.5 : 1}
         stroke={color}
+        strokeWidth={strokeWidth}
         paintOrder="stroke"
         transform={`rotate(${rotation}) translate(0, ${(fontSize ?? 2.4) / 3})`}
         textAnchor={textAnchor}
         x={xOffset}
-        style={{
-          transition: `opacity ${t}, stroke-width ${t}`,
-        }}
       >
         {label === "Human" ? `${label} \u2605\u2605\u2605` : label}
       </text>
       <circle
         r={1.5}
-        transform={variant === "highlighted" ? "scale(1.5)" : "scale(1)"}
-        style={{ transition: `transform ${t}, opacity ${t}` }}
         fill={color}
-        opacity={variant === "dimmed" ? 0.5 : 1}
       />
     </Group>
   );

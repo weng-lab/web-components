@@ -2,6 +2,7 @@ import ReactDOM from 'react-dom/client';
 import {PhyloTree, TreeItem} from './packages/visualization/src/components/PhyloTree'
 import metadataRaw from "./packages/visualization/src/components/PhyloTree/example-data/241-mammals-metadata-w-human.txt?raw";
 import { data } from "./packages/visualization/src/components/PhyloTree/example-data/241_mammals_treedata";
+import { ParentSize } from '@visx/responsive';
 
 
 type TestDataNode = { name: string; branch_length: number | null; children?: TestDataNode[] };
@@ -78,8 +79,6 @@ const args = {
   data: formatNode(data),
   highlighted: ["Homo_sapiens"],
   // highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
-  width: 1000,
-  height: 1000,
   getColor,
   getLabel,
   tooltipContents: (item: TreeItem) => (
@@ -92,8 +91,8 @@ const args = {
 
 function TestingPage() {
     return (
-      <div>
-        <PhyloTree {...args} width={1000} height={1000} />
+      <div style={{ height: "calc(100vh - 16px)", width: "calc(100vw - 16px)" }}>
+        <ParentSize>{({ width, height }) => <PhyloTree {...args} width={width} height={height} />}</ParentSize>
       </div>
     );
 }

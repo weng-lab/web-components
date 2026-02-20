@@ -1,4 +1,5 @@
 import { TransformMatrix } from "@visx/zoom/lib/types";
+import { HierarchyPointNode } from "d3-hierarchy";
 import { ReactNode } from "react";
 
 // Not great but needed to copy this type since visx doesn't export it
@@ -12,20 +13,32 @@ export type TreeItem = {
   id: string;
   branch_length: number | null,
   children?: TreeItem[]
-  /**
-   * placeholder for cumulative branch length to be put when creating root node
-   */
-  cumulative_branch_length?: number,
-  /**
-   * 
-   */
-  uniform_leaf_color?: string | null
+}
+
+export interface TreeNode extends HierarchyPointNode<TreeItem> {
+  cumulativeBranchLength?: number,
   baseNodeX?: number;
   baseNodeY?: number;
   scaledNodeX?: number;
   scaledNodeY?: number;
   branchLengthScaledRadius?: number;
+  baseLinkPath?: string
+  scaledLinkPath?: string
+  linkStrokeWidth?: number
+  labelStrokeWidth?: number
+  baseLeafLinkExtension?: { x1: number, x2: number, y1: number, y2: number }
+  scaledLeafLinkExtension?: { x1: number, x2: number, y1: number, y2: number }
+  label?: string;
+  color?: string;
+  lightenedLinkExtColor?: string
 }
+
+export type TreeLink = {
+  source: TreeNode,
+  target: TreeNode
+}
+
+
 /**
  * @todo figure out how to use this type within the component to not expose branch length and leaf colot
  */

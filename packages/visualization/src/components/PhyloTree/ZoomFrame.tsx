@@ -7,9 +7,6 @@ import { Group } from "@visx/group";
 import { INNER_DIAMETER } from "./PhyloTree";
 
 export type ZoomFrameProps = {
-  /**
-   * does this need to be separated out into the scale and reset functions?
-   */
   zoom: ProvidedZoom<SVGSVGElement> & ZoomState;
   totalHeight: number;
   totalWidth: number;
@@ -20,7 +17,6 @@ export type ZoomFrameProps = {
 export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children, toggleBranchLength }: ZoomFrameProps) {
   return (
     <div
-      // ref={containerRef}
       style={{
         position: "relative",
         border: "1px solid black",
@@ -29,7 +25,6 @@ export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children
         boxSizing: "content-box",
       }}
     >
-      {/* @todo can I have this in a different location? This feels not right and creates scope creep for this component */}
       <ControlPanel scaleZoom={zoom.scale} resetZoom={zoom.reset} toggleBranchLength={toggleBranchLength} />
       <svg
         width={totalWidth}
