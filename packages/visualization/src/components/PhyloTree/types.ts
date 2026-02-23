@@ -15,6 +15,9 @@ export type TreeItem = {
   children?: TreeItem[]
 }
 
+/**
+ * Internal only, used for layout precalculation
+ */
 export interface TreeNode extends HierarchyPointNode<TreeItem> {
   cumulativeBranchLength?: number,
   baseNodeX?: number;
@@ -40,15 +43,6 @@ export type TreeLink = {
   target: TreeNode
 }
 
-
-/**
- * @todo figure out how to use this type within the component to not expose branch length and leaf colot
- */
-type TreeItemInternal = TreeItem & {
-  cumulativeBranchLength: number,
-  uniformLeafColor?: string | null
-}
-
 export type PhyloTreeProps = {
   width: number;
   height: number;
@@ -63,18 +57,31 @@ export type PhyloTreeProps = {
   labelPadding?: number
   /**
    * @default 
-   * (item: TreeItem) => item.id
+   * (id: string) => id
    */
-  getLabel?: (item: TreeItem) => string
+  getLabel?: (id: string) => string
   /**
    * @default
-   * (item: TreeItem) => 'black'
+   * (id: string) => 'black'
    */
-  getColor?: (item: TreeItem) => string
+  getColor?: (id: string) => string
   /**
    * Optionally define tooltip for hover over leaf nodes
    */
-  tooltipContents?: (item: TreeItem) => ReactNode
+  tooltipContents?: (id: string) => ReactNode
+  /**
+   * fired when individual leaf node clicked
+   */
+  onLeafClick?: (id: string) => void,
+  /**
+   * Fired when hover state changes, single item if leaf hovered, multiple if branch hovered, empty on mouse leave
+   */
+  onLeafHoverChange?: (hovered: string[]) => void
+  /**
+   * Whether or not to use branch length on initial load
+   * @default "scaled"
+   */
+  defaultScaling?: "unscaled" | "scaled"
   /**
    * @default 8
    */

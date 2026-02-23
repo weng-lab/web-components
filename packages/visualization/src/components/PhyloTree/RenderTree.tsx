@@ -4,32 +4,31 @@ import { memo } from "react";
 import { LeafLinkExtension } from "./LeafLinkExtension";
 import { LeafNodeLabel } from "./LeafNodeLabel";
 
-export type RenderTreeProps = {
-  root: TreeNode;
-  hoveredId: string | null;
+type Shared = {
+  node: TreeNode;
   useBranchLengths: boolean;
   leafFontSize: PhyloTreeProps["leafFontSize"];
   leafFontFamily: PhyloTreeProps["leafFontFamily"];
   onNodeEnter: (event: React.MouseEvent, node: TreeNode) => void;
   onNodeLeave: (event: React.MouseEvent, node: TreeNode) => void;
+  onLeafClick: PhyloTreeProps["onLeafClick"];
 };
 
-export type RenderChild = {
-  node: TreeNode;
+export type RenderTreeProps = Shared & {
+  hoveredId: string | null;
+};
+
+export type RenderChildProps = Shared & {
   dimmed: boolean;
-  useBranchLengths: boolean;
-  leafFontSize: PhyloTreeProps["leafFontSize"];
-  leafFontFamily: PhyloTreeProps["leafFontFamily"];
-  onNodeEnter: (event: React.MouseEvent, node: TreeNode) => void;
-  onNodeLeave: (event: React.MouseEvent, node: TreeNode) => void;
 };
 
 const ChildNode = memo(
-  ({ node, dimmed, useBranchLengths, leafFontFamily, leafFontSize, onNodeEnter, onNodeLeave }: RenderChild) => {
+  ({ node, dimmed, useBranchLengths, leafFontFamily, leafFontSize, onNodeEnter, onNodeLeave, onLeafClick }: RenderChildProps) => {
     return (
       <g
         onMouseEnter={(e: React.MouseEvent) => onNodeEnter(e, node)}
         onMouseLeave={(e: React.MouseEvent) => onNodeLeave(e, node)}
+        onClick={() => onLeafClick && onLeafClick(node.data.id)}
         id={node.data.id}
         opacity={dimmed ? 0.2 : 1}
         style={{ transition: "opacity 0.2s ease-in" }}
@@ -43,7 +42,6 @@ const ChildNode = memo(
           />
         {!node.children && (
           <>
-          {/* Would need to draw the element here */}
             <LeafLinkExtension
               useBranchLengths={useBranchLengths}
               color={node.lightenedLinkExtColor}
@@ -69,25 +67,28 @@ const ChildNode = memo(
 );
 
 export const RenderTree = memo(function RenderTree({
-  root,
+  node,
   hoveredId,
   useBranchLengths,
   onNodeEnter,
   onNodeLeave,
+  onLeafClick,
   leafFontSize,
   leafFontFamily,
 }: RenderTreeProps) {
   return (
     <g id={"tree-root"}>
       {/* no root node rendered (since root does not need to display link to parent) */}
-      {root.descendants()?.map((node, i) => {
-        if (!node.parent) return;
-        const dimmed = !!hoveredId && !(node.descendantIds?.has(hoveredId) || node.ancestorIds?.has(hoveredId));
+      {node.descendants()?.map((child, i) => {
+        if (!child.parent) return;
+        //This is done to elimate a .ancestors() and .descendants() traversal on every rerender
+        const dimmed = !!hoveredId && !(child.descendantIds?.has(hoveredId) || child.ancestorIds?.has(hoveredId));
 
         return (
           <ChildNode
             key={i}
-            node={node}
+            onLeafClick={onLeafClick}
+            node={child}
             dimmed={dimmed}
             useBranchLengths={useBranchLengths}
             leafFontSize={leafFontSize}

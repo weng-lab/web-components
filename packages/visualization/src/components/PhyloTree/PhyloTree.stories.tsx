@@ -70,21 +70,21 @@ lines.slice(1).forEach((line) => {
   if (file) metadataInfo[file] = { common_name: common ?? file, order: order || undefined };
 });
 
-const getLabel = (item: TreeItem): string => {
-  const meta = metadataInfo[item.id];
-  const label = meta?.common_name ?? item.id;
+const getLabel = (id: string) => {
+  const meta = metadataInfo[id];
+  const label = meta?.common_name ?? id;
   return label;
 };
 
-const getColor = (item: TreeItem) => {
-  const meta = metadataInfo[item.id];
+const getColor = (id: string) => {
+  const meta = metadataInfo[id];
   const order = meta?.order;
   const color = ORDER_COLORS[order ?? ""] ?? null;
   return color;
 };
 
-const getOrder = (item: TreeItem) => {
-  const meta = metadataInfo[item.id];
+const getOrder = (id: string) => {
+  const meta = metadataInfo[id];
   const order = meta?.order;
   return order;
 };
@@ -92,8 +92,8 @@ const getOrder = (item: TreeItem) => {
 export const Mammals241: Story = {
   args: {
     data: formatNode(data),
-    width: 1000,
-    height: 1000,
+    width: 600,
+    height: 600,
     getColor,
     getLabel,
     tooltipContents: (item) => (
@@ -109,8 +109,8 @@ export const HighlightLeaves: Story = {
   args: {
     data: formatNode(data),
     highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
-    width: 1000,
-    height: 1000,
+    width: 600,
+    height: 600,
     getColor,
     getLabel,
     tooltipContents: (item) => (
@@ -120,4 +120,32 @@ export const HighlightLeaves: Story = {
       </div>
     ),
   },
+};
+
+export const OnLeafHoverChange: Story = {
+  args: {
+    data: formatNode(data),
+    highlighted: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
+    width: 600,
+    height: 600,
+    getColor,
+    getLabel,
+    onLeafClick: (id) => window.alert("Clicked: " + id),
+    tooltipContents: (item) => (
+      <div style={{ fontSize: 12 }}>
+        <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
+      </div>
+    ),
+  },
+  render: (args) => {
+    const [hovered, setHovered] = useState<string[]>([])
+
+    return (
+      <>
+        <PhyloTree {...args} onLeafHoverChange={setHovered} />
+        <p>hovered: {hovered.join(", ")}</p>
+      </>
+    );
+  }
 };

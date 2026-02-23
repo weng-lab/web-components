@@ -118,11 +118,14 @@ export default function PhyloTree({
   leafFontFamily = "Arial",
   linkStrokeWidth = 1,
   getColor = () => "black",
-  getLabel = (item: TreeItem) => item.id,
+  getLabel = (id) => id,
+  onLeafClick,
+  onLeafHoverChange,
   labelPadding = 135,
+  defaultScaling = "scaled",
   tooltipContents,
 }: PhyloTreeProps) {
-  const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(true);
+  const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(defaultScaling === "scaled");
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
@@ -172,7 +175,7 @@ export default function PhyloTree({
     let maxBranchLength = 0;
 
     clusterRoot.each((node) => {
-      node.label = getLabel(node.data)
+      node.label = getLabel(node.data.id)
     })
 
     // uniformLeafColor
@@ -180,7 +183,7 @@ export default function PhyloTree({
       //This node is visited after all of it's descendents. Allows us to look at immediate children to see if they have same color.
       //For leaf nodes, there will be no children, so assign the color AND assign light
       if (!node.children) {
-        node.color = getColor(node.data);
+        node.color = getColor(node.data.id);
       } else {
         const childColors = node.children.map((x) => x.color);
         const firstColor = node.children[0].color;
@@ -260,7 +263,7 @@ export default function PhyloTree({
         y1: leaf.scaledNodeY ?? 0,
         y2: leaf.baseNodeY ?? 0,
       };
-      leaf.lightenedLinkExtColor = lightenHex(leaf.color ?? "#000000", 0.5);
+      leaf.lightenedLinkExtColor = lightenHex(leaf.color ?? "#000000", 0.7);
     })
 
     // Highlighted state
@@ -272,7 +275,7 @@ export default function PhyloTree({
       node.linkStrokeWidth = isHighlighted ? linkStrokeWidth * 2 : linkStrokeWidth
       node.labelStrokeWidth = isHighlighted ? 0.7 : 0
     })
-
+    //Add ancestors and descendant IDs for faster static lookup on hover rerender
     clusterRoot.each((node) => {
       const ancestorIds = new Set(node.ancestors().map(node => node.data.id))
       const descendantIds = new Set(node.descendants().map(node => node.data.id))
@@ -294,11 +297,17 @@ export default function PhyloTree({
       tooltipLeft: e.clientX,
       tooltipTop: e.clientY,
     });
+    if (onLeafHoverChange) {
+      onLeafHoverChange(node.leaves().map(leaf => leaf.data.id))
+    }
   }, []);
 
   const handleLeafOnMouseLeave = useCallback(() => {
     scheduleHighlight(null)
     hideTooltip();
+    if (onLeafHoverChange) {
+      onLeafHoverChange([])
+    }
   }, []);
 
   const renderTree = useCallback(
@@ -316,13 +325,14 @@ export default function PhyloTree({
             left={TOTAL_INNER_RADIUS}
           >
             <RenderTree
-              root={rootNode}
+              node={rootNode}
               hoveredId={hoveredId}
               leafFontFamily={leafFontFamily}
               leafFontSize={leafFontSize}
               useBranchLengths={enableBranchLengths}
               onNodeEnter={handleLeafOnMouseEnter}
               onNodeLeave={handleLeafOnMouseLeave}
+              onLeafClick={onLeafClick}
             />
           </Group>
         </ZoomFrame>
@@ -357,7 +367,7 @@ export default function PhyloTree({
       </Zoom>
       {tooltipData && tooltipContents && (
         <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
-          {tooltipContents(tooltipData)}
+          {tooltipContents(tooltipData.id)}
         </TooltipWithBounds>
       )}
     </div>
