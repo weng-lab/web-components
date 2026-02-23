@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { Group } from "@visx/group";
 import { ascending } from "@visx/vendor/d3-array";
 import { pathRadialStep } from "@visx/shape";
@@ -8,9 +8,19 @@ import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { Zoom } from "@visx/zoom";
 import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ZoomFrame } from "./ZoomFrame";
-import { RenderTree } from "./RenderTree";
-import styles from "./PhyloTree.module.css";
 import { pointRadial } from "d3-shape";
+import { RenderTree } from "./RenderTree";
+
+/**
+ * Improvements that would make this scale better (as much as svg can):
+ * - Combine links into fewer path elements
+ *    - Requires having static hit detecting paths, but can create fewer <path> elements by combining link paths
+ *    - Creates less work for the browser to update fewer, but more complex paths
+ *    - Would need base branches grouped by color, selection path, external highlight path, and invisible static hit target paths for branch selection
+ * - Remove hover interaction and opt for click only interactions
+ * - If keeping hover behavior, define gapless areas between nodes to prevent -> hover NodeA, hover null, hover NodeB in favor of NodeA -> NodeB
+ * - Define single hit area that takes in click event and determines what was hit
+ */
 
 export const useBranchLengthTransition = {
   duration: 0.3,
@@ -93,11 +103,11 @@ const lightenHex = (hex: string, factor: number) => {
 /**
  * For internal svg calculation only
  */
-export const INNER_RADIUS = 500;
+export const TOTAL_INNER_RADIUS = 500;
 /**
- * For internal svg calculation only
+ * For internal svg calculation only (used to define viewbox in ZoomFrame)
  */
-export const INNER_DIAMETER = 1000;
+export const TOTAL_INNER_DIAMETER = TOTAL_INNER_RADIUS * 2;
 
 export default function PhyloTree({
   width: totalWidth,
@@ -113,12 +123,31 @@ export default function PhyloTree({
   tooltipContents,
 }: PhyloTreeProps) {
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(true);
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
 
-  const innerRadius = Math.max(0, INNER_RADIUS - labelPadding);
+  const pendingRef = useRef<string>(null);
+  const frameRef = useRef(false);
+
+  //Prevent hover updates more frequently than the browser can repaint
+  const scheduleHighlight = (nodeId: string | null) => {
+    pendingRef.current = nodeId;
+
+    if (!frameRef.current) {
+      frameRef.current = true;
+
+      requestAnimationFrame(() => {
+        setHoveredId(pendingRef.current);
+        frameRef.current = false;
+      });
+    }
+  };
+
+  const circleRadius = Math.max(0, TOTAL_INNER_RADIUS - labelPadding);
 
   // This defines the arbitrary x/y coordinate system. For our radial layout X is the angle defined in radians, Y is radius. https://d3js.org/d3-hierarchy/cluster#cluster_size
-  const size: [number, number] = useMemo(() => [2 * Math.PI, innerRadius], [innerRadius]);
+  const size: [number, number] = useMemo(() => [2 * Math.PI, circleRadius], [circleRadius]);
 
   /* Construct root node */
   const root = useMemo(() => {
@@ -131,7 +160,7 @@ export default function PhyloTree({
           ascending(a.data.branch_length ?? undefined, b.data.branch_length ?? undefined)
       );
     return r;
-  }, [data, getColor, innerRadius]);
+  }, [data, getColor, circleRadius]);
 
   /* Add layout/render properties */
   const rootNode = useMemo(() => {
@@ -177,7 +206,7 @@ export default function PhyloTree({
       const branchLengthScaledRadius = getBranchLengthScaledY(
         node.cumulativeBranchLength ?? 0,
         maxBranchLength,
-        innerRadius
+        circleRadius
       );
 
       node.branchLengthScaledRadius = branchLengthScaledRadius;
@@ -244,13 +273,23 @@ export default function PhyloTree({
       node.labelStrokeWidth = isHighlighted ? 0.7 : 0
     })
 
+    clusterRoot.each((node) => {
+      const ancestorIds = new Set(node.ancestors().map(node => node.data.id))
+      const descendantIds = new Set(node.descendants().map(node => node.data.id))
+      
+
+      node.ancestorIds = ancestorIds
+      node.descendantIds = descendantIds
+    })
+
     return clusterRoot;
-  }, [data, size, innerRadius, root, highlighted, linkStrokeWidth]);
+  }, [data, size, circleRadius, root, highlighted, linkStrokeWidth]);
 
   const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), []);
 
   const handleLeafOnMouseEnter = useCallback((e: React.MouseEvent, node: TreeNode) => {
-    showTooltip({
+    scheduleHighlight(node.data.id)
+    !node.children && showTooltip({
       tooltipData: node.data,
       tooltipLeft: e.clientX,
       tooltipTop: e.clientY,
@@ -258,6 +297,7 @@ export default function PhyloTree({
   }, []);
 
   const handleLeafOnMouseLeave = useCallback(() => {
+    scheduleHighlight(null)
     hideTooltip();
   }, []);
 
@@ -270,18 +310,19 @@ export default function PhyloTree({
           totalHeight={totalHeight}
           toggleBranchLength={toggleBranchLength}
         >
+          {/* Positions plot at center of zoom frame */}
           <Group
-            top={INNER_RADIUS}
-            left={INNER_RADIUS}
-            className={styles.tree}
+            top={TOTAL_INNER_RADIUS}
+            left={TOTAL_INNER_RADIUS}
           >
             <RenderTree
-              node={rootNode}
+              root={rootNode}
+              hoveredId={hoveredId}
               leafFontFamily={leafFontFamily}
               leafFontSize={leafFontSize}
               useBranchLengths={enableBranchLengths}
-              onLeafMouseEnter={handleLeafOnMouseEnter}
-              onLeafMouseLeave={handleLeafOnMouseLeave}
+              onNodeEnter={handleLeafOnMouseEnter}
+              onNodeLeave={handleLeafOnMouseLeave}
             />
           </Group>
         </ZoomFrame>
@@ -291,6 +332,7 @@ export default function PhyloTree({
       totalWidth,
       totalHeight,
       origin,
+      hoveredId,
       enableBranchLengths,
       toggleBranchLength,
       highlighted,

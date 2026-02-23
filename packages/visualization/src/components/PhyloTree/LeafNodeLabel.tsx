@@ -1,7 +1,6 @@
 import { PhyloTreeProps, TreeNode } from "./types";
 import { Group } from "@visx/group";
 import { memo } from "react";
-import styles from "./PhyloTree.module.css";
 
 
 export type LeafNodeLabelProps = {
@@ -36,7 +35,6 @@ export const LeafNodeLabel = memo(function LeafNodeLabel({
     <Group
       top={baseNodeY}
       left={baseNodeX}
-      className={styles.leafLabel}
     >
       <text
         fontSize={fontSize}

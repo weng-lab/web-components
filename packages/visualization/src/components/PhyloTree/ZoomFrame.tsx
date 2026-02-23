@@ -4,7 +4,7 @@ import { ZoomState } from "./types";
 import { ControlPanel } from "./ControlPanel";
 import { ZoomSurface } from "./ZoomSurface";
 import { Group } from "@visx/group";
-import { INNER_DIAMETER } from "./PhyloTree";
+import { TOTAL_INNER_DIAMETER } from "./PhyloTree";
 
 export type ZoomFrameProps = {
   zoom: ProvidedZoom<SVGSVGElement> & ZoomState;
@@ -30,7 +30,7 @@ export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children
         width={totalWidth}
         height={totalHeight}
         style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
-        viewBox={`0 0 ${INNER_DIAMETER} ${INNER_DIAMETER}`}
+        viewBox={`0 0 ${TOTAL_INNER_DIAMETER} ${TOTAL_INNER_DIAMETER}`}
         preserveAspectRatio="xMidYMid meet"
         ref={zoom.containerRef}
       >

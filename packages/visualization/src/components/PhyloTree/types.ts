@@ -31,6 +31,8 @@ export interface TreeNode extends HierarchyPointNode<TreeItem> {
   label?: string;
   color?: string;
   lightenedLinkExtColor?: string
+  ancestorIds?: Set<string>
+  descendantIds?: Set<string>
 }
 
 export type TreeLink = {

@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { useBranchLengthTransition } from "./PhyloTree";
 import { memo } from "react";
 import { TreeNode } from "./types";
-import styles from "./PhyloTree.module.css";
 
 
 export type LeafLinkExtensionProps = {
@@ -23,7 +22,6 @@ export const LeafLinkExtension = memo(function LinkExtension({
 
   return (
     <motion.line
-      className={`${styles.linkExtension}`}
       strokeWidth={strokeWidth}
       initial={false}
       animate={useBranchLengths ? scaledLeafLinkExtension : baseLeafLinkExtension}
