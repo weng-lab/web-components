@@ -4,7 +4,7 @@ import { ascending } from "@visx/vendor/d3-array";
 import { pathRadialStep } from "@visx/shape";
 import { cluster as d3cluster, hierarchy as d3hierarchy } from "d3-hierarchy";
 import { PhyloTreeProps, TreeItem, TreeLink, TreeNode, ZoomState } from "./types";
-import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
+import { useTooltip, defaultStyles, useTooltipInPortal } from "@visx/tooltip";
 import { Zoom } from "@visx/zoom";
 import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ZoomFrame } from "./ZoomFrame";
@@ -128,7 +128,12 @@ export default function PhyloTree({
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(defaultScaling === "scaled");
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   
-  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TreeItem>();
+  const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<TreeItem>();
+
+    const { TooltipInPortal } = useTooltipInPortal({
+      scroll: true,
+      detectBounds: true,
+    });
 
   const pendingRef = useRef<string>(null);
   const frameRef = useRef(false);
@@ -366,9 +371,9 @@ export default function PhyloTree({
         {renderTree}
       </Zoom>
       {tooltipData && tooltipContents && (
-        <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
+        <TooltipInPortal left={tooltipLeft} top={tooltipTop}>
           {tooltipContents(tooltipData.id)}
-        </TooltipWithBounds>
+        </TooltipInPortal>
       )}
     </div>
   );

@@ -1,253 +1,8 @@
 import { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
-import { SequenceAlignmentPlot, Nucleotide } from "./index";
-import dataRawEH38E4276533 from "./EH38E4276533.txt?raw";
-import dataRawEH38E4276534 from "./EH38E4276534.txt?raw";
-import dataRawEH38E3465364 from "./EH38E3465364.txt?raw";
-
-const speciesOrderInApiData = [
-  "Acinonyx_jubatus",
-  "Acomys_cahirinus",
-  "Ailuropoda_melanoleuca",
-  "Ailurus_fulgens",
-  "Allactaga_bullata",
-  "Alouatta_palliata",
-  "Ammotragus_lervia",
-  "Anoura_caudifer",
-  "Antilocapra_americana",
-  "Aotus_nancymaae",
-  "Aplodontia_rufa",
-  "Artibeus_jamaicensis",
-  "Ateles_geoffroyi",
-  "Balaenoptera_acutorostrata",
-  "Balaenoptera_bonaerensis",
-  "Beatragus_hunteri",
-  "Bison_bison",
-  "Bos_indicus",
-  "Bos_mutus",
-  "Bos_taurus",
-  "Bubalus_bubalis",
-  "Callicebus_donacophilus",
-  "Callithrix_jacchus",
-  "Camelus_bactrianus",
-  "Camelus_dromedarius",
-  "Camelus_ferus",
-  "Canis_lupus",
-  "Canis_lupus_familiaris",
-  "Capra_aegagrus",
-  "Capra_hircus",
-  "Capromys_pilorides",
-  "Carollia_perspicillata",
-  "Castor_canadensis",
-  "Catagonus_wagneri",
-  "Cavia_aperea",
-  "Cavia_porcellus",
-  "Cavia_tschudii",
-  "Cebus_albifrons",
-  "Cebus_capucinus",
-  "Ceratotherium_simum",
-  "Ceratotherium_simum_cottoni",
-  "Cercocebus_atys",
-  "Cercopithecus_neglectus",
-  "Chaetophractus_vellerosus",
-  "Cheirogaleus_medius",
-  "Chinchilla_lanigera",
-  "Chlorocebus_sabaeus",
-  "Choloepus_didactylus",
-  "Choloepus_hoffmanni",
-  "Chrysochloris_asiatica",
-  "Colobus_angolensis",
-  "Condylura_cristata",
-  "Craseonycteris_thonglongyai",
-  "Cricetomys_gambianus",
-  "Cricetulus_griseus",
-  "Crocidura_indochinensis",
-  "Cryptoprocta_ferox",
-  "Ctenodactylus_gundi",
-  "Ctenomys_sociabilis",
-  "Cuniculus_paca",
-  "Dasyprocta_punctata",
-  "Dasypus_novemcinctus",
-  "Daubentonia_madagascariensis",
-  "Delphinapterus_leucas",
-  "Desmodus_rotundus",
-  "Dicerorhinus_sumatrensis",
-  "Diceros_bicornis",
-  "Dinomys_branickii",
-  "Dipodomys_ordii",
-  "Dipodomys_stephensi",
-  "Dolichotis_patagonum",
-  "Echinops_telfairi",
-  "Eidolon_helvum",
-  "Elaphurus_davidianus",
-  "Elephantulus_edwardii",
-  "Ellobius_lutescens",
-  "Ellobius_talpinus",
-  "Enhydra_lutris",
-  "Eptesicus_fuscus",
-  "Equus_asinus",
-  "Equus_caballus",
-  "Equus_przewalskii",
-  "Erinaceus_europaeus",
-  "Erythrocebus_patas",
-  "Eschrichtius_robustus",
-  "Eubalaena_japonica",
-  "Eulemur_flavifrons",
-  "Eulemur_fulvus",
-  "Felis_catus",
-  "Felis_nigripes",
-  "Fukomys_damarensis",
-  "Galeopterus_variegatus",
-  "Giraffa_tippelskirchi",
-  "Glis_glis",
-  "Gorilla_gorilla",
-  "Graphiurus_murinus",
-  "Helogale_parvula",
-  "Hemitragus_hylocrius",
-  "Heterocephalus_glaber",
-  "Heterohyrax_brucei",
-  "Hippopotamus_amphibius",
-  "Hipposideros_armiger",
-  "Hipposideros_galeritus",
-  "Homo_sapiens",
-  "Hyaena_hyaena",
-  "Hydrochoerus_hydrochaeris",
-  "Hystrix_cristata",
-  "Ictidomys_tridecemlineatus",
-  "Indri_indri",
-  "Inia_geoffrensis",
-  "Jaculus_jaculus",
-  "Kogia_breviceps",
-  "Lasiurus_borealis",
-  "Lemur_catta",
-  "Leptonychotes_weddellii",
-  "Lepus_americanus",
-  "Lipotes_vexillifer",
-  "Loxodonta_africana",
-  "Lycaon_pictus",
-  "Macaca_fascicularis",
-  "Macaca_mulatta",
-  "Macaca_nemestrina",
-  "Macroglossus_sobrinus",
-  "Mandrillus_leucophaeus",
-  "Manis_javanica",
-  "Manis_pentadactyla",
-  "Marmota_marmota",
-  "Megaderma_lyra",
-  "Mellivora_capensis",
-  "Meriones_unguiculatus",
-  "Mesocricetus_auratus",
-  "Mesoplodon_bidens",
-  "Microcebus_murinus",
-  "Microgale_talazaci",
-  "Micronycteris_hirsuta",
-  "Microtus_ochrogaster",
-  "Miniopterus_natalensis",
-  "Miniopterus_schreibersii",
-  "Mirounga_angustirostris",
-  "Mirza_coquereli",
-  "Monodon_monoceros",
-  "Mormoops_blainvillei",
-  "Moschus_moschiferus",
-  "Mungos_mungo",
-  "Murina_feae",
-  "Mus_caroli",
-  "Mus_musculus",
-  "Mus_pahari",
-  "Mus_spretus",
-  "Muscardinus_avellanarius",
-  "Mustela_putorius",
-  "Myocastor_coypus",
-  "Myotis_brandtii",
-  "Myotis_davidii",
-  "Myotis_lucifugus",
-  "Myotis_myotis",
-  "Myrmecophaga_tridactyla",
-  "Nannospalax_galili",
-  "Nasalis_larvatus",
-  "Neomonachus_schauinslandi",
-  "Neophocaena_asiaeorientalis",
-  "Noctilio_leporinus",
-  "Nomascus_leucogenys",
-  "Nycticebus_coucang",
-  "Ochotona_princeps",
-  "Octodon_degus",
-  "Odobenus_rosmarus",
-  "Odocoileus_virginianus",
-  "Okapia_johnstoni",
-  "Ondatra_zibethicus",
-  "Onychomys_torridus",
-  "Orcinus_orca",
-  "Orycteropus_afer",
-  "Oryctolagus_cuniculus",
-  "Otolemur_garnettii",
-  "Ovis_aries",
-  "Ovis_canadensis",
-  "Pan_paniscus",
-  "Pan_troglodytes",
-  "Panthera_onca",
-  "Panthera_pardus",
-  "Panthera_tigris",
-  "Pantholops_hodgsonii",
-  "Papio_anubis",
-  "Paradoxurus_hermaphroditus",
-  "Perognathus_longimembris",
-  "Peromyscus_maniculatus",
-  "Petromus_typicus",
-  "Phocoena_phocoena",
-  "Piliocolobus_tephrosceles",
-  "Pipistrellus_pipistrellus",
-  "Pithecia_pithecia",
-  "Platanista_gangetica",
-  "Pongo_abelii",
-  "Procavia_capensis",
-  "Propithecus_coquereli",
-  "Psammomys_obesus",
-  "Pteronotus_parnellii",
-  "Pteronura_brasiliensis",
-  "Pteropus_alecto",
-  "Pteropus_vampyrus",
-  "Puma_concolor",
-  "Pygathrix_nemaeus",
-  "Rangifer_tarandus",
-  "Rattus_norvegicus",
-  "Rhinolophus_sinicus",
-  "Rhinopithecus_bieti",
-  "Rhinopithecus_roxellana",
-  "Rousettus_aegyptiacus",
-  "Saguinus_imperator",
-  "Saiga_tatarica",
-  "Saimiri_boliviensis",
-  "Scalopus_aquaticus",
-  "Semnopithecus_entellus",
-  "Sigmodon_hispidus",
-  "Solenodon_paradoxus",
-  "Sorex_araneus",
-  "Spermophilus_dauricus",
-  "Spilogale_gracilis",
-  "Suricata_suricatta",
-  "Sus_scrofa",
-  "Tadarida_brasiliensis",
-  "Tamandua_tetradactyla",
-  "Tapirus_indicus",
-  "Tapirus_terrestris",
-  "Thryonomys_swinderianus",
-  "Tolypeutes_matacus",
-  "Tonatia_saurophila",
-  "Tragulus_javanicus",
-  "Trichechus_manatus",
-  "Tupaia_chinensis",
-  "Tupaia_tana",
-  "Tursiops_truncatus",
-  "Uropsilus_gracilis",
-  "Ursus_maritimus",
-  "Vicugna_pacos",
-  "Vulpes_lagopus",
-  "Xerus_inauris",
-  "Zalophus_californianus",
-  "Zapus_hudsonius",
-  "Ziphius_cavirostris",
-];
+import { SequenceAlignmentPlot, Nucleotide, TooltipData } from "./index";
+import { EH38E3465364, EH38E4276533, EH38E4276534 } from "./example-data/mockData";
+import { getColor, getLabel, getOrder, sortByOrder, speciesOrderInApiData } from "../PhyloTree/example-data/utils";
 
 const meta = {
   title: "visualization/SequenceAlignmentPlot",
@@ -260,58 +15,79 @@ const meta = {
   decorators: [(Story) => <Story />],
 } satisfies Meta<typeof SequenceAlignmentPlot>;
 
-const sequenceMap = new Map<string, Nucleotide>([
-  ['0', "-"],
-  ['1', "A"],
-  ['2', "C"],
-  ['3', "G"],
-  ['4', "T"],
+const numberToNucleotide = new Map<number, Nucleotide>([
+  [0, "-"],
+  [1, "A"],
+  [2, "C"],
+  [3, "G"],
+  [4, "T"],
 ]);
 
-const generateSequenes = (rawData: string[]) => {
-  return rawData.map((numSequence) =>
-    numSequence
-      .split("")
-      .map((char) => sequenceMap.get(char) ?? "-")
-  );
-};
+const makePlotData = (sequences: number[][], speciesOrder: string[]): {[species: string]: Nucleotide[]} => {
+    const data: {[species: string]: Nucleotide[]} = {}
+    sequences.forEach((sequence, i) => {
+      const species = speciesOrder[i]
+      data[species] = sequence.map(num => numberToNucleotide.get(num) ?? "-")
+    })
+
+    return data
+}
+
+const sortPlotDataByOrder = (data: {[species: string]: Nucleotide[]}) => {
+  return Object.fromEntries(Object.entries(data).sort(([speciesA, seqA], [speciesB, seqB]) =>  sortByOrder(speciesA, speciesB)))
+}
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dataEH38E4276533 = generateSequenes(dataRawEH38E4276533.replaceAll(' ', '').split('\n'))
-const dataEH38E4276534 = generateSequenes(dataRawEH38E4276534.replaceAll(' ', '').split('\n'))
-const dataEH38E3465364 = generateSequenes(dataRawEH38E3465364.replaceAll(' ', '').split('\n'))
+const dataEH38E4276533 = sortPlotDataByOrder(makePlotData(EH38E4276533.data.ccreSequenceAlignmentQuery[0].sequence_alignment, speciesOrderInApiData))
+const dataEH38E4276534 = sortPlotDataByOrder(makePlotData(EH38E4276534.data.ccreSequenceAlignmentQuery[0].sequence_alignment, speciesOrderInApiData))
+const dataEH38E3465364 = sortPlotDataByOrder(makePlotData(EH38E3465364.data.ccreSequenceAlignmentQuery[0].sequence_alignment, speciesOrderInApiData))
 
+const tooltipContents = (tooltipData: TooltipData) => (
+  <div
+    style={{
+      fontSize: 12,
+    }}
+  >
+    {tooltipData.label} • {tooltipData.order}
+    {tooltipData.basePair && tooltipData.position ? ` • pos ${tooltipData.position} • ${tooltipData.basePair}` : ""}
+  </div>
+);
 
-export const EH38E4276533: Story = {
+export const EH38E4276533_: Story = {
   args: {
     data: dataEH38E4276533,
-    width: dataEH38E4276533[0].length * 2,
-    height: dataEH38E4276533.length * 2,
+    width: 1000,
+    height: 500,
+    getLabel: getLabel,
+    getOrder: (id) => getOrder(id) ?? "",
+    getOrderColor: getColor,
+    highlighted: ["Homo_sapiens"],
+    tooltipContents
   },
 };
 
-export const EH38E4276534: Story = {
+export const EH38E4276534_: Story = {
   args: {
     data: dataEH38E4276534,
-    width: dataEH38E4276534[0].length * 2,
-    height: dataEH38E4276534.length * 2,
-  },
-};
-
-export const EH38E3465364: Story = {
-  args: {
-    data: dataEH38E3465364,
-    width: dataEH38E3465364[0].length,
-    height: dataEH38E3465364.length,
-  },
-};
-
-export const EH38E3465364x2: Story = {
-  args: {
-    data: dataEH38E3465364,
-    width: 100,
+    width: 1000,
     height: 500,
+    getLabel: getLabel,
+    getOrder: (id) => getOrder(id) ?? "",
+    getOrderColor: getColor,
+    tooltipContents
+  },
+};
+
+export const EH38E3465364_: Story = {
+  args: {
+    data: dataEH38E3465364,
+    width: 1000,
+    height: 500,
+    getLabel: getLabel,
+    getOrder: (id) => getOrder(id) ?? "",
+    getOrderColor: getColor,
+    tooltipContents
   },
 };
