@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { Group } from "@visx/group";
 import { ascending } from "@visx/vendor/d3-array";
 import { pathRadialStep } from "@visx/shape";
@@ -126,27 +126,58 @@ export default function PhyloTree({
   tooltipContents,
 }: PhyloTreeProps) {
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(defaultScaling === "scaled");
+
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  
   const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<TreeItem>();
 
-    const { TooltipInPortal } = useTooltipInPortal({
-      scroll: true,
-      detectBounds: true,
-    });
+  const { TooltipInPortal } = useTooltipInPortal({
+    scroll: true,
+    detectBounds: true,
+  });
 
-  const pendingRef = useRef<string>(null);
+  interface PendingHover {
+    node: TreeNode | null;
+    x: number;
+    y: number;
+  }
+
+  const pendingRef = useRef<PendingHover | null>(null);
   const frameRef = useRef(false);
 
-  //Prevent hover updates more frequently than the browser can repaint
-  const scheduleHighlight = (nodeId: string | null) => {
-    pendingRef.current = nodeId;
+  /**
+   * Prevents hover updates more frequently than the browser can repaint by using requestAnimationFrame
+   */
+  const handleDebounceHover = (event: React.MouseEvent, node: TreeNode | null) => {
+    pendingRef.current = node 
+      ? { node, x: event.clientX, y: event.clientY }
+      : { node: null, x: 0, y: 0 };
 
     if (!frameRef.current) {
       frameRef.current = true;
 
       requestAnimationFrame(() => {
-        setHoveredId(pendingRef.current);
+        // Everything comes from the ref now — consistent snapshot
+        const pending = pendingRef.current;
+        const pendingNode = pending?.node ?? null;
+
+        setHoveredId(pendingNode ? pendingNode.data.id : null);
+
+        if (pendingNode && !pendingNode.children) {
+          showTooltip({
+            tooltipData: pendingNode.data,
+            tooltipLeft: pending!.x,
+            tooltipTop: pending!.y,
+          });
+        } else {
+          hideTooltip();
+        }
+
+        if (onLeafHoverChange) {
+          onLeafHoverChange(
+            pendingNode ? pendingNode.leaves().map((leaf) => leaf.data.id) : []
+          );
+        }
+
         frameRef.current = false;
       });
     }
@@ -175,7 +206,8 @@ export default function PhyloTree({
     const clusterLayout = d3cluster<TreeItem>();
     clusterLayout.size(size);
     clusterLayout.separation(separationFn);
-    const clusterRoot: TreeNode = clusterLayout(root);
+    //copy root node so that the reference changes when this useMemo is rerun. Otherwise is modifying in place
+    const clusterRoot: TreeNode = clusterLayout(root.copy());
 
     let maxBranchLength = 0;
 
@@ -295,27 +327,53 @@ export default function PhyloTree({
 
   const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), []);
 
-  const handleLeafOnMouseEnter = useCallback((e: React.MouseEvent, node: TreeNode) => {
-    scheduleHighlight(node.data.id)
+  const handleLeafOnMouseMove = useCallback((event: React.MouseEvent<Element, MouseEvent>, node: TreeNode) => {
+    handleDebounceHover(event, node)
     !node.children && showTooltip({
       tooltipData: node.data,
-      tooltipLeft: e.clientX,
-      tooltipTop: e.clientY,
+      tooltipLeft: event.clientX,
+      tooltipTop: event.clientY,
     });
     if (onLeafHoverChange) {
       onLeafHoverChange(node.leaves().map(leaf => leaf.data.id))
     }
   }, []);
 
-  const handleLeafOnMouseLeave = useCallback(() => {
-    scheduleHighlight(null)
+  const handleLeafOnMouseLeave = useCallback((event: React.MouseEvent<Element, MouseEvent>, node: TreeNode) => {
+    handleDebounceHover(event, null)
     hideTooltip();
     if (onLeafHoverChange) {
       onLeafHoverChange([])
     }
   }, []);
 
-  const renderTree = useCallback(
+  const treeContent = useMemo(() => {
+    return (
+      <Group top={TOTAL_INNER_RADIUS} left={TOTAL_INNER_RADIUS}>
+        <RenderTree
+          node={rootNode}
+          hoveredId={hoveredId}
+          leafFontFamily={leafFontFamily}
+          leafFontSize={leafFontSize}
+          useBranchLengths={enableBranchLengths}
+          onNodeMouseMove={handleLeafOnMouseMove}
+          onNodeMouseLeave={handleLeafOnMouseLeave}
+          onLeafClick={onLeafClick}
+        />
+      </Group>
+    );
+  }, [
+    rootNode,
+    hoveredId,
+    leafFontFamily,
+    leafFontSize,
+    enableBranchLengths,
+    handleLeafOnMouseMove,
+    handleLeafOnMouseLeave,
+    onLeafClick,
+  ]);
+
+  const renderTreeInZoom = useCallback(
     (zoom: ProvidedZoom<SVGSVGElement> & ZoomState) => {
       return (
         <ZoomFrame
@@ -324,38 +382,11 @@ export default function PhyloTree({
           totalHeight={totalHeight}
           toggleBranchLength={toggleBranchLength}
         >
-          {/* Positions plot at center of zoom frame */}
-          <Group
-            top={TOTAL_INNER_RADIUS}
-            left={TOTAL_INNER_RADIUS}
-          >
-            <RenderTree
-              node={rootNode}
-              hoveredId={hoveredId}
-              leafFontFamily={leafFontFamily}
-              leafFontSize={leafFontSize}
-              useBranchLengths={enableBranchLengths}
-              onNodeEnter={handleLeafOnMouseEnter}
-              onNodeLeave={handleLeafOnMouseLeave}
-              onLeafClick={onLeafClick}
-            />
-          </Group>
+          {treeContent}
         </ZoomFrame>
       );
     },
-    [
-      totalWidth,
-      totalHeight,
-      origin,
-      hoveredId,
-      enableBranchLengths,
-      toggleBranchLength,
-      highlighted,
-      getColor,
-      getLabel,
-      handleLeafOnMouseEnter,
-      handleLeafOnMouseLeave,
-    ]
+    [totalWidth, totalHeight, toggleBranchLength, treeContent]
   );
 
   return totalWidth < 10 ? null : (
@@ -368,7 +399,7 @@ export default function PhyloTree({
         scaleYMin={0.8}
         scaleYMax={4}
       >
-        {renderTree}
+        {renderTreeInZoom}
       </Zoom>
       {tooltipData && tooltipContents && (
         <TooltipInPortal left={tooltipLeft} top={tooltipTop}>

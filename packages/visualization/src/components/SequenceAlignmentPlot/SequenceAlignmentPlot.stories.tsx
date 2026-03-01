@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
 import { SequenceAlignmentPlot, Nucleotide, TooltipData } from "./index";
 import { EH38E3465364, EH38E4276533, EH38E4276534 } from "./example-data/mockData";

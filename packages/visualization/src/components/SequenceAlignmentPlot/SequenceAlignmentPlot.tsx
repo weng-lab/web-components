@@ -83,13 +83,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     ]);
     return new Map<string, SpeciesInfo>(entries)
   }, [data])
-
-  console.log(tooltipData)
-
-  // const shouldLowerOpacity = useCallback((id: string) => {
-  //   highlighted.length && !highlighted.includes(species) ? 0.3 : 1
-  // }, [Highlight])
-
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -125,7 +119,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         ctx.globalAlpha = 1
       });
     });
-  }, [data, canvasWidth, canvasHeight, numPositions, numSpecies]);
+  }, [data, canvasWidth, canvasHeight, numPositions, numSpecies, highlighted]);
 
   // Hover mapping
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -203,7 +197,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
           textAnchor="middle"
           fontSize={12}
         >
-          Order
+          Species
         </text>
       </svg>
       <canvas
@@ -227,7 +221,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         <AxisBottom
           scale={xScale}
           label={
-            "Position\u00A0\u00A0\u00A0•\u00A0\u00A0\u00A0🟢\u00A0A\u00A0\u00A0\u00A0🔵\u00A0C\u00A0\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\u00A0🔴\u00A0T"
+            "Position in cCRE\u00A0\u00A0\u00A0•\u00A0\u00A0\u00A0🟢\u00A0A\u00A0\u00A0\u00A0🔵\u00A0C\u00A0\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\u00A0🔴\u00A0T"
           }
           labelProps={{ fontSize: 12 }}
         />
