@@ -3,6 +3,7 @@ import { AxisBottom } from "@visx/axis";
 import { scaleLinear } from "@visx/scale";
 import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
 import { Group } from "@visx/group";
+import { Text } from "@visx/text";
 
 export type Nucleotide = "A" | "C" | "G" | "T" | "-";
 
@@ -42,7 +43,7 @@ export interface SequenceAlignmentPlotProps {
   tooltipContents?: (tooltipData: TooltipData) => ReactNode;
 }
 
-const AXIS_HEIGHT = 40;
+const AXIS_HEIGHT = 50;
 const SPECIES_BAR_WIDTH = 30;
 const HIGHLIGHTED_BAR_WIDTH = 10;
 const PADDING = 10;
@@ -302,39 +303,61 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         height: totalHeight,
       }}
     >
-      <svg width={HIGHLIGHTED_AND_SPECIES_SVG_WIDTH} height={canvasHeight} style={{ top: 0, left: 0, position: "absolute" }}>
-        <Group>
-          {speciesList.map((species, i) => {
-            const rectHeight = canvasHeight / speciesList.length;
-            return (
-              <g
-                key={i}
-                onMouseMove={(event) => handleSpeciesBarMouseMove(event, species)}
-                onMouseLeave={(event) => handleSpeciesBarMouseLeave(event, species)}
-                opacity={hovered.length && !hovered.includes(species.id) ? 0.3 : 1}
-              >
-                {highlighted.includes(species.id) && (
-                  <rect
-                    width={HIGHLIGHTED_BAR_WIDTH}
-                    height={rectHeight}
-                    x={0}
-                    y={rectHeight * i}
-                    fill={species.color}
-                    shapeRendering={"crispEdges"}
-                  />
-                )}
+      <svg
+        width={HIGHLIGHTED_AND_SPECIES_SVG_WIDTH}
+        height={totalHeight}
+        style={{ top: 0, left: 0, position: "absolute" }}
+      >
+        {speciesList.map((species, i) => {
+          const rectHeight = canvasHeight / speciesList.length;
+          return (
+            <g
+              key={i}
+              onMouseMove={(event) => handleSpeciesBarMouseMove(event, species)}
+              onMouseLeave={(event) => handleSpeciesBarMouseLeave(event, species)}
+              opacity={hovered.length && !hovered.includes(species.id) ? 0.3 : 1}
+            >
+              {highlighted.includes(species.id) && (
                 <rect
-                  width={SPECIES_BAR_WIDTH}
+                  width={HIGHLIGHTED_BAR_WIDTH}
                   height={rectHeight}
-                  x={HIGHLIGHTED_BAR_WIDTH + PADDING}
+                  x={0}
                   y={rectHeight * i}
                   fill={species.color}
                   shapeRendering={"crispEdges"}
                 />
-              </g>
-            );
-          })}
-        </Group>
+              )}
+              <rect
+                width={SPECIES_BAR_WIDTH}
+                height={rectHeight}
+                x={HIGHLIGHTED_BAR_WIDTH + PADDING}
+                y={rectHeight * i}
+                fill={species.color}
+                shapeRendering={"crispEdges"}
+              />
+            </g>
+          );
+        })}
+        <Text
+          angle={270}
+          textAnchor="end"
+          verticalAnchor="middle"
+          fontSize={12}
+          x={0.5 * HIGHLIGHTED_BAR_WIDTH}
+          y={canvasHeight + 2}
+        >
+          Highlight
+        </Text>
+        <Text
+          angle={270}
+          textAnchor="end"
+          verticalAnchor="middle"
+          fontSize={12}
+          x={HIGHLIGHTED_BAR_WIDTH + PADDING + 0.5 * SPECIES_BAR_WIDTH}
+          y={canvasHeight + 2}
+        >
+          Species
+        </Text>
       </svg>
       <canvas
         ref={canvasRef}
@@ -356,7 +379,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
           position: "absolute",
           //position it into the other svg by AXIS_LEFT_PADDING to fix axis cutoff of 0 at first load.
           //can't fix with overflow visible since on zoom the axis needs to be clipped
-          left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH - AXIS_LEFT_PADDING, 
+          left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH - AXIS_LEFT_PADDING,
           bottom: 0,
           pointerEvents: "none",
           overflow: "hidden",
@@ -367,14 +390,14 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
           numTicks={Math.min(numPositions, Math.round(10 * zoomTransform.scaleX))}
           left={AXIS_LEFT_PADDING}
         />
-        <text fontSize={12} textAnchor="middle" x={axisWidth / 2} y={AXIS_HEIGHT - 4}>
+        <Text fontSize={12} textAnchor="middle" verticalAnchor="end" x={axisWidth / 2} y={AXIS_HEIGHT - 4}>
           {
             "Position in cCRE\u00A0\u00A0\u00A0•\u00A0\u00A0\u00A0🟢\u00A0A\u00A0\u00A0\u00A0🔵\u00A0C\u00A0\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\u00A0🔴\u00A0T"
           }
-        </text>
-        <text fontSize={12} textAnchor="end" x={axisWidth - 4} y={AXIS_HEIGHT - 4}>
-          {`${zoomTransform.scaleX.toFixed(2)}x Zoom`}
-        </text>
+        </Text>
+        <Text fontSize={12} textAnchor="end" verticalAnchor="end" x={axisWidth} y={AXIS_HEIGHT - 4}>
+          {`${zoomTransform.scaleX.toFixed(2)}\u00d7`}
+        </Text>
       </svg>
       {tooltipData && tooltipContents && (
         <TooltipInPortal left={tooltipLeft} top={tooltipTop} style={defaultStyles}>
