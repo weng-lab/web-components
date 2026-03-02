@@ -46,10 +46,11 @@ const AXIS_HEIGHT = 40;
 const SPECIES_BAR_WIDTH = 30;
 const HIGHLIGHTED_BAR_WIDTH = 10;
 const PADDING = 10;
-const SVG_WIDTH = HIGHLIGHTED_BAR_WIDTH + PADDING + SPECIES_BAR_WIDTH + PADDING;
+const HIGHLIGHTED_AND_SPECIES_SVG_WIDTH = HIGHLIGHTED_BAR_WIDTH + PADDING + SPECIES_BAR_WIDTH + PADDING;
 const MIN_SCALE = 1;
 const MAX_SCALE = 50;
 const ZOOM_FACTOR = 1.15;
+const AXIS_LEFT_PADDING = 5
 
 export type SpeciesInfo = { id: string; label: string; order: string; color: string };
 
@@ -128,7 +129,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
   const numSpecies = Object.keys(data).length;
   const numPositions = Object.values(data)[0].length ?? 0;
 
-  const canvasWidth = totalWidth - SVG_WIDTH;
+  const canvasWidth = totalWidth - HIGHLIGHTED_AND_SPECIES_SVG_WIDTH;
   const canvasHeight = totalHeight - AXIS_HEIGHT;
 
   const speciesInfo = useMemo(() => {
@@ -291,6 +292,8 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
   const speciesList = useMemo(() => [...speciesInfo.values()], [speciesInfo]);
 
+  const axisWidth = canvasWidth + AXIS_LEFT_PADDING
+
   return (
     <div
       style={{
@@ -299,7 +302,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         height: totalHeight,
       }}
     >
-      <svg width={SVG_WIDTH} height={canvasHeight} style={{ top: 0, left: 0, position: "absolute" }}>
+      <svg width={HIGHLIGHTED_AND_SPECIES_SVG_WIDTH} height={canvasHeight} style={{ top: 0, left: 0, position: "absolute" }}>
         <Group>
           {speciesList.map((species, i) => {
             const rectHeight = canvasHeight / speciesList.length;
@@ -341,30 +344,36 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         onMouseLeave={handleHeatmapMouseLeave}
         style={{
           position: "absolute",
-          left: SVG_WIDTH,
+          left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH,
           cursor: isDragging ? "grabbing" : zoomTransform.scaleX > 1 ? "grab" : "default",
         }}
       />
       {/* overflow: hidden clips axis ticks that scroll outside the canvas bounds when zoomed */}
       <svg
-        width={canvasWidth}
+        width={axisWidth}
         height={AXIS_HEIGHT}
         style={{
           position: "absolute",
-          right: 0,
+          //position it into the other svg by AXIS_LEFT_PADDING to fix axis cutoff of 0 at first load.
+          //can't fix with overflow visible since on zoom the axis needs to be clipped
+          left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH - AXIS_LEFT_PADDING, 
           bottom: 0,
           pointerEvents: "none",
-          overflow: "visible",
+          overflow: "hidden",
         }}
       >
         <AxisBottom
           scale={zoomedXScale}
           numTicks={Math.min(numPositions, Math.round(10 * zoomTransform.scaleX))}
+          left={AXIS_LEFT_PADDING}
         />
-        <text fontSize={12} textAnchor="middle" x={canvasWidth/2} y={AXIS_HEIGHT - 4}>
+        <text fontSize={12} textAnchor="middle" x={axisWidth / 2} y={AXIS_HEIGHT - 4}>
           {
             "Position in cCRE\u00A0\u00A0\u00A0•\u00A0\u00A0\u00A0🟢\u00A0A\u00A0\u00A0\u00A0🔵\u00A0C\u00A0\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\u00A0🔴\u00A0T"
           }
+        </text>
+        <text fontSize={12} textAnchor="end" x={axisWidth - 4} y={AXIS_HEIGHT - 4}>
+          {`${zoomTransform.scaleX.toFixed(2)}x Zoom`}
         </text>
       </svg>
       {tooltipData && tooltipContents && (

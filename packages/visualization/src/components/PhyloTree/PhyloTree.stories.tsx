@@ -150,6 +150,7 @@ export const Mammals241: Story = {
     tooltipContents: (item) => (
       <div style={{ fontSize: 12 }}>
         <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div>{item.replaceAll("_", " ")}</div>
         <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
       </div>
     ),
@@ -167,6 +168,7 @@ export const HighlightLeaves: Story = {
     tooltipContents: (item) => (
       <div style={{ fontSize: 12 }}>
         <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div>{item.replaceAll("_", " ")}</div>
         <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
       </div>
     ),
@@ -184,6 +186,7 @@ export const ExternalHovered: Story = {
     tooltipContents: (item) => (
       <div style={{ fontSize: 12 }}>
         <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div>{item.replaceAll("_", " ")}</div>
         <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
       </div>
     ),
@@ -202,6 +205,7 @@ export const OnLeafHoverChange: Story = {
     tooltipContents: (item) => (
       <div style={{ fontSize: 12 }}>
         <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div>{item.replaceAll("_", " ")}</div>
         <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
       </div>
     ),
