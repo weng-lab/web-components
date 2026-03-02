@@ -114,6 +114,7 @@ export default function PhyloTree({
   height: totalHeight,
   data,
   highlighted = [],
+  hovered: externalHovered = [],
   leafFontSize = 8,
   leafFontFamily = "Arial",
   linkStrokeWidth = 1,
@@ -127,8 +128,13 @@ export default function PhyloTree({
 }: PhyloTreeProps) {
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(defaultScaling === "scaled");
 
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [internalHovered, setInternalHovered] = useState<string | null>(null)
   const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<TreeItem>();
+
+  const hovered = useMemo(
+    () => (internalHovered ? [internalHovered, ...externalHovered] : externalHovered),
+    [internalHovered, externalHovered]
+  );
 
   const { TooltipInPortal } = useTooltipInPortal({
     scroll: true,
@@ -160,7 +166,7 @@ export default function PhyloTree({
         const pending = pendingRef.current;
         const pendingNode = pending?.node ?? null;
 
-        setHoveredId(pendingNode ? pendingNode.data.id : null);
+        setInternalHovered(pendingNode ? pendingNode.data.id : null);
 
         if (pendingNode && !pendingNode.children) {
           showTooltip({
@@ -352,7 +358,7 @@ export default function PhyloTree({
       <Group top={TOTAL_INNER_RADIUS} left={TOTAL_INNER_RADIUS}>
         <RenderTree
           node={rootNode}
-          hoveredId={hoveredId}
+          hovered={hovered}
           leafFontFamily={leafFontFamily}
           leafFontSize={leafFontSize}
           useBranchLengths={enableBranchLengths}
@@ -364,7 +370,7 @@ export default function PhyloTree({
     );
   }, [
     rootNode,
-    hoveredId,
+    hovered,
     leafFontFamily,
     leafFontSize,
     enableBranchLengths,

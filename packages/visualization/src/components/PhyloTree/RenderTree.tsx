@@ -15,7 +15,7 @@ type Shared = {
 };
 
 export type RenderTreeProps = Shared & {
-  hoveredId: string | null;
+  hovered: string[];
 };
 
 export type RenderChildProps = Shared & {
@@ -68,7 +68,7 @@ const ChildNode = memo(
 
 export const RenderTree = memo(function RenderTree({
   node,
-  hoveredId,
+  hovered,
   useBranchLengths,
   onNodeMouseMove,
   onNodeMouseLeave,
@@ -82,7 +82,7 @@ export const RenderTree = memo(function RenderTree({
       {node.descendants()?.map((child, i) => {
         if (!child.parent) return;
         //This is done to elimate a .ancestors() and .descendants() traversal on every rerender
-        const dimmed = !!hoveredId && !(child.descendantIds?.has(hoveredId) || child.ancestorIds?.has(hoveredId));
+        const dimmed = !!hovered.length && !(hovered.some(id => child.descendantIds?.has(id) || child.ancestorIds?.has(id)));
 
         return (
           <ChildNode

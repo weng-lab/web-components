@@ -2,6 +2,7 @@ import { Meta, StoryObj } from "@storybook/react-vite";
 import { SequenceAlignmentPlot, Nucleotide, TooltipData } from "./index";
 import { EH38E3465364, EH38E4276533, EH38E4276534 } from "./example-data/mockData";
 import { getColor, getLabel, getOrder, sortByOrder, speciesOrderInApiData } from "../PhyloTree/example-data/utils";
+import { useState } from "react";
 
 const meta = {
   title: "visualization/SequenceAlignmentPlot",
@@ -62,19 +63,7 @@ export const EH38E4276533_: Story = {
     getLabel: getLabel,
     getOrder: (id) => getOrder(id) ?? "",
     getOrderColor: getColor,
-    highlighted: ["Homo_sapiens"],
-    tooltipContents
-  },
-};
-
-export const EH38E4276534_: Story = {
-  args: {
-    data: dataEH38E4276534,
-    width: 1000,
-    height: 500,
-    getLabel: getLabel,
-    getOrder: (id) => getOrder(id) ?? "",
-    getOrderColor: getColor,
+    hovered: ["Homo_sapiens"],
     tooltipContents
   },
 };
@@ -84,6 +73,40 @@ export const EH38E3465364_: Story = {
     data: dataEH38E3465364,
     width: 1000,
     height: 500,
+    getLabel: getLabel,
+    getOrder: (id) => getOrder(id) ?? "",
+    getOrderColor: getColor,
+    tooltipContents
+  },
+};
+
+export const hoverChange: Story = {
+  args: {
+    data: dataEH38E4276534,
+    width: 1000,
+    height: 500,
+    getLabel: getLabel,
+    getOrder: (id) => getOrder(id) ?? "",
+    getOrderColor: getColor,
+    tooltipContents
+  },
+  render: (args) => {
+    const [hovered, setHovered] = useState<string | null>(null);
+    return (
+      <>
+        <SequenceAlignmentPlot {...args} onHoverChange={setHovered} />
+        <p>hovered: {hovered}</p>
+      </>
+    );
+  }
+};
+
+export const highlighted: Story = {
+  args: {
+    data: dataEH38E4276534,
+    width: 1000,
+    height: 500,
+    highlighted: ["Homo_sapiens"],
     getLabel: getLabel,
     getOrder: (id) => getOrder(id) ?? "",
     getOrderColor: getColor,

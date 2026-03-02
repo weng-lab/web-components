@@ -173,6 +173,23 @@ export const HighlightLeaves: Story = {
   },
 };
 
+export const ExternalHovered: Story = {
+  args: {
+    data: formatNode(data),
+    hovered: ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"],
+    width: 600,
+    height: 600,
+    getColor,
+    getLabel,
+    tooltipContents: (item) => (
+      <div style={{ fontSize: 12 }}>
+        <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>
+        <div style={{ opacity: 0.8 }}>{getOrder(item)}</div>
+      </div>
+    ),
+  },
+};
+
 export const OnLeafHoverChange: Story = {
   args: {
     data: formatNode(data),

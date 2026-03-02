@@ -52,6 +52,10 @@ export type PhyloTreeProps = {
    */
   highlighted?: string[]
   /**
+   * Used to sync plot state with hover on SequenceAlignmentPlot. Tree treats these as if they are internally hovered
+   */
+  hovered?: string[]
+  /**
    * @default 135
    */
   labelPadding?: number
