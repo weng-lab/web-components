@@ -7,11 +7,11 @@ import { Group } from "@visx/group";
 export type Nucleotide = "A" | "C" | "G" | "T" | "-";
 
 const NUCLEOTIDE_COLORS: Record<Nucleotide, string> = {
-  A: "#228b22", // green
-  C: "blue", // blue
-  G: "orange", // orange
-  T: "red", // red
-  "-": "white", // missing
+  A: "#228b22",
+  C: "blue",
+  G: "orange",
+  T: "red",
+  "-": "white",
 };
 
 export interface SequenceAlignmentPlotProps {
@@ -35,18 +35,21 @@ export interface SequenceAlignmentPlotProps {
   /**
    * Places indicator next to species
    */
-  highlighted?: string[]
+  highlighted?: string[];
   /**
    * Optionally define tooltip for hover over leaf nodes
    */
   tooltipContents?: (tooltipData: TooltipData) => ReactNode;
 }
 
-const AXIS_HEIGHT = 30;
+const AXIS_HEIGHT = 40;
 const SPECIES_BAR_WIDTH = 30;
 const HIGHLIGHTED_BAR_WIDTH = 10;
-const PADDING = 10
+const PADDING = 10;
 const SVG_WIDTH = HIGHLIGHTED_BAR_WIDTH + PADDING + SPECIES_BAR_WIDTH + PADDING;
+const MIN_SCALE = 1;
+const MAX_SCALE = 50;
+const ZOOM_FACTOR = 1.15;
 
 export type SpeciesInfo = { id: string; label: string; order: string; color: string };
 
@@ -54,6 +57,18 @@ export type TooltipData = SpeciesInfo & {
   basePair?: Nucleotide;
   position?: number;
 };
+
+interface ZoomTransform {
+  scaleX: number;
+  translateX: number;
+}
+
+/**
+ * Clamps translateX so the data never scrolls outside the canvas bounds.
+ * Valid range: [canvasWidth * (1 - scaleX), 0]
+ */
+const clampTranslateX = (translateX: number, scaleX: number, canvasWidth: number): number =>
+  Math.min(0, Math.max(canvasWidth * (1 - scaleX), translateX));
 
 /**
  * @todo This component could use some cleanup and maybe manual memoization to handle hover changes to highlight more efficiently
@@ -72,11 +87,22 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
   tooltipContents,
 }) => {
   const [internalHovered, setInternalHovered] = useState<string | null>(null);
+  const [zoomTransform, setZoomTransform] = useState<ZoomTransform>({ scaleX: 1, translateX: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Refs for event handlers that need current values without being in dependency arrays
+  const zoomTransformRef = useRef<ZoomTransform>(zoomTransform);
+  const dragStartX = useRef(0);
+  const dragStartTranslateX = useRef(0);
+
+  // Keep ref in sync so the wheel handler (attached imperatively) always sees current transform
+  useEffect(() => {
+    zoomTransformRef.current = zoomTransform;
+  }, [zoomTransform]);
 
   const handleSetInternalHover = useCallback(
     (newHovered: string | null) => {
       const changed = newHovered !== internalHovered;
-
       if (changed) {
         setInternalHovered(newHovered);
         onHoverChange(newHovered);
@@ -92,7 +118,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<TooltipData>();
+  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TooltipData>();
 
   const { TooltipInPortal } = useTooltipInPortal({
     scroll: true,
@@ -113,6 +139,33 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     return new Map<string, SpeciesInfo>(entries);
   }, [data]);
 
+  // Attach wheel listener imperatively with passive: false so we can call preventDefault.
+  // React 17+ attaches onWheel passively, which prevents scroll cancellation.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const { scaleX, translateX } = zoomTransformRef.current;
+
+      const zoomDir = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
+      const newScaleX = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleX * zoomDir));
+
+      // Adjust translateX so the data point under the cursor stays fixed
+      const newTranslateX = cursorX - (cursorX - translateX) * (newScaleX / scaleX);
+      const clampedTranslateX = clampTranslateX(newTranslateX, newScaleX, canvasWidth);
+
+      setZoomTransform({ scaleX: newScaleX, translateX: clampedTranslateX });
+    };
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, [canvasWidth]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -122,24 +175,22 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
     const dpr = window.devicePixelRatio || 1;
 
-    // Bitmap matches CSS size (scaled for DPR)
     canvas.width = canvasWidth * dpr;
     canvas.height = canvasHeight * dpr;
-
     canvas.style.width = `${canvasWidth}px`;
     canvas.style.height = `${canvasHeight}px`;
 
-    // Clear + reset transform
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Map data space → bitmap space
-    const scaleX = canvas.width / numPositions;
-    const scaleY = canvas.height / numSpecies;
+    // Combine the base data→bitmap mapping with the zoom transform.
+    // translateX is in CSS pixels so it must be scaled by dpr for the bitmap.
+    const bitmapScaleX = (canvas.width / numPositions) * zoomTransform.scaleX;
+    const bitmapScaleY = canvas.height / numSpecies;
+    const bitmapTranslateX = zoomTransform.translateX * dpr;
 
-    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+    ctx.setTransform(bitmapScaleX, 0, 0, bitmapScaleY, bitmapTranslateX, 0);
 
-    // Draw all data
     Object.entries(data).forEach(([species, sequence], y) => {
       sequence.forEach((nucleotide, x) => {
         ctx.fillStyle = NUCLEOTIDE_COLORS[nucleotide];
@@ -148,21 +199,50 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         ctx.globalAlpha = 1;
       });
     });
-  }, [data, canvasWidth, canvasHeight, numPositions, numSpecies, hovered]);
+  }, [data, canvasWidth, canvasHeight, numPositions, numSpecies, hovered, zoomTransform]);
 
-  // Map mouse position on canvas to correct data point
+  // Converts a CSS pixel x position on the canvas to a data-space nucleotide index,
+  // inverting the zoom transform: dataX = (cssX - translateX) / (cssWidthPerDataUnit * scaleX)
+  const cssXToPosition = useCallback(
+    (cssX: number): number => {
+      const { scaleX, translateX } = zoomTransformRef.current;
+      return Math.floor(((cssX - translateX) / canvasWidth) * (numPositions / scaleX));
+    },
+    [canvasWidth, numPositions]
+  );
+
+  const handleHeatmapMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDragging(true);
+    dragStartX.current = e.clientX;
+    dragStartTranslateX.current = zoomTransformRef.current.translateX;
+  };
+
   const handleHeatmapMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
 
-    const position = Math.floor(((e.clientX - rect.left) / rect.width) * numPositions);
-    const speciesIndex = Math.floor(((e.clientY - rect.top) / rect.height) * numSpecies);
+    // While dragging: update pan, suppress hover/tooltip
+    if (isDragging) {
+      const delta = e.clientX - dragStartX.current;
+      const newTranslateX = clampTranslateX(
+        dragStartTranslateX.current + delta,
+        zoomTransformRef.current.scaleX,
+        canvasWidth
+      );
+      setZoomTransform((prev) => ({ ...prev, translateX: newTranslateX }));
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const cssX = e.clientX - rect.left;
+    const cssY = e.clientY - rect.top;
+
+    const position = cssXToPosition(cssX);
+    const speciesIndex = Math.floor((cssY / rect.height) * numSpecies);
     const speciesId = Object.keys(data)[speciesIndex];
-    const basePair = data[speciesId][position];
+    const basePair = data[speciesId]?.[position];
 
     if (position >= 0 && position < numPositions && speciesIndex >= 0 && speciesIndex < numSpecies) {
-      //want to prevent state from being set unnecessarily
       handleSetInternalHover(speciesId);
       showTooltip({
         tooltipTop: e.clientY,
@@ -175,7 +255,12 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     }
   };
 
-  const handleHeatmapMouseLeave = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleHeatmapMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleHeatmapMouseLeave = () => {
+    setIsDragging(false);
     handleSetInternalHover(null);
     hideTooltip();
   };
@@ -190,10 +275,19 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     hideTooltip();
   };
 
-  const xScale = scaleLinear({
-    domain: [0, numPositions - 1],
-    range: [0, canvasWidth],
-  });
+  // Apply the zoom transform to the axis scale so tick positions stay in sync with the canvas.
+  // Domain [0, numPositions-1] maps to zoomed CSS range [translateX, canvasWidth * scaleX + translateX].
+  const zoomedXScale = useMemo(
+    () =>
+      scaleLinear({
+        domain: [0, numPositions - 1],
+        range: [
+          zoomTransform.translateX,
+          canvasWidth * zoomTransform.scaleX + zoomTransform.translateX,
+        ],
+      }),
+    [numPositions, canvasWidth, zoomTransform]
+  );
 
   const speciesList = useMemo(() => [...speciesInfo.values()], [speciesInfo]);
 
@@ -205,15 +299,10 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         height: totalHeight,
       }}
     >
-      <svg
-        width={SVG_WIDTH}
-        height={canvasHeight}
-        style={{ top: 0, left: 0, position: "absolute" }}
-      >
+      <svg width={SVG_WIDTH} height={canvasHeight} style={{ top: 0, left: 0, position: "absolute" }}>
         <Group>
           {speciesList.map((species, i) => {
             const rectHeight = canvasHeight / speciesList.length;
-
             return (
               <g
                 key={i}
@@ -246,11 +335,17 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
       </svg>
       <canvas
         ref={canvasRef}
+        onMouseDown={handleHeatmapMouseDown}
         onMouseMove={handleHeatmapMouseMove}
+        onMouseUp={handleHeatmapMouseUp}
         onMouseLeave={handleHeatmapMouseLeave}
-        style={{ position: "absolute", left: SVG_WIDTH }}
+        style={{
+          position: "absolute",
+          left: SVG_WIDTH,
+          cursor: isDragging ? "grabbing" : zoomTransform.scaleX > 1 ? "grab" : "default",
+        }}
       />
-      {/* Bottom axis */}
+      {/* overflow: hidden clips axis ticks that scroll outside the canvas bounds when zoomed */}
       <svg
         width={canvasWidth}
         height={AXIS_HEIGHT}
@@ -263,12 +358,14 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         }}
       >
         <AxisBottom
-          scale={xScale}
-          label={
+          scale={zoomedXScale}
+          numTicks={Math.min(numPositions, Math.round(10 * zoomTransform.scaleX))}
+        />
+        <text fontSize={12} textAnchor="middle" x={canvasWidth/2} y={AXIS_HEIGHT - 4}>
+          {
             "Position in cCRE\u00A0\u00A0\u00A0•\u00A0\u00A0\u00A0🟢\u00A0A\u00A0\u00A0\u00A0🔵\u00A0C\u00A0\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\u00A0🔴\u00A0T"
           }
-          labelProps={{ fontSize: 12 }}
-        />
+        </text>
       </svg>
       {tooltipData && tooltipContents && (
         <TooltipInPortal left={tooltipLeft} top={tooltipTop} style={defaultStyles}>
