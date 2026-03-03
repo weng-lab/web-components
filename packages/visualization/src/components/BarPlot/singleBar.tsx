@@ -2,9 +2,7 @@ import React, { useCallback, useRef } from "react";
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
 import { BarData, SingleBarProps } from "./types";
-import { defaultStyles as defaultTooltipStyles, useTooltip, TooltipWithBounds as VisxTooltipWithBounds, Portal as VisxPortal } from '@visx/tooltip';
-import { PortalProps } from '@visx/tooltip/lib/Portal';
-import { TooltipWithBoundsProps } from '@visx/tooltip/lib/tooltips/TooltipWithBounds';
+import { defaultStyles as defaultTooltipStyles, useTooltip, TooltipWithBounds, Portal } from '@visx/tooltip';
 import { Bar, Circle } from "@visx/shape";
 import { getAnimationProps } from "../../utility";
 import { motion } from "framer-motion";
@@ -31,35 +29,13 @@ const SingleBar = <T,>({
 }: SingleBarProps<T>) => {
     const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } = useTooltip<BarData<T>>({});
 
-    /**
-         * Hacky workaround for complex type compatability issues. Hopefully this will fix itself when ugrading to React 19 - Jonathan 12/11/24
-         * @todo remove this when possible
-         */
-    const Portal = VisxPortal as unknown as React.FC<PortalProps>;
-    const TooltipWithBounds = VisxTooltipWithBounds as unknown as React.FC<TooltipWithBoundsProps>;
-
-    const requestRef = useRef<number | null>(null);
-    const tooltipDataRef = useRef<{ top: number; left: number; data: BarData<T> } | null>(null);
-
-    const handleMouseMove = useCallback((event: React.MouseEvent, barData: BarData<T>) => {
-        tooltipDataRef.current = {
-            top: event.pageY,
-            left: event.pageX,
-            data: barData,
-        };
-        if (!requestRef.current) {
-            requestRef.current = requestAnimationFrame(() => {
-                if (tooltipDataRef.current) {
-                    showTooltip({
-                        tooltipTop: tooltipDataRef.current.top,
-                        tooltipLeft: tooltipDataRef.current.left,
-                        tooltipData: tooltipDataRef.current.data,
-                    });
-                }
-                requestRef.current = null;
-            });
-        }
-    }, [showTooltip]);
+    const handleMouseMove = useCallback((event: React.MouseEvent<SVGGElement, MouseEvent>, data: BarData<T>) => {
+        showTooltip({
+            tooltipData: data,
+            tooltipLeft: event.pageX,
+            tooltipTop: event.pageY,
+        });
+    }, [ showTooltip]);
 
     const hovered = bar.id === tooltipData?.id;
 

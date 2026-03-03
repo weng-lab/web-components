@@ -37,6 +37,29 @@ const scatterData: Point[] = [
     { x: 5, y: 6, color: 'green' },
 ];
 
+
+
+function generatePoints(count = 2000): Point[] {
+  const points: Point[] = []
+
+  for (let i = 0; i < count; i++) {
+    const angle = i * 0.1
+    const radius = Math.sqrt(i) * 2
+
+    points.push({
+      x: radius * Math.cos(angle) + (i % 50),
+      y: radius * Math.sin(angle) + (i % 30),
+      color: `hsl(${i % 360}, 100%, 50%)`,
+    })
+  }
+
+  return points
+}
+
+// usage
+const points = generatePoints(2500)
+
+
 const moreScatterData: Point[] = [
     { x: 1, y: 2, color: 'red' },
     { x: 3, y: 4, color: 'blue' },
@@ -353,5 +376,50 @@ export const ControlsHighlight: Story = {
                 selectionType: "pan"
             }
         }
+    }
+};
+
+export const Animation: Story = {
+    args: {
+        pointData: scatterData,
+        loading: false,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        initialState: {
+            minimap: {
+                open: true,
+            },
+            controls: {
+                selectionType: "pan"
+            }
+        }
+    },
+    render: () => {
+        return (
+            <ScatterPlot
+                pointData={points}
+                loading={false}
+                leftAxisLabel=""
+                bottomAxisLabel=""
+                miniMap={miniMap}
+                disableTooltip
+                initialState={
+                    {
+                        minimap: {
+                            open: true,
+                        },
+                        controls: {
+                            selectionType: "pan"
+                        }
+                    }
+                }
+                animation="slideUp"
+                animationBuffer={0.02}
+                animationGroupSize={10}
+            />
+
+        )
     }
 };

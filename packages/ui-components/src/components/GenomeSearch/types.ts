@@ -38,7 +38,7 @@ export type Domain = {
 };
 
 // Result types used to distinguish between different types of results
-export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Study" | "Legacy cCRE";
+export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Study" | "Legacy cCRE" | "Ome";
 
 // Result object used to display in the autocomplete dropdown
 export type Result = {

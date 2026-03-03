@@ -10,6 +10,7 @@ This project should be relatively easy to migrate to yarn workspaces if needed, 
 
 ### Storybook
 Run Storybook (from root): `pnpm run storybook`
+Run Development Enviorment (from root): `pnpm run dev`
 
 ### Build
 Build a package (from root): `pnpm --filter ${PACKAGE} build`
