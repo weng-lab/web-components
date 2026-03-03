@@ -19,10 +19,8 @@ export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children
     <div
       style={{
         position: "relative",
-        border: "1px solid black",
         width: totalWidth,
         height: totalHeight,
-        boxSizing: "content-box",
       }}
     >
       <ControlPanel scaleZoom={zoom.scale} resetZoom={zoom.reset} toggleBranchLength={toggleBranchLength} />

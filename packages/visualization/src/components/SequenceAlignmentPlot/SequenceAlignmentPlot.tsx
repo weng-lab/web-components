@@ -118,21 +118,20 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     [internalHovered, externalHovered]
   );
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
+  
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TooltipData>();
-
+  
   const { TooltipInPortal } = useTooltipInPortal({
     scroll: true,
     detectBounds: true,
   });
-
+  
   const numSpecies = Object.keys(data).length;
   const numPositions = Object.values(data)[0].length ?? 0;
-
+  
   const canvasWidth = totalWidth - HIGHLIGHTED_AND_SPECIES_SVG_WIDTH;
   const canvasHeight = totalHeight - AXIS_HEIGHT;
-
+  
   const speciesInfo = useMemo(() => {
     const entries: [string, SpeciesInfo][] = Object.keys(data).map((species) => [
       species,
@@ -140,6 +139,8 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     ]);
     return new Map<string, SpeciesInfo>(entries);
   }, [data]);
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Attach wheel listener imperatively with passive: false so we can call preventDefault.
   // React 17+ attaches onWheel passively, which prevents scroll cancellation.
@@ -168,6 +169,23 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, [canvasWidth]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const preventTouchScroll = (e: TouchEvent) => {
+      if (e.touches.length === 1) e.preventDefault(); // single finger = pan, not page scroll
+    };
+
+    canvas.addEventListener("touchstart", preventTouchScroll, { passive: false });
+    canvas.addEventListener("touchmove", preventTouchScroll, { passive: false });
+    return () => {
+      canvas.removeEventListener("touchstart", preventTouchScroll);
+      canvas.removeEventListener("touchmove", preventTouchScroll);
+    };
+  }, []);
+
+  // Draw to the cancas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,13 +231,14 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     [canvasWidth, numPositions]
   );
 
-  const handleHeatmapMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleHeatmapPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     setIsDragging(true);
     dragStartX.current = e.clientX;
     dragStartTranslateX.current = zoomTransformRef.current.translateX;
+    e.currentTarget.setPointerCapture(e.pointerId)
   };
 
-  const handleHeatmapMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleHeatmapPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -257,11 +276,11 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     }
   };
 
-  const handleHeatmapMouseUp = () => {
+  const handleHeatmapPointerUp = () => {
     setIsDragging(false);
   };
 
-  const handleHeatmapMouseLeave = () => {
+  const handleHeatmapPointerLeave = () => {
     setIsDragging(false);
     handleSetInternalHover(null);
     hideTooltip();
@@ -295,7 +314,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
   const axisWidth = canvasWidth + AXIS_LEFT_PADDING
 
-  return (
+  return totalWidth < 10 || totalHeight < 10 ? null :(
     <div
       style={{
         position: "relative",
@@ -361,10 +380,10 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
       </svg>
       <canvas
         ref={canvasRef}
-        onMouseDown={handleHeatmapMouseDown}
-        onMouseMove={handleHeatmapMouseMove}
-        onMouseUp={handleHeatmapMouseUp}
-        onMouseLeave={handleHeatmapMouseLeave}
+        onPointerDown={handleHeatmapPointerDown}
+        onPointerMove={handleHeatmapPointerMove}
+        onPointerUp={handleHeatmapPointerUp}
+        onPointerLeave={handleHeatmapPointerLeave}
         style={{
           position: "absolute",
           left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH,
@@ -392,11 +411,11 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         />
         <Text fontSize={12} textAnchor="middle" verticalAnchor="end" x={axisWidth / 2} y={AXIS_HEIGHT - 4}>
           {
-            "Position in cCRE\u00A0\u00A0\u00A0•\u00A0\u00A0\u00A0🟢\u00A0A\u00A0\u00A0\u00A0🔵\u00A0C\u00A0\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\u00A0🔴\u00A0T"
+            "Position in cCRE\u00A0\u00A0•\u00A0\u00A0🟢\u00A0A\u00A0\u00A0🔵\u00A0C\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\🔴\u00A0T"
           }
         </Text>
         <Text fontSize={12} textAnchor="end" verticalAnchor="end" x={axisWidth} y={AXIS_HEIGHT - 4}>
-          {`${zoomTransform.scaleX.toFixed(2)}\u00d7`}
+          {`${zoomTransform.scaleX.toFixed(1)}\u00d7`}
         </Text>
       </svg>
       {tooltipData && tooltipContents && (
