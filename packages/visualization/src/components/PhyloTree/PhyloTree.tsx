@@ -120,7 +120,7 @@ export default function PhyloTree({
   linkStrokeWidth = 1,
   getColor = () => "black",
   getLabel = (id) => id,
-  onLeafClick,
+  onBranchClick = () => null,
   onLeafHoverChange,
   labelPadding = 135,
   defaultScaling = "scaled",
@@ -199,11 +199,18 @@ export default function PhyloTree({
     const r = d3hierarchy(data, (d) => d.children)
       // sorts first by least number of children, and then by branch length to create nice looking plot
       .sum((d) => (d.children ? 0 : 1))
-      .sort(
-        (a, b) =>
+      .sort((a, b) => {
+        // Float the Homo_sapiens subtree to the end so it appears at the top
+        const aHasHuman = a.leaves().some((l) => l.data.id === "Homo_sapiens");
+        const bHasHuman = b.leaves().some((l) => l.data.id === "Homo_sapiens");
+        if (aHasHuman !== bHasHuman) return aHasHuman ? -1 : 1;
+
+        // Original sort
+        return (
           (a.value || 0) - (b.value || 0) ||
           ascending(a.data.branch_length ?? undefined, b.data.branch_length ?? undefined)
-      );
+        );
+      });
     return r;
   }, [data, getColor, circleRadius]);
 
@@ -364,7 +371,7 @@ export default function PhyloTree({
           useBranchLengths={enableBranchLengths}
           onNodeMouseMove={handleLeafOnMouseMove}
           onNodeMouseLeave={handleLeafOnMouseLeave}
-          onLeafClick={onLeafClick}
+          onBranchClick={onBranchClick}
         />
       </Group>
     );
@@ -376,7 +383,7 @@ export default function PhyloTree({
     enableBranchLengths,
     handleLeafOnMouseMove,
     handleLeafOnMouseLeave,
-    onLeafClick,
+    onBranchClick,
   ]);
 
   const renderTreeInZoom = useCallback(

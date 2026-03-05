@@ -74,9 +74,9 @@ export type PhyloTreeProps = {
    */
   tooltipContents?: (id: string) => ReactNode
   /**
-   * fired when individual leaf node clicked
+   * fired when branch clicked, calls function with array of descendant leaf nodes
    */
-  onLeafClick?: (id: string) => void,
+  onBranchClick?: (leafIds: string[]) => void,
   /**
    * Fired when hover state changes, single item if leaf hovered, multiple if branch hovered, empty on mouse leave
    */

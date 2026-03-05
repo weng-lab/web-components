@@ -11,7 +11,7 @@ type Shared = {
   leafFontFamily: PhyloTreeProps["leafFontFamily"];
   onNodeMouseMove: (event: React.MouseEvent, node: TreeNode) => void;
   onNodeMouseLeave: (event: React.MouseEvent, node: TreeNode) => void;
-  onLeafClick: PhyloTreeProps["onLeafClick"];
+  onBranchClick: (leafIds: string[]) => void;
 };
 
 export type RenderTreeProps = Shared & {
@@ -23,12 +23,12 @@ export type RenderChildProps = Shared & {
 };
 
 const ChildNode = memo(
-  ({ node, dimmed, useBranchLengths, leafFontFamily, leafFontSize, onNodeMouseMove, onNodeMouseLeave, onLeafClick }: RenderChildProps) => {
+  ({ node, dimmed, useBranchLengths, leafFontFamily, leafFontSize, onNodeMouseMove, onNodeMouseLeave, onBranchClick }: RenderChildProps) => {
     return (
       <g
         onMouseMove={(e: React.MouseEvent) => onNodeMouseMove(e, node)}
         onMouseLeave={(e: React.MouseEvent) => onNodeMouseLeave(e, node)}
-        onClick={() => onLeafClick && onLeafClick(node.data.id)}
+        onClick={() => onBranchClick(node.leaves().map(x => x.data.id))}
         id={node.data.id}
         opacity={dimmed ? 0.2 : 1}
         style={{ transition: "opacity 0.2s ease-in" }}
@@ -72,7 +72,7 @@ export const RenderTree = memo(function RenderTree({
   useBranchLengths,
   onNodeMouseMove,
   onNodeMouseLeave,
-  onLeafClick,
+  onBranchClick,
   leafFontSize,
   leafFontFamily,
 }: RenderTreeProps) {
@@ -87,12 +87,12 @@ export const RenderTree = memo(function RenderTree({
         return (
           <ChildNode
             key={i}
-            onLeafClick={onLeafClick}
             node={child}
             dimmed={dimmed}
             useBranchLengths={useBranchLengths}
             leafFontSize={leafFontSize}
             leafFontFamily={leafFontFamily}
+            onBranchClick={onBranchClick}
             onNodeMouseMove={onNodeMouseMove}
             onNodeMouseLeave={onNodeMouseLeave}
           />

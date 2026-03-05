@@ -127,7 +127,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
   });
   
   const numSpecies = Object.keys(data).length;
-  const numPositions = Object.values(data)[0].length ?? 0;
+  const numPositions = Object.values(data)[0]?.length ?? 0;
   
   const canvasWidth = totalWidth - HIGHLIGHTED_AND_SPECIES_SVG_WIDTH;
   const canvasHeight = totalHeight - AXIS_HEIGHT;
