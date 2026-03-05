@@ -1,125 +1,46 @@
-import React, { useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import Box from '@mui/material/Box';
-import {  ScatterPlot } from './packages/visualization/src/components/ScatterPlot';
-import { Button } from '@mui/material';
-import { DownloadPlotHandle } from './packages/visualization/src/utility';
-import { BarData } from './packages/visualization/src/components/BarPlot/types';
-import BarPlot from './packages/visualization/src/components/BarPlot/barplot';
+import {PhyloTree, TreeItem} from './packages/visualization/src/components/PhyloTree'
+import metadataRaw from "./packages/visualization/src/components/PhyloTree/example-data/241-mammals-metadata-w-human.txt?raw";
+import { data } from "./packages/visualization/src/components/PhyloTree/example-data/241_mammals_treedata";
+import { ParentSize } from '@visx/responsive';
+import { getColor, getLabel, getOrder } from './packages/visualization/src/components/PhyloTree/example-data/utils';
+import { useState } from 'react';
+
+type TestDataNode = { name: string; branch_length: number | null; children?: TestDataNode[] };
+
+const formatNode = (node: TestDataNode): TreeItem => {
+  const newNode: TreeItem = { id: node.name, branch_length: node.branch_length };
+
+  if (node.children) {
+    const newChildren = node.children.map((child) => formatNode(child));
+    newNode.children = newChildren
+  }
+
+  return newNode;
+};
+
+const args = {
+  data: formatNode(data),
+  getColor,
+  getLabel,
+  tooltipContents: (id: string) => (
+    <div style={{ fontSize: 12 }}>
+      <div style={{ fontWeight: 600 }}>{getLabel(id)}</div>
+      <div style={{ opacity: 0.8 }}>{getOrder(id)}</div>
+    </div>
+  ),
+};
+
+const highlightedOpts = [["Homo_sapiens"], ["Homo_sapiens", "Pan_paniscus", "Pan_troglodytes", "Gorilla_gorilla", "Sorex_araneus"]]
 
 function TestingPage() {
-  type MyMetadata = {
-    description?: string;
-    source?: string;
-  };
-
-  const sampleData: BarData<MyMetadata>[] = [
-      {
-          category: "Group A",
-          label: "Apples",
-          value: 30,
-          id: "apples-a1",
-          color: "#FF6384",
-          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
-      },
-      {
-          category: "Group B",
-          label: "Grapes",
-          value: 50,
-          id: "grapes-b1",
-          color: "#4BC0C0",
-          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
-      },
-      {
-          category: "Group C",
-          label: "Bananas",
-          value: 27,
-          id: "bananas-c1",
-          color: "#FFCD56",
-          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
-      },
-      {
-          category: "Group A",
-          label: "Apples",
-          value: 30,
-          id: "apples-a2",
-          color: "#FF6384",
-          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
-      },
-      {
-          category: "Group B",
-          label: "Grapes",
-          value: 50,
-          id: "grapes-b2",
-          color: "#4BC0C0",
-          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
-      },
-      {
-          category: "Group C",
-          label: "Bananas",
-          value: 27,
-          id: "bananas-c2",
-          color: "#FFCD56",
-          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
-      },
-      {
-          category: "Group A",
-          label: "Apples",
-          value: 30,
-          id: "apples-a3",
-          color: "#FF6384",
-          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
-      },
-      {
-          category: "Group B",
-          label: "Grapes",
-          value: 50,
-          id: "grapes-b3",
-          color: "#4BC0C0",
-          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
-      },
-      {
-          category: "Group C",
-          label: "Bananas",
-          value: 27,
-          id: "bananas-c3",
-          color: "#FFCD56",
-          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
-      },
-      {
-          category: "Group A",
-          label: "Apples",
-          value: 30,
-          id: "apples-a4",
-          color: "#FF6384",
-          metadata: { description: "Red apples from Group A", source: "Orchard 1" }
-      },
-      {
-          category: "Group B",
-          label: "Grapes",
-          value: 50,
-          id: "grapes-b4",
-          color: "#4BC0C0",
-          metadata: { description: "Seedless grapes from Group B", source: "Vineyard 1" }
-      },
-      {
-          category: "Group C",
-          label: "Bananas",
-          value: 27,
-          id: "bananas-c4",
-          color: "#FFCD56",
-          metadata: { description: "Sweet bananas from Group C", source: "Plantation 4" }
-      },
-  ]
+  const [highlighted, setHighlighted] = useState<0 | 1>(0)
 
   return (
-    <Box height="250px" width="auto" padding={0} sx={{ position: "relative", border: "1px solid black", overflow: "auto" }}>
-      <BarPlot
-        data={sampleData}
-        animation="scale"
-        barSize={25}
-      />
-    </Box>
+    <div>
+      <button onClick={() => setHighlighted(prev => prev === 1 ? 0 : 1)}>toggle</button>
+      <PhyloTree {...args} width={700} height={700} highlighted={highlightedOpts[highlighted]} />
+    </div>
   );
 }
 

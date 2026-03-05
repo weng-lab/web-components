@@ -1,0 +1,48 @@
+import { ProvidedZoom } from "@visx/zoom/lib/types";
+import { memo, ReactNode, useState } from "react";
+import { ZoomState } from "./types";
+import { ControlPanel } from "./ControlPanel";
+import { ZoomSurface } from "./ZoomSurface";
+import { Group } from "@visx/group";
+import { TOTAL_INNER_DIAMETER } from "./PhyloTree";
+
+export type ZoomFrameProps = {
+  zoom: ProvidedZoom<SVGSVGElement> & ZoomState;
+  totalHeight: number;
+  totalWidth: number;
+  toggleBranchLength: () => void;
+  children: ReactNode
+};
+
+export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children, toggleBranchLength }: ZoomFrameProps) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: totalWidth,
+        height: totalHeight,
+      }}
+    >
+      <ControlPanel scaleZoom={zoom.scale} resetZoom={zoom.reset} toggleBranchLength={toggleBranchLength} />
+      <svg
+        width={totalWidth}
+        height={totalHeight}
+        style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
+        viewBox={`0 0 ${TOTAL_INNER_DIAMETER} ${TOTAL_INNER_DIAMETER}`}
+        preserveAspectRatio="xMidYMid meet"
+        ref={zoom.containerRef}
+      >
+        <ZoomSurface
+          dragStart={zoom.dragStart}
+          dragEnd={zoom.dragEnd}
+          dragMove={zoom.dragMove}
+          scale={zoom.scale}
+          isDragging={zoom.isDragging}
+        />
+        <Group transform={zoom.toString()}>
+          {children}
+        </Group>
+      </svg>
+    </div>
+  );
+});
