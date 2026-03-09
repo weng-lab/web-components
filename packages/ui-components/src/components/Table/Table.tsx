@@ -21,23 +21,16 @@ export const autosizeOptions: GridAutosizeOptions = {
   outliersFactor: 1.5,
 };
 
-const Table = (props: TableProps) => {
-  /**
-   * Provide defaults
-   * @todo obey the defaults specified in the theme.
-   * Ex: Overriding density like this overrides the defaults specified in the theme
-   */
+const CustomDataGridPremium = (props: Omit<TableProps, "emptyTableFallback" | "error"> & { rows: NonNullable<TableProps["rows"]> }) => {
   const {
     pagination = true,
     columns,
     density = "compact",
-    rows = [],
+    rows,
     apiRef: externalApiRef,
-    emptyTableFallback,
     showToolbar = true,
     divHeight = {},
     sx = {},
-    error = false,
     slots = {},
     label,
     labelTooltip,
@@ -76,8 +69,8 @@ const Table = (props: TableProps) => {
       return {
         ...col,
         renderHeader: (params: GridColumnHeaderParams) => (
-          <HeaderWithTooltip 
-            params={params} 
+          <HeaderWithTooltip
+            params={params}
             tooltipTitle={col.tooltip!} // We know it exists here
             originalRenderHeader={col.renderHeader} // Pass the user's custom renderer if it exists
           />
@@ -86,20 +79,17 @@ const Table = (props: TableProps) => {
     });
   }, [columns]);
 
-  //Assign default ID if no ID is provided in the row data
-  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
-
   const internalApiRef = useGridApiRef();
   // prioritize using the provided apiRef if available, otherwise create a new one
   const apiRef = externalApiRef ?? internalApiRef;
 
   const handleResizeCols = useCallback(() => {
-    // need to check .autosizeCoumns since the current was being set with an empty object
+    // need to check .autosizeColumns since the current was being set with an empty object
     if (!apiRef.current?.autosizeColumns) return;
     apiRef.current.autosizeColumns(autosizeOptions);
   }, [apiRef]);
 
-  // trigger resize when rows or columns change so that rows/columns don't need to be memoized outisde of this component
+  // trigger resize when rows or columns change so that rows/columns don't need to be memoized outside of this component
   // otherwise sometimes would snap back to default widths when rows/columns change
   useEffect(() => {
     handleResizeCols();
@@ -122,20 +112,6 @@ const Table = (props: TableProps) => {
     initialState,
   });
 
-  const shouldDisplayEmptyFallback = emptyTableFallback && rowsWithIds.length === 0 && !restDataGridProps.loading;
-
-  if (shouldDisplayEmptyFallback) {
-    return typeof emptyTableFallback === "string" ? (
-      <TableFallback message={emptyTableFallback} variant="empty" />
-    ) : (
-      emptyTableFallback
-    );
-  }
-
-  if (error) {
-    return <TableFallback message={`Error fetching ${label}`} variant="error" />;
-  }
-
   return (
     <div
       ref={wrapperRef}
@@ -143,14 +119,14 @@ const Table = (props: TableProps) => {
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        maxHeight: '100%',
+        maxHeight: "100%",
         ...divHeight,
       }}
     >
       <DataGridPremium
         apiRef={apiRef}
         columns={transformedColumns}
-        rows={rowsWithIds}
+        rows={rows}
         autosizeOnMount
         autosizeOptions={autosizeOptions}
         disableRowSelectionOnClick
@@ -173,6 +149,33 @@ const Table = (props: TableProps) => {
       />
     </div>
   );
+};
+
+const Table = (props: TableProps) => {
+  const {
+    rows = [],
+    emptyTableFallback,
+    error = false,
+    label,
+    ...restProps
+  } = props;
+
+  //Assign default ID if no ID is provided in the row data
+  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
+
+  if (emptyTableFallback && rowsWithIds.length === 0 && !restProps.loading) {
+    return typeof emptyTableFallback === "string" ? (
+      <TableFallback message={emptyTableFallback} variant="empty" />
+    ) : (
+      emptyTableFallback
+    );
+  }
+
+  if (error) {
+    return <TableFallback message={`Error fetching ${label}`} variant="error" />;
+  }
+
+  return <CustomDataGridPremium rows={rowsWithIds} label={label} {...restProps} />;
 };
 
 export default Table;
