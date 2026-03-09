@@ -8,6 +8,8 @@ import {
   useGridApiRef,
   useKeepGroupedColumnsHidden,
 } from "@mui/x-data-grid-premium";
+import NoSsr from "@mui/material/NoSsr";
+import Skeleton from "@mui/material/Skeleton";
 import { useMemo, useEffect, useCallback, useRef } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
@@ -123,29 +125,31 @@ const CustomDataGridPremium = (props: Omit<TableProps, "emptyTableFallback" | "e
         ...divHeight,
       }}
     >
-      <DataGridPremium
-        apiRef={apiRef}
-        columns={transformedColumns}
-        rows={rows}
-        autosizeOptions={autosizeOptions}
-        disableRowSelectionOnClick
-        showToolbar={showToolbar}
-        density={density}
-        sx={{
-          "& .MuiDataGrid-toolbarDivider": {
-            height: "20px",
-          },
-          ...sx,
-        }}
-        slots={{
-          toolbar: CustomToolbarWrapper,
-          ...slots,
-        }}
-        disableAggregation
-        disablePivoting
-        initialState={internalInitialState}
-        {...restDataGridProps}
-      />
+      <NoSsr fallback={<Skeleton variant="rounded" width="100%" height="100%" sx={{ minHeight: 100 }} />}>
+        <DataGridPremium
+          apiRef={apiRef}
+          columns={transformedColumns}
+          rows={rows}
+          autosizeOptions={autosizeOptions}
+          disableRowSelectionOnClick
+          showToolbar={showToolbar}
+          density={density}
+          sx={{
+            "& .MuiDataGrid-toolbarDivider": {
+              height: "20px",
+            },
+            ...sx,
+          }}
+          slots={{
+            toolbar: CustomToolbarWrapper,
+            ...slots,
+          }}
+          disableAggregation
+          disablePivoting
+          initialState={internalInitialState}
+          {...restDataGridProps}
+        />
+      </NoSsr>
     </div>
   );
 };
