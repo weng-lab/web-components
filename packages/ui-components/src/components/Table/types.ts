@@ -1,10 +1,10 @@
-import { DataGridPremiumProps, GridColDef } from "@mui/x-data-grid-premium";
+import { DataGridPremiumProps, GridColDef, GridValidRowModel } from "@mui/x-data-grid-premium";
 import { ReactElement, ReactNode } from "react"; 
 import { SvgIconOwnProps, TooltipProps } from "@mui/material";
 
 // Extend the GridColDef type to add optional tooltip to column
-export type TableColDef = GridColDef & { 
-  tooltip?: TooltipProps["title"]
+export type TableColDef<R extends GridValidRowModel = any, V = any, F = V> = GridColDef<R, V, F> & {
+  tooltip?: TooltipProps["title"];
 };
 
 //The props listed here are the props which are new or overridden compared to the MUI DataGridProProps
