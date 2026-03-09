@@ -13,5 +13,11 @@ export default defineConfig({
   build: {
     sourcemap: true,
     target: "esnext",
+    rollupOptions: {
+      output: {
+        preserveModules: true,
+        preserveModulesRoot: 'src',
+      }
+    }
   },
 });
