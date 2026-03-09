@@ -127,7 +127,6 @@ const CustomDataGridPremium = (props: Omit<TableProps, "emptyTableFallback" | "e
         apiRef={apiRef}
         columns={transformedColumns}
         rows={rows}
-        autosizeOnMount
         autosizeOptions={autosizeOptions}
         disableRowSelectionOnClick
         showToolbar={showToolbar}
