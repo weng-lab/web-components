@@ -14,6 +14,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "devDependencies": {
+    "@mui/x-data-grid-premium": "^8.18.0",
+    "@mui/x-license": "^8.18.0",
     "@chromatic-com/storybook": "^4",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",

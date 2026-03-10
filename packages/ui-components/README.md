@@ -7,17 +7,17 @@ This library assumes you have `react` and `react-dom` installed in your project 
 ## Installation
 npm
 ```
-npm install @weng-lab/ui-components @mui/material @mui/icons-material @emotion/styled @emotion/react
+npm install @weng-lab/ui-components @mui/material @mui/icons-material @emotion/styled @emotion/react @mui/x-data-grid-premium
 ```
 
 yarn
 ```
-yarn add @weng-lab/ui-components @mui/material @mui/icons-material @emotion/styled @emotion/react
+yarn add @weng-lab/ui-components @mui/material @mui/icons-material @emotion/styled @emotion/react @mui/x-data-grid-premium
 ```
 
 pnpm
 ```
-pnpm add @weng-lab/ui-components @mui/material @mui/icons-material @emotion/styled @emotion/react
+pnpm add @weng-lab/ui-components @mui/material @mui/icons-material @emotion/styled @emotion/react @mui/x-data-grid-premium
 ```
 
 ## Component Documentaion
