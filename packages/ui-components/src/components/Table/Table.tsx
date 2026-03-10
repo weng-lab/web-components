@@ -1,5 +1,6 @@
 import {
   DataGridPremium,
+  GridApiPremium,
   GridAutosizeOptions,
   GridColDef,
   GridColumnHeaderParams,
@@ -10,7 +11,7 @@ import {
 } from "@mui/x-data-grid-premium";
 import NoSsr from "@mui/material/NoSsr";
 import Skeleton from "@mui/material/Skeleton";
-import { useMemo, useEffect, useCallback, useRef, ReactNode, CSSProperties } from "react";
+import { useMemo, useEffect, useCallback, useRef, ReactNode, CSSProperties, RefObject } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 import { CustomToolbar } from "./CustomToolbar";
@@ -106,7 +107,11 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
   }, [apiRef]);
 
   useEffect(() => {
-    return onReady?.();
+    if (!apiRef.current) return;
+    const cleanups = onReady?.(apiRef as RefObject<GridApiPremium>);
+    if (!cleanups) return;
+    if (Array.isArray(cleanups)) return () => cleanups.forEach(fn => fn());
+    return cleanups;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
