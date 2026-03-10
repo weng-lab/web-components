@@ -1,5 +1,5 @@
-import { DataGridPremiumProps, GridColDef, GridValidRowModel } from "@mui/x-data-grid-premium";
-import { ReactElement, ReactNode } from "react"; 
+import { DataGridPremiumProps, GridApiPremium, GridColDef, GridValidRowModel } from "@mui/x-data-grid-premium";
+import { RefObject, ReactElement, ReactNode } from "react";
 import { SvgIconOwnProps, TooltipProps } from "@mui/material";
 
 // Extend the GridColDef type to add optional tooltip to column
@@ -90,12 +90,18 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
   /**
    * Called once after the DataGrid has mounted and the apiRef is fully initialized.
    * Use this to subscribe to DataGrid events that don't have a corresponding event prop (e.g. `rowExpansionChange`).
-   * The return value is used as cleanup — returning the unsubscribe function from `subscribeEvent` handles cleanup automatically.
+   * Return a single unsubscribe function or an array of unsubscribe functions for cleanup.
    *
    * @example
-   * onReady={() => apiRef.current.subscribeEvent("rowExpansionChange", handler)}
+   * onReady={(apiRef) => apiRef.current.subscribeEvent("rowExpansionChange", handler)}
+   *
+   * @example
+   * onReady={(apiRef) => [
+   *   apiRef.current.subscribeEvent("rowExpansionChange", handler1),
+   *   apiRef.current.subscribeEvent("someOtherEvent", handler2),
+   * ]}
    */
-  onReady?: () => (() => void) | void
+  onReady?: (apiRef: RefObject<GridApiPremium>) => (() => void) | (() => void)[] | void
 }
 
 //This enforces that a downloadFileName is specified if a ReactElement is used as the label (no default )
