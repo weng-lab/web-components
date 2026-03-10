@@ -8,7 +8,9 @@ import {
   useGridApiRef,
   useKeepGroupedColumnsHidden,
 } from "@mui/x-data-grid-premium";
-import { useMemo, useEffect, useCallback, useRef } from "react";
+import NoSsr from "@mui/material/NoSsr";
+import Skeleton from "@mui/material/Skeleton";
+import { useMemo, useEffect, useCallback, useRef, ReactNode, CSSProperties } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 import { CustomToolbar } from "./CustomToolbar";
@@ -21,23 +23,18 @@ export const autosizeOptions: GridAutosizeOptions = {
   outliersFactor: 1.5,
 };
 
-const Table = (props: TableProps) => {
-  /**
-   * Provide defaults
-   * @todo obey the defaults specified in the theme.
-   * Ex: Overriding density like this overrides the defaults specified in the theme
-   */
+type CustomDataGridProps = Omit<TableProps, "emptyTableFallback" | "error"> & { rows: NonNullable<TableProps["rows"]> };
+
+const CustomDataGridPremium = (props: CustomDataGridProps) => {
   const {
     pagination = true,
     columns,
     density = "compact",
-    rows = [],
+    rows,
     apiRef: externalApiRef,
-    emptyTableFallback,
     showToolbar = true,
-    divHeight = {},
+    divHeight,
     sx = {},
-    error = false,
     slots = {},
     label,
     labelTooltip,
@@ -46,23 +43,21 @@ const Table = (props: TableProps) => {
     toolbarStyle,
     toolbarIconColor,
     initialState,
+    onReady,
     ...restDataGridProps
   } = props;
 
   // Create a ref for the wrapper div to measure container resizing
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const CustomToolbarWrapper = useMemo(() => {
-    const customToolbarProps = {
-      label,
-      downloadFileName,
-      labelTooltip,
-      toolbarSlot,
-      toolbarStyle,
-      toolbarIconColor,
-    };
-    return (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...customToolbarProps} />;
-  }, [label, labelTooltip, toolbarSlot]);
+  const toolbarPropsRef = useRef({ label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, toolbarIconColor });
+  toolbarPropsRef.current = { label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, toolbarIconColor };
+
+  // Stable component identity regardless of toolbar prop changes, so DataGrid never unmounts/remounts the toolbar slot
+  const CustomToolbarWrapper = useMemo(
+    () => (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...toolbarPropsRef.current} />,
+    []
+  );
 
   // This handles transforming columns of the TableColDef type back to GridColDef, dealing with adding the tooltip element to the RenderHeader
   const transformedColumns: GridColDef[] = useMemo(() => {
@@ -76,8 +71,8 @@ const Table = (props: TableProps) => {
       return {
         ...col,
         renderHeader: (params: GridColumnHeaderParams) => (
-          <HeaderWithTooltip 
-            params={params} 
+          <HeaderWithTooltip
+            params={params}
             tooltipTitle={col.tooltip!} // We know it exists here
             originalRenderHeader={col.renderHeader} // Pass the user's custom renderer if it exists
           />
@@ -86,20 +81,17 @@ const Table = (props: TableProps) => {
     });
   }, [columns]);
 
-  //Assign default ID if no ID is provided in the row data
-  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
-
   const internalApiRef = useGridApiRef();
   // prioritize using the provided apiRef if available, otherwise create a new one
   const apiRef = externalApiRef ?? internalApiRef;
 
   const handleResizeCols = useCallback(() => {
-    // need to check .autosizeCoumns since the current was being set with an empty object
+    // need to check .autosizeColumns since the current was being set with an empty object
     if (!apiRef.current?.autosizeColumns) return;
     apiRef.current.autosizeColumns(autosizeOptions);
   }, [apiRef]);
 
-  // trigger resize when rows or columns change so that rows/columns don't need to be memoized outisde of this component
+  // trigger resize when rows or columns change so that rows/columns don't need to be memoized outside of this component
   // otherwise sometimes would snap back to default widths when rows/columns change
   useEffect(() => {
     handleResizeCols();
@@ -113,6 +105,11 @@ const Table = (props: TableProps) => {
     });
   }, [apiRef]);
 
+  useEffect(() => {
+    return onReady?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Measure wrapper div for changes in size to trigger autosizeColumns
   // Both resize and viewportInnerSizeChange events on the DataGrid are triggered on column resize so couldn't use those instead
   useContainerResize(wrapperRef, handleResizeCols);
@@ -122,36 +119,13 @@ const Table = (props: TableProps) => {
     initialState,
   });
 
-  const shouldDisplayEmptyFallback = emptyTableFallback && rowsWithIds.length === 0 && !restDataGridProps.loading;
-
-  if (shouldDisplayEmptyFallback) {
-    return typeof emptyTableFallback === "string" ? (
-      <TableFallback message={emptyTableFallback} variant="empty" />
-    ) : (
-      emptyTableFallback
-    );
-  }
-
-  if (error) {
-    return <TableFallback message={`Error fetching ${label}`} variant="error" />;
-  }
-
   return (
-    <div
-      ref={wrapperRef}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        maxHeight: '100%',
-        ...divHeight,
-      }}
-    >
+    <div ref={wrapperRef} style={{ width: "100%", height: '100%' }}>
       <DataGridPremium
         apiRef={apiRef}
         columns={transformedColumns}
-        rows={rowsWithIds}
         autosizeOnMount
+        rows={rows}
         autosizeOptions={autosizeOptions}
         disableRowSelectionOnClick
         showToolbar={showToolbar}
@@ -172,6 +146,58 @@ const Table = (props: TableProps) => {
         {...restDataGridProps}
       />
     </div>
+  );
+};
+
+const TableContainer = ({ divHeight = {}, children }: { divHeight?: CSSProperties; children: ReactNode }) => (
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      ...divHeight,
+    }}
+  >
+    {children}
+  </div>
+);
+
+const TableSSRBoundary = ({ children }: { children: ReactNode }) => (
+  <NoSsr fallback={<Skeleton variant="rounded" width="100%" height="100%" sx={{ minHeight: 100 }} />}>
+    {children}
+  </NoSsr>
+);
+
+const Table = (props: TableProps) => {
+  const {
+    rows = [],
+    emptyTableFallback,
+    error = false,
+    label,
+    divHeight,
+    ...restProps
+  } = props;
+
+  //Assign default ID if no ID is provided in the row data
+  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
+
+  if (emptyTableFallback && rowsWithIds.length === 0 && !restProps.loading) {
+    return typeof emptyTableFallback === "string" ? (
+      <TableFallback message={emptyTableFallback} variant="empty" />
+    ) : (
+      emptyTableFallback
+    );
+  }
+
+  if (error) {
+    return <TableFallback message={`Error fetching ${label}`} variant="error" />;
+  }
+
+  return (
+    <TableContainer divHeight={divHeight}>
+      <TableSSRBoundary>
+        <CustomDataGridPremium rows={rowsWithIds} label={label} {...restProps} />
+      </TableSSRBoundary>
+    </TableContainer>
   );
 };
 

@@ -1,4 +1,5 @@
-import { GridRowId, TableProps } from "../Table";
+import { GridRowId } from "@mui/x-data-grid-premium";
+import { TableProps } from "../Table";
 
 export type EncodeBiosample = {
   name: string;

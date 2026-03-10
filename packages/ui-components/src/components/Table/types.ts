@@ -1,10 +1,10 @@
-import { DataGridPremiumProps, GridColDef } from "@mui/x-data-grid-premium";
+import { DataGridPremiumProps, GridColDef, GridValidRowModel } from "@mui/x-data-grid-premium";
 import { ReactElement, ReactNode } from "react"; 
 import { SvgIconOwnProps, TooltipProps } from "@mui/material";
 
 // Extend the GridColDef type to add optional tooltip to column
-export type TableColDef = GridColDef & { 
-  tooltip?: TooltipProps["title"]
+export type TableColDef<R extends GridValidRowModel = any, V = any, F = V> = GridColDef<R, V, F> & {
+  tooltip?: TooltipProps["title"];
 };
 
 //The props listed here are the props which are new or overridden compared to the MUI DataGridProProps
@@ -87,6 +87,15 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    * Color passed as `htmlColor` to columns, filter, download and search icons
    */
   toolbarIconColor?: SvgIconOwnProps["htmlColor"]
+  /**
+   * Called once after the DataGrid has mounted and the apiRef is fully initialized.
+   * Use this to subscribe to DataGrid events that don't have a corresponding event prop (e.g. `rowExpansionChange`).
+   * The return value is used as cleanup — returning the unsubscribe function from `subscribeEvent` handles cleanup automatically.
+   *
+   * @example
+   * onReady={() => apiRef.current.subscribeEvent("rowExpansionChange", handler)}
+   */
+  onReady?: () => (() => void) | void
 }
 
 //This enforces that a downloadFileName is specified if a ReactElement is used as the label (no default )
