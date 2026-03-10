@@ -253,6 +253,7 @@ const BarPlot = <T,>({
 
                             return (
                                 <SingleBar
+                                    key={d.id}
                                     bar={d}
                                     index={i}
                                     onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}

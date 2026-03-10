@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
 import { BarData, SingleBarProps } from "./types";
@@ -67,9 +67,8 @@ const SingleBar = <T,>({
     const animProps = getAnimationProps(animation, index, animationBuffer ?? .03);
 
     return (
-        <React.Fragment key={`frag-${index}`}>
+        <>
             <Group
-                key={index}
                 onClick={() => onBarClicked?.(bar)}
                 style={onBarClicked && { cursor: 'pointer' }}
                 onMouseMove={(event) => handleMouseMove(event, bar)}
@@ -87,10 +86,9 @@ const SingleBar = <T,>({
                 >
                     {bar.category}
                 </Text>
-                <Wrapper key={`node-${index}`} {...animProps}>
+                <Wrapper {...animProps}>
                     <Group>
                         <Bar
-                            key={`bar-${bar.label}`}
                             x={barX}
                             y={barY}
                             width={barWidth}
@@ -146,7 +144,7 @@ const SingleBar = <T,>({
                     </TooltipWithBounds>
                 </Portal>
             )}
-        </React.Fragment>
+        </>
     )
 }
 
