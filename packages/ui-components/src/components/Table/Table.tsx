@@ -33,7 +33,7 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
     rows,
     apiRef: externalApiRef,
     showToolbar = true,
-    divHeight = {},
+    divHeight,
     sx = {},
     slots = {},
     label,
@@ -120,7 +120,7 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
   });
 
   return (
-    <div ref={wrapperRef} style={{ width: "100%", flex: 1 }}>
+    <div ref={wrapperRef} style={{ width: "100%", height: '100%' }}>
       <DataGridPremium
         apiRef={apiRef}
         columns={transformedColumns}
@@ -154,8 +154,6 @@ const TableContainer = ({ divHeight = {}, children }: { divHeight?: CSSPropertie
     style={{
       display: "flex",
       flexDirection: "column",
-      width: "100%",
-      maxHeight: "100%",
       ...divHeight,
     }}
   >
@@ -197,7 +195,7 @@ const Table = (props: TableProps) => {
   return (
     <TableContainer divHeight={divHeight}>
       <TableSSRBoundary>
-        <CustomDataGridPremium rows={rowsWithIds} label={label} divHeight={divHeight} {...restProps} />
+        <CustomDataGridPremium rows={rowsWithIds} label={label} {...restProps} />
       </TableSSRBoundary>
     </TableContainer>
   );
