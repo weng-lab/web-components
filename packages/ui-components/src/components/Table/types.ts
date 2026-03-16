@@ -55,7 +55,7 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    * 
    * By default it's wrapped with:
    * ```jsx
-   * <div style={{ display: 'flex', flexDirection: 'column' }}>
+   * <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
    * ```
    * 
    * Additional height properties spread onto this `<div>`
