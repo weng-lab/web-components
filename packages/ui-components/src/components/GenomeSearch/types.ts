@@ -15,6 +15,7 @@ export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, f
   ccreLimit?: number;
   legacyCcreLimit?: number;
   studyLimit?: number;
+  useQueryOrder?: boolean;
 
   // slot props for internal MUI components
   slotProps?: {
