@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   isDomain,
 } from "./utils";
@@ -58,6 +58,32 @@ const Search: React.FC<GenomeSearchProps> = ({
     }
   );
 
+  const orderedResults = useMemo(() => {
+    const queryOrder = new Map(queries.map((query, index) => [query, index]));
+
+    const sortByQueryOrder = (results: Result[]) =>
+      [...results].sort((a, b) => {
+        const aIndex = queryOrder.get(a.type);
+        const bIndex = queryOrder.get(b.type);
+
+        if (aIndex === undefined && bIndex === undefined) {
+          return (a.title || "").localeCompare(b.title || "");
+        }
+
+        if (aIndex === undefined) return 1;
+        if (bIndex === undefined) return -1;
+
+        if (aIndex !== bIndex) return aIndex - bIndex;
+
+        return (a.title || "").localeCompare(b.title || "");
+      });
+
+    return {
+      data: data ? sortByQueryOrder(data) : data,
+      defaultResults: sortByQueryOrder(defaultResults),
+    };
+  }, [data, defaultResults, queries]);
+
   //Clear input on assembly change
   useEffect(() => {
     setInputValue("");
@@ -93,7 +119,7 @@ const Search: React.FC<GenomeSearchProps> = ({
       <Autocomplete
         onChange={onChange}
         value={selection as Result}
-        options={inputValue === "" ? defaultResults : loading || !data ? [] : data}
+        options={inputValue === "" ? orderedResults.defaultResults : loading || !orderedResults.data ? [] : orderedResults.data}
         getOptionLabel={(option: Result) => {
           return option.title || "";
         }}

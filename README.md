@@ -3,6 +3,7 @@ Shared web components across the Weng/Moore lab suite of genomics research tools
 
 ## Prerequisites
 Install pnpm - https://pnpm.io/installation
+Node Version - Vite requires Node.js version 20.19+ or 22.12+.
 <br/>
 This project should be relatively easy to migrate to yarn workspaces if needed, but was built using pnpm workspaces and the following will assume the use of pnpm
 
