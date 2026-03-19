@@ -13,5 +13,5 @@ export type * from "./components/BiosampleTable";
 export { GenomeSearch, useEntityAutocomplete } from "./components/GenomeSearch";
 export type { GenomeSearchProps, Result, Domain, ResultType } from "./components/GenomeSearch";
 
-export { TwoPaneLayout } from "./components/TwoPaneLayout";
+export { TwoPaneLayout, useSyncedTable, useTablePlotSync } from "./components/TwoPaneLayout";
 export type { TwoPanePlotConfig, TwoPaneLayoutProps, ResponsiveDirection } from "./components/TwoPaneLayout";

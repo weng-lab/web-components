@@ -80,7 +80,7 @@ const TwoPaneLayout = ({ TableComponent, plots, direction = "row" }: TwoPaneLayo
 
   const tableIconButton = (
     <Tooltip title={`${tableOpen ? "Hide" : "Show"} Table`}>
-      <IconButton onClick={handleToggleTable} sx={{ mx: -1 }}>
+      <IconButton onClick={handleToggleTable} sx={{ marginLeft: -1, marginRight: tableOpen ? -1 : 0 }}>
         <TableChartRounded color="primary" fontSize="small" />
       </IconButton>
     </Tooltip>
