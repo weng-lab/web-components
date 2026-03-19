@@ -4,11 +4,16 @@ import type { GridApi, GridSortModel } from "@mui/x-data-grid-premium";
 import AutoSortSwitch from "./AutoSortSwitch";
 import type { useTablePlotSync } from "./useTablePlotSync";
 import { useAutoSort } from "./useAutoSort";
-import { TableProps } from "../Table";
+import { TableColDef, TableProps } from "../Table";
+import { sortableTableCheckboxColumn } from "./SortableTableCheckboxColumn";
 
 type UseSyncedTableOptions<T> = {
   /** The tableProps object returned by useTablePlotSync */
   tableProps: ReturnType<typeof useTablePlotSync<T>>["tableProps"];
+  /**
+   * will be prepended with sortable checkbox column
+   */
+  columns: TableColDef[]
   /** Default sort model when autoSort is off */
   initialSort: GridSortModel;
   /** True when rows are pre-sorted (e.g. tissue grouping) — disables column sorting */
@@ -26,6 +31,7 @@ type UseSyncedTableReturn = {
  */
 export function useSyncedTable<T>({
   tableProps,
+  columns,
   initialSort,
   isPresorted,
 }: UseSyncedTableOptions<T>): UseSyncedTableReturn {
@@ -42,6 +48,8 @@ export function useSyncedTable<T>({
     [tableSyncOnReady, autoSortOnReady]
   );
 
+  const columnsWithCheckbox = useMemo(() => [sortableTableCheckboxColumn, ...columns], [columns])
+
   const syncedTableProps = useMemo(
     () => ({
       apiRef,
@@ -50,6 +58,7 @@ export function useSyncedTable<T>({
       divHeight: { height: "100%" } as const,
       initialState: { sorting: { sortModel: initialSort } },
       toolbarSlot: <AutoSortSwitch autoSort={autoSort} setAutoSort={setAutoSort} />,
+      columns: columnsWithCheckbox,
       ...restTableProps,
     }),
     [apiRef, composedOnReady, isPresorted, initialSort, autoSort, setAutoSort, restTableProps]
