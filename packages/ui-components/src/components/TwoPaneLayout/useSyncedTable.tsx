@@ -20,11 +20,6 @@ type UseSyncedTableOptions<T> = {
   isPresorted: boolean;
 };
 
-type UseSyncedTableReturn = {
-  /** Spread these onto <Table> — includes apiRef, onReady, selection, sorting, and toolbarSlot */
-  syncedTableProps: Partial<TableProps>;
-};
-
 /**
  * Composes useAutoSort with the tableProps from useTablePlotSync,
  * handling the onReady callback chaining and AutoSortSwitch rendering.
@@ -34,7 +29,7 @@ export function useSyncedTable<T>({
   columns,
   initialSort,
   isPresorted,
-}: UseSyncedTableOptions<T>): UseSyncedTableReturn {
+}: UseSyncedTableOptions<T>) {
   const { apiRef, onReady: tableSyncOnReady, ...restTableProps } = tableProps;
 
   const { autoSort, setAutoSort, onReady: autoSortOnReady } = useAutoSort(apiRef, initialSort, isPresorted);
@@ -55,12 +50,11 @@ export function useSyncedTable<T>({
       apiRef,
       onReady: composedOnReady,
       disableColumnSorting: isPresorted,
-      divHeight: { height: "100%" } as const,
       initialState: { sorting: { sortModel: initialSort } },
       toolbarSlot: <AutoSortSwitch autoSort={autoSort} setAutoSort={setAutoSort} />,
       columns: columnsWithCheckbox,
       ...restTableProps,
-    }),
+    }) satisfies Partial<TableProps>,
     [apiRef, composedOnReady, isPresorted, initialSort, autoSort, setAutoSort, restTableProps]
   );
 
