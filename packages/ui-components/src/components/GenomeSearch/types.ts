@@ -15,7 +15,6 @@ export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, f
   ccreLimit?: number;
   legacyCcreLimit?: number;
   studyLimit?: number;
-  useQueryOrder?: boolean;
 
   // slot props for internal MUI components
   slotProps?: {
@@ -45,7 +44,7 @@ export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Stud
 export type Result = {
   title?: string;
   description?: string;
-  type?: ResultType;
+  type: ResultType;
   id?: string;
   name?: string;
   domain?: Domain;

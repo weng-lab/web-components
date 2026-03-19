@@ -30,7 +30,6 @@ const Search: React.FC<GenomeSearchProps> = ({
   studyLimit = defaultLimit,
   onSearchSubmit,
   defaultResults = [],
-  useQueryOrder = false,
   style,
   sx,
   slots,
@@ -62,15 +61,17 @@ const Search: React.FC<GenomeSearchProps> = ({
   const orderedResults = useMemo(() => {
     const queryOrder = new Map(queries.map((query, index) => [query, index]));
 
-    const getQueryOrderIndex = (type?: Result["type"]) => {
-      if (!type) return Number.MAX_SAFE_INTEGER;
-      return queryOrder.get(type) ?? Number.MAX_SAFE_INTEGER;
-    };
-
     const sortByQueryOrder = (results: Result[]) =>
       [...results].sort((a, b) => {
-        const aIndex = getQueryOrderIndex(a.type);
-        const bIndex = getQueryOrderIndex(b.type);
+        const aIndex = queryOrder.get(a.type);
+        const bIndex = queryOrder.get(b.type);
+
+        if (aIndex === undefined && bIndex === undefined) {
+          return (a.title || "").localeCompare(b.title || "");
+        }
+
+        if (aIndex === undefined) return 1;
+        if (bIndex === undefined) return -1;
 
         if (aIndex !== bIndex) return aIndex - bIndex;
 
@@ -78,9 +79,10 @@ const Search: React.FC<GenomeSearchProps> = ({
       });
 
     return {
-      data: useQueryOrder && data ? sortByQueryOrder(data) : data,
+      data: data ? sortByQueryOrder(data) : data,
+      defaultResults: sortByQueryOrder(defaultResults),
     };
-  }, [data, defaultResults, queries, useQueryOrder]);
+  }, [data, defaultResults, queries]);
 
   //Clear input on assembly change
   useEffect(() => {
@@ -117,7 +119,7 @@ const Search: React.FC<GenomeSearchProps> = ({
       <Autocomplete
         onChange={onChange}
         value={selection as Result}
-        options={inputValue === "" ? defaultResults : loading || !orderedResults.data ? [] : orderedResults.data}
+        options={inputValue === "" ? orderedResults.defaultResults : loading || !orderedResults.data ? [] : orderedResults.data}
         getOptionLabel={(option: Result) => {
           return option.title || "";
         }}
