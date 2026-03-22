@@ -154,12 +154,20 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
   );
 };
 
-const TableContainer = ({ divHeight = {}, children }: { divHeight?: CSSProperties; children: ReactNode }) => (
+const TableContainer = ({
+  autoHeight,
+  divHeight = {},
+  children,
+}: {
+  autoHeight?: boolean;
+  divHeight?: TableProps["divHeight"];
+  children: ReactNode;
+}) => (
   <div
     style={{
       display: "flex",
       flexDirection: "column",
-      height: "min-content",
+      height: autoHeight ? "auto" : "100%",
       ...divHeight,
     }}
   >
@@ -199,7 +207,7 @@ const Table = (props: TableProps) => {
   }
 
   return (
-    <TableContainer divHeight={divHeight}>
+    <TableContainer divHeight={divHeight} autoHeight={restProps.autoHeight}>
       <TableSSRBoundary>
         <CustomDataGridPremium rows={rowsWithIds} label={label} {...restProps} />
       </TableSSRBoundary>

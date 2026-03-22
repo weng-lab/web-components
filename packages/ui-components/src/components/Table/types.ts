@@ -51,13 +51,10 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    */
   showToolbar?: DataGridPremiumProps["showToolbar"]
   /**
-   * Configures the height properties of the wrapper `<div>`. 
-   * 
-   * By default it's wrapped with:
-   * ```jsx
-   * <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-   * ```
-   * 
+   * Configures the height properties of the wrapper `<div>`.
+   *
+   * By default the wrapper uses `height: '100%'` (or `height: 'auto'` when `autoHeight` is set).
+   *
    * Additional height properties spread onto this `<div>`
    */
   divHeight?: {
