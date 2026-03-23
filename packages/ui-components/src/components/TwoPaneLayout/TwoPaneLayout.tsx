@@ -38,7 +38,7 @@ function useResolvedDirection(direction: ResponsiveDirection): Direction {
   return "column";
 }
 
-const TwoPaneLayout = ({ TableComponent, plots, direction = "row" }: TwoPaneLayoutProps) => {
+const TwoPaneLayout = ({ TableComponent, plots, direction = "row", columnHeight = "500px", rowHeight = "max(60vh, 600px)" }: TwoPaneLayoutProps) => {
   const [tab, setTab] = useState<number>(0);
   const [tableOpen, setTableOpen] = useState(true);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -51,7 +51,7 @@ const TwoPaneLayout = ({ TableComponent, plots, direction = "row" }: TwoPaneLayo
   const tabValue = Math.min(tab, plots.length - 1);
   const activePlot = plots[tabValue];
   const hasDownload = !!(activePlot?.onDownloadSVG || activePlot?.onDownloadPNG);
-  const paneHeight = isColumn ? "500px" : "max(60vh, 600px)";
+  const paneHeight = isColumn ? columnHeight : rowHeight;
 
   const handleSetTab = (newTab: number) => {
     setTab(newTab);

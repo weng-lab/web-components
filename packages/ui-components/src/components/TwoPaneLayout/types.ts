@@ -16,4 +16,6 @@ export type TwoPaneLayoutProps = {
   TableComponent: React.ReactNode;
   plots: readonly TwoPanePlotConfig[];
   direction?: ResponsiveDirection;
+  columnHeight?: string;
+  rowHeight?: string;
 };
