@@ -2,16 +2,15 @@ import React, { useRef, useEffect, useState, useMemo, useCallback, ReactNode } f
 import { AxisBottom } from "@visx/axis";
 import { scaleLinear } from "@visx/scale";
 import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
-import { Group } from "@visx/group";
 import { Text } from "@visx/text";
 
 export type Nucleotide = "A" | "C" | "G" | "T" | "-";
 
 const NUCLEOTIDE_COLORS: Record<Nucleotide, string> = {
-  A: "#228b22",
-  C: "blue",
-  G: "orange",
-  T: "red",
+  A: "#05ac05",
+  C: "#1668cb",
+  G: "#ffb700",
+  T: "#fd1414",
   "-": "white",
 };
 
@@ -44,8 +43,8 @@ export interface SequenceAlignmentPlotProps {
 }
 
 const AXIS_HEIGHT = 50;
-const SPECIES_BAR_WIDTH = 30;
-const HIGHLIGHTED_BAR_WIDTH = 10;
+const SPECIES_BAR_WIDTH = 12;
+const HIGHLIGHTED_BAR_WIDTH = 12;
 const PADDING = 10;
 const HIGHLIGHTED_AND_SPECIES_SVG_WIDTH = HIGHLIGHTED_BAR_WIDTH + PADDING + SPECIES_BAR_WIDTH + PADDING;
 const MIN_SCALE = 1;
