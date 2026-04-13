@@ -5,6 +5,8 @@ import { Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Ty
 import SearchIcon from "@mui/icons-material/Search";
 import React, { useState } from "react";
 
+const SCREEN_GQL_URL = "/api/screen-graphql";
+
 const meta = {
   title: "ui-components/GenomeSearch",
   component: GenomeSearch,
@@ -29,6 +31,7 @@ export const Default: Story = {
     sx: { width: 300 },
     slots: {},
     slotProps: {},
+    graphqlUrl: SCREEN_GQL_URL,
   },
 };
 export const InputSlot: Story = {
@@ -45,6 +48,7 @@ export const InputSlot: Story = {
     slots: {
       input: <TextField label="Search" variant="standard" color="secondary" />,
     },
+    graphqlUrl: SCREEN_GQL_URL,
   },
 };
 
@@ -69,6 +73,7 @@ export const ButtonSlotProps: Story = {
         sx: { paddingInline: 3 },
       },
     },
+    graphqlUrl: SCREEN_GQL_URL,
   },
 };
 
@@ -92,6 +97,7 @@ export const ButtonAndInputSlot: Story = {
       input: <TextField label="Search" variant="standard" color="secondary" />,
     },
     slotProps: {},
+    graphqlUrl: SCREEN_GQL_URL,
   },
 };
 
@@ -116,6 +122,7 @@ export const ClearOnAssemblyChange: Story = {
         sx: { paddingInline: 3 },
       },
     },
+    graphqlUrl: SCREEN_GQL_URL,
   },
   render: (args) => {
     const [assembly, setAssembly] = useState<"GRCh38" | "mm10">("GRCh38");
@@ -154,6 +161,7 @@ export const GencodeVersions: Story = {
     icreLimit: 3,
     snpLimit: 3,
     sx: { width: 300 },
+    graphqlUrl: SCREEN_GQL_URL,
   },
   render: (args) => {
     return (

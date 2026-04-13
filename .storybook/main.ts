@@ -1,5 +1,7 @@
 import { StorybookConfig } from "@storybook/react-vite";
 import { join, dirname } from "path"
+import { loadEnv } from "vite";
+import { proxyScreenGraphql } from "../lib/screen-proxy";
 
 /**
 * This function is used to resolve the absolute path of a package.
@@ -26,12 +28,40 @@ const config: StorybookConfig = {
     "name": getAbsolutePath('@storybook/react-vite'),
     "options": {}
   },
-  // This defines runtime env variable so that it can be called by MUI X component's story decorators
-  viteFinal: async (config) => {
+  viteFinal: async (config, { configType }) => {
+    const mode = configType === "PRODUCTION" ? "production" : "development";
+    const env = loadEnv(mode, process.cwd(), "");
+    process.env.SCREEN_API_KEY = env.SCREEN_API_KEY;
+    process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY = env.NEXT_PUBLIC_MUI_X_LICENSE_KEY;
+
+    // Bundle the MUI X license key into the client — it's a public runtime token.
+    // Do NOT add SCREEN_API_KEY here; it must stay server-side.
     config.define = {
       ...config.define,
-      'process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY': JSON.stringify(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY),
+      'process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY': JSON.stringify(env.NEXT_PUBLIC_MUI_X_LICENSE_KEY),
     };
+
+    config.plugins = config.plugins ?? [];
+    config.plugins.push({
+      name: "screen-graphql-dev-proxy",
+      configureServer(server) {
+        server.middlewares.use("/api/screen-graphql", async (req, res) => {
+          if (req.method !== "POST") { res.statusCode = 405; res.end(); return; }
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) chunks.push(chunk as Buffer);
+          try {
+            const result = await proxyScreenGraphql(Buffer.concat(chunks).toString("utf8"));
+            res.statusCode = result.status;
+            res.setHeader("Content-Type", result.contentType);
+            res.end(result.body);
+          } catch (err) {
+            res.statusCode = 500;
+            res.end(String(err));
+          }
+        });
+      },
+    });
+
     return config;
   },
 };
