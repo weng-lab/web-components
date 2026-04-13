@@ -27,6 +27,7 @@ type Limits = {
 type HookOptions = {
   queries: ResultType[];
   assembly: GenomeSearchProps["assembly"];
+  graphqlUrl: string;
   geneVersion?: GenomeSearchProps["geneVersion"];
   limits?: Limits;
   showiCREFlag?: boolean;
@@ -45,7 +46,7 @@ export function useEntityAutocomplete(
   options: HookOptions
 ): HookResult {
   const inputs = Array.isArray(inputsArg) ? inputsArg : [inputsArg];
-  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 200 } = options;
+  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 200, graphqlUrl } = options;
 
   const [data, setData] = useState<Result[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,7 +105,7 @@ export function useEntityAutocomplete(
               if (qGene && !isDomain(input)) {
                 const geneLimit = limits?.gene ?? 3;
                 fetchPromises.push(
-                  getGenes(input, assembly, geneLimit, geneVersion, abortSignal).then((geneResults) =>
+                  getGenes(input, assembly, geneLimit, geneVersion, graphqlUrl, abortSignal).then((geneResults) =>
                     geneResults ? geneResultList(geneResults as any, geneLimit, typeof geneVersion === "object") : []
                   )
                 );
@@ -114,7 +115,7 @@ export function useEntityAutocomplete(
               if (qCCRE && input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh" : "em")) {
                 const ccreLimit = limits?.ccre ?? 3;
                 fetchPromises.push(
-                  getCCREs(input, assembly, ccreLimit, showiCREFlag || false, abortSignal).then((ccreData) =>
+                  getCCREs(input, assembly, ccreLimit, showiCREFlag || false, graphqlUrl, abortSignal).then((ccreData) =>
                     ccreData?.data?.cCREAutocompleteQuery
                       ? ccreResultList(ccreData.data.cCREAutocompleteQuery, ccreLimit)
                       : []
@@ -130,7 +131,7 @@ export function useEntityAutocomplete(
               if (qLegacyCcre) {
                 const legacyCcreLimit = limits?.legacyCcre ?? 3;
                 fetchPromises.push(
-                  getLegacyCCREs(input, assembly, abortSignal).then((legacyData) =>
+                  getLegacyCCREs(input, assembly, graphqlUrl, abortSignal).then((legacyData) =>
                     legacyData?.data?.ccreMappings
                       ? legacyCcreResultList(legacyData.data.ccreMappings, legacyCcreLimit)
                       : []
@@ -143,7 +144,7 @@ export function useEntityAutocomplete(
                 if (qICRE && input.toLowerCase().startsWith("eh")) {
                   const icreLimit = limits?.icre ?? 3;
                   fetchPromises.push(
-                    getICREs(input, icreLimit, abortSignal).then((icreData) =>
+                    getICREs(input, icreLimit, graphqlUrl, abortSignal).then((icreData) =>
                       icreData?.data?.iCREQuery ? icreResultList(icreData.data.iCREQuery, icreLimit) : []
                     )
                   );
@@ -152,7 +153,7 @@ export function useEntityAutocomplete(
                 if (qSnp && input.toLowerCase().startsWith("rs")) {
                   const snpLimit = limits?.snp ?? 3;
                   fetchPromises.push(
-                    getSNPs(input, assembly, snpLimit, abortSignal).then((snpData) =>
+                    getSNPs(input, assembly, snpLimit, graphqlUrl, abortSignal).then((snpData) =>
                       snpData?.data?.snpAutocompleteQuery
                         ? snpResultList(snpData.data.snpAutocompleteQuery, snpLimit)
                         : []
@@ -163,7 +164,7 @@ export function useEntityAutocomplete(
                 if (qStudy && !isDomain(input) && input !== "") {
                   const studyLimit = limits?.study ?? 3;
                   fetchPromises.push(
-                    getStudys(input, studyLimit, abortSignal).then((studyData) =>
+                    getStudys(input, studyLimit, graphqlUrl, abortSignal).then((studyData) =>
                       studyData?.data?.getGWASStudiesMetadata
                         ? studyResultList(studyData.data.getGWASStudiesMetadata, studyLimit)
                         : []
@@ -216,7 +217,7 @@ export function useEntityAutocomplete(
         timeoutRef.current = null;
       }
     };
-  }, [JSON.stringify(inputs), queries.join("|"), assembly, JSON.stringify(limits), JSON.stringify(geneVersion), showiCREFlag, debounceMs]);
+  }, [JSON.stringify(inputs), queries.join("|"), assembly, JSON.stringify(limits), JSON.stringify(geneVersion), showiCREFlag, debounceMs, graphqlUrl]);
 
   return { data, loading, error };
 }

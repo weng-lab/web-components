@@ -125,8 +125,8 @@ query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [
 }
 `;
 
-export const getICREs = async (value: string, limit: number, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getICREs = async (value: string, limit: number, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: ICRE_AUTOCOMPLETE_QUERY,
@@ -141,8 +141,8 @@ export const getICREs = async (value: string, limit: number, signal?: AbortSigna
   return response.json();
 };
 
-export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: CCRE_AUTOCOMPLETE_QUERY,
@@ -159,8 +159,8 @@ export const getCCREs = async (value: string, assembly: GenomeSearchProps["assem
   return response.json();
 };
 
-export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: LEGACY_CCRE_QUERY,
@@ -180,6 +180,7 @@ export const getGenes = async (
   assembly: GenomeSearchProps["assembly"],
   limit: number,
   geneVersions: GenomeSearchProps["geneVersion"],
+  url: string,
   signal?: AbortSignal
 ) => {
   let versions = geneVersions
@@ -194,7 +195,7 @@ export const getGenes = async (
   // Fetch genes for all versions
   const versionResults = await Promise.all(
     versions.map((version) =>
-      fetch("https://screen.api.wenglab.org/graphql", {
+      fetch(url, {
         method: "POST",
         body: JSON.stringify({
           query: GENE_AUTOCOMPLETE_QUERY,
@@ -256,8 +257,8 @@ async function getDescription(name: string): Promise<string | null> {
   return matches && matches.length >= 1 ? matches[0][4] : null;
 }
 
-export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: SNP_AUTOCOMPLETE_QUERY,
@@ -273,8 +274,8 @@ export const getSNPs = async (value: string, assembly: GenomeSearchProps["assemb
   return response.json();
 };
 
-export const getStudys = async (value: string, limit: number, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getStudys = async (value: string, limit: number, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: GWAS_AUTOCOMPLETE_QUERY,

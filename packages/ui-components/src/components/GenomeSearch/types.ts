@@ -16,6 +16,11 @@ export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, f
   legacyCcreLimit?: number;
   studyLimit?: number;
 
+  /** GraphQL endpoint for autocomplete fetches. The wenglab gateway requires
+   *  a server-injected secret header, so this should point at an app route
+   *  handler (e.g. "/api/graphql") that attaches the key server-side. */
+  graphqlUrl: string;
+
   // slot props for internal MUI components
   slotProps?: {
     input?: Partial<TextFieldProps>;

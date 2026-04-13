@@ -28,6 +28,7 @@ const Search: React.FC<GenomeSearchProps> = ({
   ccreLimit = defaultLimit,
   legacyCcreLimit = defaultLimit,
   studyLimit = defaultLimit,
+  graphqlUrl,
   onSearchSubmit,
   defaultResults = [],
   style,
@@ -55,6 +56,7 @@ const Search: React.FC<GenomeSearchProps> = ({
       },
       showiCREFlag,
       debounceMs: 100,
+      graphqlUrl,
     }
   );
 
