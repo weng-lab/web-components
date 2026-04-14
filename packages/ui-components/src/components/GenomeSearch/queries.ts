@@ -1,42 +1,26 @@
 import { GeneResponse, GenomeSearchProps } from "./types";
 
 export const SNP_AUTOCOMPLETE_QUERY = `
-  query suggestions($assembly: String!, $snpid: String!) {
-      snpAutocompleteQuery(assembly: $assembly, snpid: $snpid) {
-          id
-          coordinates {
-              chromosome
-              start
-              end
-          }
+  query suggestions($assembly: String!, $snpid: String!, $limit: Int) {
+    snpAutocompleteQuery(assembly: $assembly, snpid: $snpid, limit: $limit) {
+      id
+      coordinates {
+        chromosome
+        start
+        end
       }
+    }
   }
 `;
 
 export const GENE_AUTOCOMPLETE_QUERY = `
   query Genes(
-      $id: [String]
-      $name: [String]
-      $strand: String
-      $chromosome: String
-      $start: Int
-      $end: Int
-      $gene_type: String
-      $havana_id: String
       $name_prefix: [String!]
       $limit: Int
       $assembly: String!
       $version: Int
   ) {
       gene(
-          id: $id
-          name: $name
-          strand: $strand
-          chromosome: $chromosome
-          start: $start
-          end: $end
-          gene_type: $gene_type
-          havana_id: $havana_id
           name_prefix: $name_prefix
           limit: $limit
           assembly: $assembly
@@ -109,8 +93,8 @@ export const LEGACY_CCRE_QUERY = `
 `
 
 export const GWAS_AUTOCOMPLETE_QUERY = `
-query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [String], $parent_terms: [String]){
-    getGWASStudiesMetadata(studyid: $studyid, limit: $limit, parent_terms: $parent_terms, studyname_prefix: $studyname_prefix )
+query getGWASStudyMetadata($limit: Int, $studyname_prefix: [String]){
+    getGWASStudiesMetadata(limit: $limit, studyname_prefix: $studyname_prefix )
     {
         studyid
         author
