@@ -4,8 +4,10 @@ import { Result } from "./types";
 import { Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import React, { useState } from "react";
+import { http, HttpResponse, delay } from "msw";
+import { within, userEvent } from "storybook/test";
 
-const SCREEN_GQL_URL = "https://screen.api.wenglab.org/graphql";
+const SCREEN_GQL_URL = "https://screen.api.wenglab.org/graphql"; //These will be caught by 
 
 const meta = {
   title: "ui-components/GenomeSearch",
@@ -148,6 +150,28 @@ export const ClearOnAssemblyChange: Story = {
         <GenomeSearch assembly={assembly} {...Autocompleteprops} />
       </Stack>
     );
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    ...Default.args,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.post(SCREEN_GQL_URL, async () => {
+          await delay("infinite");
+          return HttpResponse.json({});
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = await canvas.findByRole("combobox");
+    await userEvent.click(input);
+    await userEvent.type(input, "SOX");
   },
 };
 
