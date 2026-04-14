@@ -55,6 +55,7 @@ export const ICRE_AUTOCOMPLETE_QUERY = `
 
 export const CCRE_AUTOCOMPLETE_QUERY = `
   query cCREAutocompleteQuery(
+    $accession: [String!]
     $accession_prefix: [String!]
     $assembly: String!
     $includeiCREs: Boolean
@@ -64,6 +65,7 @@ export const CCRE_AUTOCOMPLETE_QUERY = `
       includeiCREs: $includeiCREs
       assembly: $assembly
       limit: $limit
+      accession: $accession
       accession_prefix: $accession_prefix
     ) {
       accession
@@ -126,14 +128,17 @@ export const getICREs = async (value: string, limit: number, url: string, signal
 };
 
 export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean, url: string, signal?: AbortSignal) => {
+  const isExactAccession = value.length === 12;
   const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: CCRE_AUTOCOMPLETE_QUERY,
       variables: {
-        accession_prefix: [value],
-        assembly: assembly.toLowerCase(),
-        limit: limit,
+        ...(isExactAccession
+          ? { accession: [value.toUpperCase()] }
+          : { accession_prefix: [value] }),
+        assembly,
+        limit,
         includeiCREs: showiCREFlag,
       },
     }),
