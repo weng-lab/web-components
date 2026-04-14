@@ -14,13 +14,13 @@
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "devDependencies": {
-    "@mui/x-data-grid-premium": "^8.18.0",
-    "@mui/x-license": "^8.18.0",
     "@chromatic-com/storybook": "^4",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
+    "@mui/x-data-grid-premium": "^8.18.0",
+    "@mui/x-license": "^8.18.0",
     "@storybook/addon-a11y": "9.0.10",
     "@storybook/addon-docs": "9.0.10",
     "@storybook/addon-themes": "9.0.10",
@@ -52,6 +52,8 @@
     "@vitest/browser": "^3.2.3",
     "@vitest/coverage-v8": "^3.2.3",
     "babel-plugin-react-compiler": "^1.0.0",
+    "msw": "^2.13.3",
+    "msw-storybook-addon": "^2.0.7",
     "playwright": "^1.53.0",
     "prop-types": "^15.8.1",
     "react": "^19.1.0",
@@ -61,5 +63,10 @@
     "vite": "^7.0.0",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.3"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

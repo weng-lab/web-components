@@ -5,7 +5,7 @@ import { Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Ty
 import SearchIcon from "@mui/icons-material/Search";
 import React, { useState } from "react";
 
-const SCREEN_GQL_URL = "/api/screen-graphql";
+const SCREEN_GQL_URL = "https://screen.api.wenglab.org/graphql";
 
 const meta = {
   title: "ui-components/GenomeSearch",
