@@ -1,4 +1,4 @@
-import { GeneResponse, GenomeSearchProps } from "./types";
+import { GenomeSearchProps } from "./types";
 
 export const SNP_AUTOCOMPLETE_QUERY = `
   query suggestions($assembly: String!, $snpid: String!, $limit: Int) {
@@ -238,12 +238,16 @@ const toTitleCase = (str: string) =>
     .join(" ");
 
 async function getDescription(name: string): Promise<string | null> {
-  const response = await fetch(
-    "https://clinicaltables.nlm.nih.gov/api/ncbi_genes/v3/search?authenticity_token=&terms=" + name.toUpperCase()
-  );
-  const data = await response.json();
-  const matches = data[3] && data[3].filter((x: string[]) => x[3] === name.toUpperCase());
-  return matches && matches.length >= 1 ? matches[0][4] : null;
+  try {
+    const response = await fetch(
+      "https://clinicaltables.nlm.nih.gov/api/ncbi_genes/v3/search?authenticity_token=&terms=" + name.toUpperCase()
+    );
+    const data = await response.json();
+    const matches = data[3] && data[3].filter((x: string[]) => x[3] === name.toUpperCase());
+    return matches && matches.length >= 1 ? matches[0][4] : null;
+  } catch {
+    return null;
+  }
 }
 
 export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, url: string, signal?: AbortSignal) => {

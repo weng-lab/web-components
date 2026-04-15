@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { isDomain } from "./utils";
 import {
-  isDomain,
-} from "./utils";
-import { AutocompleteProps, Box, Button, ButtonProps, TextField, TextFieldProps, Typography } from "@mui/material";
+  AutocompleteRenderGroupParams,
+  Box,
+  Button,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { Autocomplete } from "@mui/material";
 import { GenomeSearchProps, Result } from "./types";
 import { useEntityAutocomplete } from "./useEntityAutocomplete";
-
-const defaultLimit = 3
 
 /**
  * An autocomplete search component for genomic landmarks such as genes, SNPs, ICRs, and CCRs.
@@ -17,17 +19,12 @@ const defaultLimit = 3
  * You must also provide a function to call when a result is selected, which will run when the user clicks the button.
  * @param props - extends MUI AutocompleteProps and includes additional props specific to this component
  */
-const Search: React.FC<GenomeSearchProps> = ({
+function GenomeSearch({
   queries,
   assembly,
   showiCREFlag,
   geneVersion,
-  geneLimit = defaultLimit,
-  snpLimit = defaultLimit,
-  icreLimit = defaultLimit,
-  ccreLimit = defaultLimit,
-  legacyCcreLimit = defaultLimit,
-  studyLimit = defaultLimit,
+  limit,
   graphqlUrl,
   onSearchSubmit,
   defaultResults = [],
@@ -36,24 +33,35 @@ const Search: React.FC<GenomeSearchProps> = ({
   slots,
   slotProps,
   ...autocompleteProps
-}) => {
+}: GenomeSearchProps) {
   const [inputValue, setInputValue] = useState("");
   const [selection, setSelection] = useState<Result | null>(null);
 
+  const {
+    input: inputSlot,
+    button: buttonSlot,
+    box: boxSlot,
+    ...muiSlots
+  } = slots ?? {};
+
+  const {
+    input: inputSlotProps,
+    button: buttonSlotProps,
+    box: boxSlotProps,
+    ...muiSlotProps
+  } = slotProps ?? {};
+
+  const InputSlot = inputSlot ?? TextField;
+  const ButtonSlot = buttonSlot ?? Button;
+  const BoxSlot = boxSlot ?? Box;
+
   const { data, loading } = useEntityAutocomplete(
-    inputValue && inputValue !== "" ? [inputValue] : [],
+    inputValue ? [inputValue] : [],
     {
       queries,
       assembly,
       geneVersion,
-      limits: {
-        gene: geneLimit,
-        snp: snpLimit,
-        icre: icreLimit,
-        ccre: ccreLimit,
-        legacyCcre: legacyCcreLimit,
-        study: studyLimit,
-      },
+      limit,
       showiCREFlag,
       debounceMs: 100,
       graphqlUrl,
@@ -62,29 +70,45 @@ const Search: React.FC<GenomeSearchProps> = ({
 
   const orderedResults = useMemo(() => {
     const queryOrder = new Map(queries.map((query, index) => [query, index]));
+    const query = inputValue.toLowerCase();
+    const skipRelevance = isDomain(inputValue);
+
+    const relevanceRank = (title: string) => {
+      if (skipRelevance || !query) return 3;
+      if (title === query) return 0;
+      if (title.startsWith(query)) return 1;
+      if (title.includes(query)) return 2;
+      return 3;
+    };
 
     const sortByQueryOrder = (results: Result[]) =>
       [...results].sort((a, b) => {
         const aIndex = queryOrder.get(a.type);
         const bIndex = queryOrder.get(b.type);
 
-        if (aIndex === undefined && bIndex === undefined) {
-          return (a.title || "").localeCompare(b.title || "");
+        // 1. Group order — keep options that share a group contiguous.
+        if (aIndex === undefined && bIndex !== undefined) return 1;
+        if (bIndex === undefined && aIndex !== undefined) return -1;
+        if (aIndex !== undefined && bIndex !== undefined && aIndex !== bIndex) {
+          return aIndex - bIndex;
         }
 
-        if (aIndex === undefined) return 1;
-        if (bIndex === undefined) return -1;
+        // 2. Relevance to inputValue within a group.
+        const aTitle = (a.title || "").toLowerCase();
+        const bTitle = (b.title || "").toLowerCase();
+        const aRank = relevanceRank(aTitle);
+        const bRank = relevanceRank(bTitle);
+        if (aRank !== bRank) return aRank - bRank;
 
-        if (aIndex !== bIndex) return aIndex - bIndex;
-
-        return (a.title || "").localeCompare(b.title || "");
+        // 3. Alphabetical fallback.
+        return aTitle.localeCompare(bTitle);
       });
 
     return {
       data: data ? sortByQueryOrder(data) : data,
       defaultResults: sortByQueryOrder(defaultResults),
     };
-  }, [data, defaultResults, queries]);
+  }, [data, defaultResults, queries, inputValue]);
 
   //Clear input on assembly change
   useEffect(() => {
@@ -108,104 +132,64 @@ const Search: React.FC<GenomeSearchProps> = ({
         }
       }
     },
-    [data, setSelection, onSearchSubmit]
+    [data, inputValue, onSearchSubmit]
   );
 
-  const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result) => {
+  const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result | null) => {
     setSelection(newValue);
     setInputValue(newValue?.title || ""); //needed so that the matching to inputValue works on enter press after selection
   };
 
   return (
-    <Box display="flex" flexDirection="row" gap={2} style={{ ...style }} sx={{ ...sx }} {...slotProps?.box}>
+    <BoxSlot display="flex" flexDirection="row" gap={2} style={style} sx={sx} {...boxSlotProps}>
       <Autocomplete
+        sx={{ flex: 1 }}
         onChange={onChange}
-        value={selection as Result}
+        value={selection}
         options={inputValue === "" ? orderedResults.defaultResults : loading || !orderedResults.data ? [] : orderedResults.data}
         getOptionLabel={(option: Result) => {
           return option.title || "";
         }}
         groupBy={(option: Result) => option.type || ""}
-        renderGroup={(params) => renderGroup(params, inputValue)}
+        renderGroup={renderGroup}
         noOptionsText={noOptionsText(inputValue, loading, data)}
         isOptionEqualToValue={(option, value) => option.title === value.title}
         renderOption={renderOptions}
         filterOptions={(x) => x}
-        renderInput={(params) => {
-          if (slots && slots.input) {
-            return React.cloneElement(slots.input as React.ReactElement<TextFieldProps>, {
-              ...params,
-              onKeyDown: handleKeyDown,
-              value: inputValue,
-              onChange: (event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value),
-            });
-          }
-          return (
-            <TextField
-              {...params}
-              label="Search"
-              onKeyDown={handleKeyDown}
-              value={inputValue}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
-              {...slotProps?.input}
-            />
-          );
-        }}
-        style={style}
-        sx={sx}
-        {...(autocompleteProps as Partial<AutocompleteProps<Result, false, true, false, React.ElementType>>)}
+        renderInput={(params) => (
+          <InputSlot
+            {...params}
+            label="Search"
+            onKeyDown={handleKeyDown}
+            value={inputValue}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
+            {...inputSlotProps}
+          />
+        )}
+        slots={muiSlots}
+        slotProps={muiSlotProps}
+        {...autocompleteProps}
       />
-      {/* Submit Button */}
-      {slots && slots.button ? (
-        React.cloneElement(slots.button as React.ReactElement<ButtonProps, string | React.JSXElementConstructor<any>>, {
-          onClick: () => onSubmit(),
-        })
-      ) : (
-        <Button variant="contained" onClick={() => onSubmit()} {...slotProps?.button}>
-          {slotProps?.button?.children || "Go"}
-        </Button>
-      )}
-    </Box>
+      <ButtonSlot variant="contained" onClick={onSubmit} {...buttonSlotProps}>
+        {buttonSlotProps?.children ?? "Go"}
+      </ButtonSlot>
+    </BoxSlot>
   );
-};
+}
 
 /**
- * Renders the group of options. Orders the options by relevance to the input value.
- * @param params - The params object from the Autocomplete component
- * @param inputValue - The current input value
- * @returns A rendered group of options
+ * Renders the group of options. Relevance ordering happens upstream in
+ * `orderedResults` so that the options array and visual order stay in sync —
+ * reordering `<li>`s here would desync MUI's `data-option-index`-based
+ * keyboard navigation.
  */
-function renderGroup(params: any, inputValue: string) {
-  // Sort items within each group by title match relevance
-  const sortedOptions =
-    Array.isArray(params.children) && !isDomain(inputValue)
-      ? params.children.sort((a: any, b: any) => {
-          const aTitle = (a.props?.children?.props?.children?.[0]?.props?.children || "").toLowerCase();
-          const bTitle = (b.props?.children?.props?.children?.[0]?.props?.children || "").toLowerCase();
-          const query = inputValue.toLowerCase();
-          // Exact matches first
-          if (aTitle === query && bTitle !== query) return -1;
-          if (bTitle === query && aTitle !== query) return 1;
-
-          // Starts with query second
-          if (aTitle.startsWith(query) && !bTitle.startsWith(query)) return -1;
-          if (bTitle.startsWith(query) && !aTitle.startsWith(query)) return 1;
-
-          // Contains query third
-          if (aTitle.includes(query) && !bTitle.includes(query)) return -1;
-          if (bTitle.includes(query) && !aTitle.includes(query)) return 1;
-
-          // Alphabetical order for equal relevance
-          return aTitle.localeCompare(bTitle);
-        })
-      : params.children;
-
+function renderGroup(params: AutocompleteRenderGroupParams) {
   return (
     <div key={params.key}>
       <Typography variant="subtitle2" sx={{ color: "gray", paddingInline: 1.5, paddingBlock: 1 }}>
         {params.group}
       </Typography>
-      {sortedOptions}
+      {params.children}
     </div>
   );
 }
@@ -255,15 +239,6 @@ function renderOptions(props: any, option: Result) {
       </Box>
     </li>
   );
-}
-
-/**
- * Wraps the Search component in a QueryClientProvider.
- * @param props - The props object from the Autocomplete component
- * @returns A wrapped Search component
- */
-function GenomeSearch(props: GenomeSearchProps) {
-  return <Search {...props} />;
 }
 
 export default GenomeSearch;

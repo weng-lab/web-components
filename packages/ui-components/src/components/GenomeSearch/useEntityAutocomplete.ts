@@ -14,22 +14,14 @@ import {
 } from "./utils";
 import { GenomeSearchProps, Result, ResultType } from "./types";
 
-type Limits = {
-  gene?: number;
-  snp?: number;
-  icre?: number;
-  ccre?: number;
-  legacyCcre?: number;
-  study?: number;
-  ome?: number;
-};
+export const DEFAULT_LIMIT = 3;
 
 type HookOptions = {
   queries: ResultType[];
   assembly: GenomeSearchProps["assembly"];
   graphqlUrl: string;
   geneVersion?: GenomeSearchProps["geneVersion"];
-  limits?: Limits;
+  limit?: GenomeSearchProps["limit"];
   showiCREFlag?: boolean;
   debounceMs?: number;
 };
@@ -46,7 +38,10 @@ export function useEntityAutocomplete(
   options: HookOptions
 ): HookResult {
   const inputs = Array.isArray(inputsArg) ? inputsArg : [inputsArg];
-  const { queries, assembly, geneVersion, limits, showiCREFlag, debounceMs = 200, graphqlUrl } = options;
+  const { queries, assembly, geneVersion, limit, showiCREFlag, debounceMs = 200, graphqlUrl } = options;
+
+  const getLimit = (type: ResultType): number =>
+    typeof limit === "number" ? limit : limit?.[type] ?? DEFAULT_LIMIT;
 
   const [data, setData] = useState<Result[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,6 +49,11 @@ export function useEntityAutocomplete(
 
   const timeoutRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const inputsKey = JSON.stringify(inputs);
+  const limitKey = JSON.stringify(limit);
+  const geneVersionKey = JSON.stringify(geneVersion);
+  const queriesKey = queries.join("|");
 
   useEffect(() => {
     // clear any pending timer and abort previous requests
@@ -82,6 +82,15 @@ export function useEntityAutocomplete(
     abortControllerRef.current = new AbortController();
     const abortSignal = abortControllerRef.current.signal;
 
+    const qGene = queries.includes("Gene");
+    const qSnp = queries.includes("SNP");
+    const qICRE = queries.includes("iCRE");
+    const qCCRE = queries.includes("cCRE");
+    const qLegacyCcre = queries.includes("Legacy cCRE");
+    const qCoordinate = queries.includes("Coordinate");
+    const qStudy = queries.includes("Study");
+    const qOme = queries.includes("Ome");
+
     timeoutRef.current = window.setTimeout(() => {
       (async () => {
         try {
@@ -89,21 +98,12 @@ export function useEntityAutocomplete(
 
           await Promise.all(
             activeInputs.map(async (input) => {
-              const qGene = queries.includes("Gene");
-              const qSnp = queries.includes("SNP");
-              const qICRE = queries.includes("iCRE");
-              const qCCRE = queries.includes("cCRE");
-              const qLegacyCcre = queries.includes("Legacy cCRE");
-              const qCoordinate = queries.includes("Coordinate");
-              const qStudy = queries.includes("Study");
-              const qOme = queries.includes("Ome");
-
               // array for fetch promises (so that we can Promise.all them in parallel)
               const fetchPromises: Promise<Result[]>[] = [];
 
               // Genes
               if (qGene && !isDomain(input)) {
-                const geneLimit = limits?.gene ?? 3;
+                const geneLimit = getLimit("Gene");
                 fetchPromises.push(
                   getGenes(input, assembly, geneLimit, geneVersion, graphqlUrl, abortSignal).then((geneResults) =>
                     geneResults ? geneResultList(geneResults as any, geneLimit, typeof geneVersion === "object") : []
@@ -113,7 +113,7 @@ export function useEntityAutocomplete(
 
               // cCRE - check beginning of input to make sure it matches that assembly
               if (qCCRE && input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh" : "em")) {
-                const ccreLimit = limits?.ccre ?? 3;
+                const ccreLimit = getLimit("cCRE");
                 fetchPromises.push(
                   getCCREs(input, assembly, ccreLimit, showiCREFlag || false, graphqlUrl, abortSignal).then((ccreData) =>
                     ccreData?.data?.cCREAutocompleteQuery
@@ -129,7 +129,7 @@ export function useEntityAutocomplete(
               }
 
               if (qLegacyCcre) {
-                const legacyCcreLimit = limits?.legacyCcre ?? 3;
+                const legacyCcreLimit = getLimit("Legacy cCRE");
                 fetchPromises.push(
                   getLegacyCCREs(input, assembly, graphqlUrl, abortSignal).then((legacyData) =>
                     legacyData?.data?.ccreMappings
@@ -142,7 +142,7 @@ export function useEntityAutocomplete(
               // Human only fetches
               if (assembly === "GRCh38") {
                 if (qICRE && input.toLowerCase().startsWith("eh")) {
-                  const icreLimit = limits?.icre ?? 3;
+                  const icreLimit = getLimit("iCRE");
                   fetchPromises.push(
                     getICREs(input, icreLimit, graphqlUrl, abortSignal).then((icreData) =>
                       icreData?.data?.iCREQuery ? icreResultList(icreData.data.iCREQuery, icreLimit) : []
@@ -151,7 +151,7 @@ export function useEntityAutocomplete(
                 }
 
                 if (qSnp && input.toLowerCase().startsWith("rs")) {
-                  const snpLimit = limits?.snp ?? 3;
+                  const snpLimit = getLimit("SNP");
                   fetchPromises.push(
                     getSNPs(input, assembly, snpLimit, graphqlUrl, abortSignal).then((snpData) =>
                       snpData?.data?.snpAutocompleteQuery
@@ -162,7 +162,7 @@ export function useEntityAutocomplete(
                 }
 
                 if (qStudy && !isDomain(input) && input !== "") {
-                  const studyLimit = limits?.study ?? 3;
+                  const studyLimit = getLimit("Study");
                   fetchPromises.push(
                     getStudys(input, studyLimit, graphqlUrl, abortSignal).then((studyData) =>
                       studyData?.data?.getGWASStudiesMetadata
@@ -173,7 +173,7 @@ export function useEntityAutocomplete(
                 }
 
                 if (qOme && !isDomain(input) && input !== "") {
-                  const omeLimit = limits?.ome ?? 3;
+                  const omeLimit = getLimit("Ome");
 
                   const filtered = OmesList.filter((ome) => {
                     const search = input.toLowerCase();
@@ -217,7 +217,7 @@ export function useEntityAutocomplete(
         timeoutRef.current = null;
       }
     };
-  }, [JSON.stringify(inputs), queries.join("|"), assembly, JSON.stringify(limits), JSON.stringify(geneVersion), showiCREFlag, debounceMs, graphqlUrl]);
+  }, [inputsKey, queriesKey, assembly, limitKey, geneVersionKey, showiCREFlag, debounceMs, graphqlUrl]);
 
   return { data, loading, error };
 }

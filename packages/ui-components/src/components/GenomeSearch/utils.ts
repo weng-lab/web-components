@@ -28,7 +28,7 @@ export function getCoordinates(input: string, assembly: string): Result[] {
   // Normalize chromosome name to use capital X and Y
   const normalizedChromosome = chromosome.replace(/chrx$/, "chrX").replace(/chry$/, "chrY");
 
-  const chrLength = chromosomeLengths[assembly][chromosome];
+  const chrLength = chromosomeLengths[assembly][normalizedChromosome];
   if (end > start && chrLength && end <= chrLength) {
     results.push({
       title: `${normalizedChromosome}:${start.toLocaleString()}-${end.toLocaleString()}`,
@@ -147,6 +147,7 @@ export function legacyCcreResultList(results: LegacyCcreResponse[], limit: numbe
       return {
         title: result.input,
         // !!! Do not change this format without also modifying SCREEN's /search page. This specific formatting is relied upon
+        // At most two overlapping v4 cCREs are ever returned, so a single (non-global) comma replace is sufficient for the "a, b" rendering.
         description: `(Registry ${result.input_latest_previous_version})\n${result.input_region}\n${overlapping ? `Intersects v4 cCRE${overlapping.includes(",") ? "s" : ""}: ${overlapping.replace(",", ", ")}` : "No intersecting v4 cCREs"}`,
         domain: {
           chromosome: region.split(":")[0],
@@ -240,9 +241,7 @@ const chromosomeLengths: { [key: string]: { [key: string]: number } } = {
     chr21: 46709983,
     chr22: 50818468,
     chrX: 156040895,
-    chrx: 156040895,
     chrY: 57227415,
-    chry: 57227415,
   },
   mm10: {
     chr1: 195471971,
@@ -265,9 +264,7 @@ const chromosomeLengths: { [key: string]: { [key: string]: number } } = {
     chr18: 90702639,
     chr19: 61431566,
     chrX: 171031299,
-    chrx: 171031299,
     chrY: 91744698,
-    chry: 91744698,
   },
 };
 
