@@ -129,7 +129,6 @@ export function BiosampleTable(props: BiosampleTableProps): JSX.Element {
     prefilterBiosamples = () => true, //custom added prop
     columns = defaultCols,
     label = "Biosamples",
-    downloadFileName = "Biosamples",
     initialState = initialTableState,
     onSelectionChange = (selected: EncodeBiosample[]) => null, //custom added prop
     onRowSelectionModelChange, //have to extract here or else overrides to it would break the onSelectionChange functionality
@@ -193,7 +192,6 @@ export function BiosampleTable(props: BiosampleTableProps): JSX.Element {
       <Table
         apiRef={apiRef}
         label={label}
-        downloadFileName={downloadFileName}
         rows={internalRows}
         columns={internalFlexColumns}
         loading={loading || encodeLoading}

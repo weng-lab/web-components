@@ -1,5 +1,5 @@
 import { DataGridPremiumProps, GridApiPremium, GridColDef, GridValidRowModel } from "@mui/x-data-grid-premium";
-import { RefObject, ReactElement, ReactNode } from "react";
+import { CSSProperties, RefObject, ReactElement, ReactNode } from "react";
 import { SvgIconOwnProps, TooltipProps } from "@mui/material";
 
 // Extend the GridColDef type to add optional tooltip to column
@@ -8,12 +8,12 @@ export type TableColDef<R extends GridValidRowModel = any, V = any, F = V> = Gri
 };
 
 //The props listed here are the props which are new or overridden compared to the MUI DataGridProProps
-interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
+export interface TableProps extends Omit<DataGridPremiumProps, 'label'> {
   /**
    * Rows to be consumed in the table.
-   * 
+   *
    * ```undefined``` will be given default value of ```[]```
-   * 
+   *
    * Note: Rows without an 'id' property will be given id matching their index
    */
   rows: DataGridPremiumProps["rows"];
@@ -21,6 +21,10 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    * Columns to be used. TableColDef is same as GridColDef plus an optional tooltip property
    */
   columns: TableColDef[];
+  /**
+   * Table label. Rendered inside the toolbar. If a string, it is also used as the default export filename.
+   */
+  label?: string | ReactElement;
   /**
    * @default true
    * @note Overrides MUI default
@@ -68,23 +72,6 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
    */
   error?: boolean
   /**
-   * Slot for extra component to be rendered within the toolbar, to the left of the filters
-   */
-  toolbarSlot?: ReactNode
-  /**
-   * If anything besides an element, renders tooltip icon to the right of the table label with specified string as tooltip contents.
-   * If an element, renders the element to the right of the table label.
-   */
-  labelTooltip?: ReactNode
-  /**
-   * Styling object for the toolbar
-   */
-  toolbarStyle?: React.CSSProperties;
-  /**
-   * Color passed as `htmlColor` to columns, filter, download and search icons
-   */
-  toolbarIconColor?: SvgIconOwnProps["htmlColor"]
-  /**
    * Called once after the DataGrid has mounted and the apiRef is fully initialized.
    * Use this to subscribe to DataGrid events that don't have a corresponding event prop (e.g. `rowExpansionChange`).
    * Return a single unsubscribe function or an array of unsubscribe functions for cleanup.
@@ -101,9 +88,19 @@ interface BaseTableProps extends Omit<DataGridPremiumProps, 'label'> {
   onReady?: (apiRef: RefObject<GridApiPremium>) => (() => void) | (() => void)[] | void
 }
 
-//This enforces that a downloadFileName is specified if a ReactElement is used as the label (no default )
-export type TableProps = BaseTableProps & (
-  | { label?: string; downloadFileName?: string }
-  | { label: ReactElement; downloadFileName: string }
-  | { label?: undefined; downloadFileName?: string }
-);
+// Augment MUI's ToolbarPropsOverrides so our custom toolbar keys are typed on
+// `slotProps.toolbar` for consumers. All toolbar customization flows through here.
+declare module "@mui/x-data-grid-premium" {
+  interface ToolbarPropsOverrides {
+    /** Table label. Injected internally from the top-level `label` prop; consumers should pass `label` at the top level. */
+    label?: TableProps["label"];
+    /** Extra content rendered inside the toolbar, to the left of the filters. */
+    extra?: ReactNode;
+    /** Inline style applied to the Toolbar root. */
+    style?: CSSProperties;
+    /** Color forwarded as `htmlColor` to the columns/filter/download/search icons. */
+    iconColor?: SvgIconOwnProps["htmlColor"];
+    /** Optional info tooltip rendered next to the label. String/number renders inside an InfoOutline tooltip; any other ReactNode renders raw. */
+    labelTooltip?: ReactNode;
+  }
+}

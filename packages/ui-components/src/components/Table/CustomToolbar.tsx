@@ -28,7 +28,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import CancelIcon from "@mui/icons-material/Cancel";
 import SearchIcon from "@mui/icons-material/Search";
 import Typography from "@mui/material/Typography";
-import { TableProps } from "./types";
+import "./types";
 import { InfoOutline } from "@mui/icons-material";
 
 type OwnerState = {
@@ -60,24 +60,25 @@ const StyledTextField = styled(TextField)<{
   transition: theme.transitions.create(["width", "opacity"]),
 }));
 
-type CustomToolbarProps = {
-  label: TableProps["label"];
-  downloadFileName: TableProps["downloadFileName"];
-  labelTooltip: TableProps["labelTooltip"];
-  toolbarSlot?: TableProps["toolbarSlot"];
-  toolbarStyle?: TableProps["toolbarStyle"];
-  toolbarIconColor?: TableProps["toolbarIconColor"];
-} & GridToolbarProps &
-  ToolbarPropsOverrides;
+type CustomToolbarProps = GridToolbarProps & ToolbarPropsOverrides;
 
-export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, toolbarIconColor, ...restToolbarProps }: CustomToolbarProps) {
+export function CustomToolbar({
+  label,
+  labelTooltip,
+  extra,
+  style,
+  iconColor: iconColorProp,
+  ...toolbarProps
+}: CustomToolbarProps) {
   const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
   const exportMenuTriggerRef = React.useRef<HTMLButtonElement>(null);
 
-  const iconColor = toolbarIconColor ?? "inherit"
+  const iconColor = iconColorProp ?? "inherit";
+
+  const {printOptions, csvOptions, excelOptions, ...restToolbarProps} = toolbarProps
 
   return (
-    <Toolbar style={{ ...toolbarStyle }}>
+    <Toolbar style={style}>
       {typeof label !== "string" && label}
       <Typography fontWeight="medium" sx={{ flex: 1, mx: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
         {typeof label === "string" && label}
@@ -90,9 +91,9 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
           labelTooltip
         )}
       </Typography>
-      {toolbarSlot && (
+      {extra && (
         <>
-          {toolbarSlot}
+          {extra}
           <Divider orientation="vertical" variant="middle" flexItem sx={{ mx: 0.5 }} />
         </>
       )}
@@ -141,22 +142,24 @@ export function CustomToolbar({ label, downloadFileName, labelTooltip, toolbarSl
           },
         }}
       >
-        <ExportPrint
-          options={{ ...restToolbarProps.printOptions }}
-          render={<MenuItem />}
-          onClick={() => setExportMenuOpen(false)}
-        >
+        <ExportPrint options={printOptions} render={<MenuItem />} onClick={() => setExportMenuOpen(false)}>
           Print
         </ExportPrint>
         <ExportCsv
-          options={{ fileName: typeof label === "string" ? label : downloadFileName, ...restToolbarProps.csvOptions }}
+          options={{
+            ...(typeof label === "string" ? { fileName: label } : {}),
+            ...csvOptions,
+          }}
           render={<MenuItem />}
           onClick={() => setExportMenuOpen(false)}
         >
           Download as CSV
         </ExportCsv>
         <ExportExcel
-          options={{ ...restToolbarProps.excelOptions }}
+          options={{
+            ...(typeof label === "string" ? { fileName: label } : {}),
+            ...excelOptions,
+          }}
           render={<MenuItem />}
           onClick={() => setExportMenuOpen(false)}
         >

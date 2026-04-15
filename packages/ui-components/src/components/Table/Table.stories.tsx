@@ -156,11 +156,15 @@ export const UseToolbarSlot: Story = {
           {...args}
           columns={columns}
           rows={modifiedRows}
-          toolbarSlot={
-            <Button variant="contained" size="small" onClick={handleTogglePopper}>
-              Toggle Popper
-            </Button>
-          }
+          slotProps={{
+            toolbar: {
+              extra: (
+                <Button variant="contained" size="small" onClick={handleTogglePopper}>
+                  Toggle Popper
+                </Button>
+              ),
+            },
+          }}
         />
         <Popper open={Boolean(anchorEl)} anchorEl={anchorEl}>
           <Box sx={{ border: 1, p: 1, bgcolor: "background.paper" }}>
@@ -179,7 +183,7 @@ export const LabelTooltip: Story = {
     columns,
     rows,
     label: "Table Title",
-    labelTooltip: "This is a tooltip",
+    slotProps: { toolbar: { labelTooltip: "This is a tooltip" } },
   },
 };
 
@@ -188,11 +192,15 @@ export const LabelTooltipCustomElement: Story = {
     columns,
     rows,
     label: "Table Title",
-    labelTooltip: (
-      <Tooltip title={"tooltip contents"}>
-        <QuestionMark fontSize="inherit" />
-      </Tooltip>
-    ),
+    slotProps: {
+      toolbar: {
+        labelTooltip: (
+          <Tooltip title={"tooltip contents"}>
+            <QuestionMark fontSize="inherit" />
+          </Tooltip>
+        ),
+      },
+    },
   },
 };
 
@@ -201,9 +209,13 @@ export const OverrideToolbarProps: Story = {
     columns,
     rows,
     label: "Table Title",
-    slotProps: {toolbar: {csvOptions: {fileName: 'overrideFilename'}}},
-    toolbarStyle: {backgroundColor: "#e7eef8", padding: "12px 24px", opacity: 0.9},
-    toolbarIconColor: "#444"
+    slotProps: {
+      toolbar: {
+        csvOptions: { fileName: "overrideFilename" },
+        style: { backgroundColor: "#e7eef8", padding: "12px 24px", opacity: 0.9 },
+        iconColor: "#444",
+      },
+    },
   },
 };
 
@@ -214,17 +226,18 @@ export const ReactElementLabel: Story = {
     slotProps: { toolbar: { csvOptions: { fileName: "overrideFilename" } } },
   },
   render: (args) => {
-  const CustomLabelEl = (
-    <Stack direction={"row"} alignItems={"center"} spacing={1}>
-      <Typography>Expression at</Typography>
-      <Select label="Peak" defaultValue={1} variant="standard">
-        <MenuItem value={1}>ZH38T0025301</MenuItem>
-        <MenuItem value={2}>ZH38T0025302</MenuItem>
-        <MenuItem value={3}>ZH38T0025303</MenuItem>
-      </Select>
-    </Stack>
-  );
-  return <Table {...args} label={CustomLabelEl} downloadFileName="needWithCustomElementLabel" />},
+    const CustomLabelEl = (
+      <Stack direction={"row"} alignItems={"center"} spacing={1}>
+        <Typography>Expression at</Typography>
+        <Select label="Peak" defaultValue={1} variant="standard">
+          <MenuItem value={1}>ZH38T0025301</MenuItem>
+          <MenuItem value={2}>ZH38T0025302</MenuItem>
+          <MenuItem value={3}>ZH38T0025303</MenuItem>
+        </Select>
+      </Stack>
+    );
+    return <Table {...args} label={CustomLabelEl} />;
+  },
 };
 
 export const columnTooltips: Story = {
@@ -264,6 +277,6 @@ export const columnTooltips: Story = {
     ],
     rows,
     label: "Table Title",
-    labelTooltip: "This is a tooltip",
+    slotProps: { toolbar: { labelTooltip: "This is a tooltip" } },
   },
 };
