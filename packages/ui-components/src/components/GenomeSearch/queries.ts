@@ -16,12 +16,14 @@ export const SNP_AUTOCOMPLETE_QUERY = `
 export const GENE_AUTOCOMPLETE_QUERY = `
   query Genes(
       $name_prefix: [String!]
+      $idprefix: [String!]
       $limit: Int
       $assembly: String!
       $version: Int
   ) {
       gene(
           name_prefix: $name_prefix
+          idprefix: $idprefix
           limit: $limit
           assembly: $assembly
           orderby: "name"
@@ -181,6 +183,9 @@ export const getGenes = async (
   // sort versions from high to low (prioritize newest versions in map)
   versions = versions.sort((a, b) => b - a);
 
+  console.log("called")
+  console.log(value.startsWith("ENSG"))
+
   // Fetch genes for all versions
   const versionResults = await Promise.all(
     versions.map((version) =>
@@ -190,7 +195,7 @@ export const getGenes = async (
           query: GENE_AUTOCOMPLETE_QUERY,
           variables: {
             assembly: assembly.toLowerCase(),
-            name_prefix: value,
+            ...(value.startsWith("ENSG") ? { idprefix: value.split(".")[0] } : { name_prefix: value }),
             version: version,
             limit: limit,
           },
