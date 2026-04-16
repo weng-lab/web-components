@@ -82,19 +82,37 @@ export function useEntityAutocomplete(
     abortControllerRef.current = new AbortController();
     const abortSignal = abortControllerRef.current.signal;
 
-    const qGene = queries.includes("Gene");
-    const qSnp = queries.includes("SNP");
-    const qICRE = queries.includes("iCRE");
-    const qCCRE = queries.includes("cCRE");
-    const qLegacyCcre = queries.includes("Legacy cCRE");
-    const qCoordinate = queries.includes("Coordinate");
-    const qStudy = queries.includes("Study");
-    const qOme = queries.includes("Ome");
-
     timeoutRef.current = window.setTimeout(() => {
       (async () => {
         try {
           const aggregated: Result[] = [];
+
+          const shouldFetch = (type: ResultType, input: string): boolean => {
+            if (!queries.includes(type)) return false;
+
+            const isSnpRsId = /^rs\d+$/i.test(input) && input.toLowerCase() !== "rs1";
+
+            switch (type) {
+              case "Coordinate":
+                return isDomain(input);
+              case "Gene":
+                return !isDomain(input) && !input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh38" : "em10") && !isSnpRsId;
+              case "cCRE":
+                return !isDomain(input) && input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh" : "em");
+              case "Legacy cCRE":
+                return !isDomain(input) && input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh" : "em");
+              case "iCRE":
+                return !isDomain(input) && assembly === "GRCh38" && input.toLowerCase().startsWith("eh");
+              case "SNP":
+                return !isDomain(input) && assembly === "GRCh38" && (["r", "rs"].includes(input) || isSnpRsId);
+              case "Study":
+                return !isDomain(input) && assembly === "GRCh38";
+              case "Ome":
+                return !isDomain(input) && assembly === "GRCh38";
+              default:
+                return false;
+            }
+          };
 
           await Promise.all(
             activeInputs.map(async (input) => {
@@ -102,7 +120,7 @@ export function useEntityAutocomplete(
               const fetchPromises: Promise<Result[]>[] = [];
 
               // Genes
-              if (qGene && !isDomain(input)) {
+              if (shouldFetch("Gene", input)) {
                 const geneLimit = getLimit("Gene");
                 fetchPromises.push(
                   getGenes(input, assembly, geneLimit, geneVersion, graphqlUrl, abortSignal).then((geneResults) =>
@@ -111,8 +129,8 @@ export function useEntityAutocomplete(
                 );
               }
 
-              // cCRE - check beginning of input to make sure it matches that assembly
-              if (qCCRE && input.toLowerCase().startsWith(assembly === "GRCh38" ? "eh" : "em")) {
+              // cCRE
+              if (shouldFetch("cCRE", input)) {
                 const ccreLimit = getLimit("cCRE");
                 fetchPromises.push(
                   getCCREs(input, assembly, ccreLimit, showiCREFlag || false, graphqlUrl, abortSignal).then((ccreData) =>
@@ -124,11 +142,12 @@ export function useEntityAutocomplete(
               }
 
               // Coordinates (synchronous, push directly)
-              if (qCoordinate && isDomain(input)) {
+              if (shouldFetch("Coordinate", input)) {
                 aggregated.push(...getCoordinates(input, assembly));
               }
 
-              if (qLegacyCcre) {
+              // Legacy cCRE
+              if (shouldFetch("Legacy cCRE", input)) {
                 const legacyCcreLimit = getLimit("Legacy cCRE");
                 fetchPromises.push(
                   getLegacyCCREs(input, assembly, graphqlUrl, abortSignal).then((legacyData) =>
@@ -139,55 +158,56 @@ export function useEntityAutocomplete(
                 );
               }
 
-              // Human only fetches
-              if (assembly === "GRCh38") {
-                if (qICRE && input.toLowerCase().startsWith("eh")) {
-                  const icreLimit = getLimit("iCRE");
-                  fetchPromises.push(
-                    getICREs(input, icreLimit, graphqlUrl, abortSignal).then((icreData) =>
-                      icreData?.data?.iCREQuery ? icreResultList(icreData.data.iCREQuery, icreLimit) : []
-                    )
+              // iCRE
+              if (shouldFetch("iCRE", input)) {
+                const icreLimit = getLimit("iCRE");
+                fetchPromises.push(
+                  getICREs(input, icreLimit, graphqlUrl, abortSignal).then((icreData) =>
+                    icreData?.data?.iCREQuery ? icreResultList(icreData.data.iCREQuery, icreLimit) : []
+                  )
+                );
+              }
+
+              // SNP
+              if (shouldFetch("SNP", input)) {
+                const snpLimit = getLimit("SNP");
+                fetchPromises.push(
+                  getSNPs(input, assembly, snpLimit, graphqlUrl, abortSignal).then((snpData) =>
+                    snpData?.data?.snpAutocompleteQuery
+                      ? snpResultList(snpData.data.snpAutocompleteQuery, snpLimit)
+                      : []
+                  )
+                );
+              }
+
+              // Study
+              if (shouldFetch("Study", input)) {
+                const studyLimit = getLimit("Study");
+                fetchPromises.push(
+                  getStudys(input, studyLimit, graphqlUrl, abortSignal).then((studyData) =>
+                    studyData?.data?.getGWASStudiesMetadata
+                      ? studyResultList(studyData.data.getGWASStudiesMetadata, studyLimit)
+                      : []
+                  )
+                );
+              }
+
+              // Ome
+              if (shouldFetch("Ome", input)) {
+                const omeLimit = getLimit("Ome");
+
+                const filtered = OmesList.filter((ome) => {
+                  const search = input.toLowerCase();
+
+                  return (
+                    ome.label.toLowerCase().includes(search) ||
+                    ome.keywords?.some((k) => k.toLowerCase().includes(search))
                   );
-                }
+                }).slice(0, omeLimit);
 
-                if (qSnp && input.toLowerCase().startsWith("rs")) {
-                  const snpLimit = getLimit("SNP");
-                  fetchPromises.push(
-                    getSNPs(input, assembly, snpLimit, graphqlUrl, abortSignal).then((snpData) =>
-                      snpData?.data?.snpAutocompleteQuery
-                        ? snpResultList(snpData.data.snpAutocompleteQuery, snpLimit)
-                        : []
-                    )
-                  );
-                }
-
-                if (qStudy && !isDomain(input) && input !== "") {
-                  const studyLimit = getLimit("Study");
-                  fetchPromises.push(
-                    getStudys(input, studyLimit, graphqlUrl, abortSignal).then((studyData) =>
-                      studyData?.data?.getGWASStudiesMetadata
-                        ? studyResultList(studyData.data.getGWASStudiesMetadata, studyLimit)
-                        : []
-                    )
-                  );
-                }
-
-                if (qOme && !isDomain(input) && input !== "") {
-                  const omeLimit = getLimit("Ome");
-
-                  const filtered = OmesList.filter((ome) => {
-                    const search = input.toLowerCase();
-
-                    return (
-                      ome.label.toLowerCase().includes(search) ||
-                      ome.keywords?.some((k) => k.toLowerCase().includes(search))
-                    );
-                  }).slice(0, omeLimit);
-
-                  fetchPromises.push(
-                    Promise.resolve(omeResultsList(filtered))
-                  );
-                }
+                fetchPromises.push(
+                  Promise.resolve(omeResultsList(filtered))
+                );
               }
 
               // Execute all parallel fetches and aggregate results

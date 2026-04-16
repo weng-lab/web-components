@@ -183,9 +183,6 @@ export const getGenes = async (
   // sort versions from high to low (prioritize newest versions in map)
   versions = versions.sort((a, b) => b - a);
 
-  console.log("called")
-  console.log(value.startsWith("ENSG"))
-
   // Fetch genes for all versions
   const versionResults = await Promise.all(
     versions.map((version) =>
@@ -195,7 +192,7 @@ export const getGenes = async (
           query: GENE_AUTOCOMPLETE_QUERY,
           variables: {
             assembly: assembly.toLowerCase(),
-            ...(value.startsWith("ENSG") ? { idprefix: value.split(".")[0] } : { name_prefix: value }),
+            ...(value.toUpperCase().startsWith("ENSG") ? { idprefix: value.split(".")[0] } : { name_prefix: value }),
             version: version,
             limit: limit,
           },
