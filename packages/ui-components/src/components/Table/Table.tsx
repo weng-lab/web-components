@@ -4,14 +4,12 @@ import {
   GridAutosizeOptions,
   GridColDef,
   GridColumnHeaderParams,
-  GridToolbarProps,
-  ToolbarPropsOverrides,
   useGridApiRef,
   useKeepGroupedColumnsHidden,
 } from "@mui/x-data-grid-premium";
 import NoSsr from "@mui/material/NoSsr";
 import Skeleton from "@mui/material/Skeleton";
-import { useMemo, useEffect, useCallback, useRef, ReactNode, CSSProperties, RefObject } from "react";
+import { useMemo, useEffect, useCallback, useRef, ReactNode, RefObject } from "react";
 import TableFallback from "./EmptyFallback";
 import { TableProps } from "./types";
 import { CustomToolbar } from "./CustomToolbar";
@@ -37,12 +35,8 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
     divHeight,
     sx = {},
     slots = {},
+    slotProps = {},
     label,
-    labelTooltip,
-    downloadFileName,
-    toolbarSlot,
-    toolbarStyle,
-    toolbarIconColor,
     initialState,
     onReady,
     ...restDataGridProps
@@ -50,15 +44,6 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
 
   // Create a ref for the wrapper div to measure container resizing
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  const toolbarPropsRef = useRef({ label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, toolbarIconColor });
-  toolbarPropsRef.current = { label, downloadFileName, labelTooltip, toolbarSlot, toolbarStyle, toolbarIconColor };
-
-  // Stable component identity regardless of toolbar prop changes, so DataGrid never unmounts/remounts the toolbar slot
-  const CustomToolbarWrapper = useMemo(
-    () => (props: GridToolbarProps & ToolbarPropsOverrides) => <CustomToolbar {...props} {...toolbarPropsRef.current} />,
-    []
-  );
 
   // This handles transforming columns of the TableColDef type back to GridColDef, dealing with adding the tooltip element to the RenderHeader
   const transformedColumns: GridColDef[] = useMemo(() => {
@@ -142,8 +127,15 @@ const CustomDataGridPremium = (props: CustomDataGridProps) => {
           ...sx,
         }}
         slots={{
-          toolbar: CustomToolbarWrapper,
+          toolbar: CustomToolbar,
           ...slots,
+        }}
+        slotProps={{
+          ...slotProps,
+          toolbar: {
+            label,
+            ...slotProps?.toolbar,
+          },
         }}
         disableAggregation
         disablePivoting

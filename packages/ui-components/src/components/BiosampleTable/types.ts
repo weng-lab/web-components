@@ -32,6 +32,7 @@ export type EncodeBiosample = {
   chromhmm?: string;
   chromhmm_url?: string;
   bigbedurl?: string | null;
+  assembly: "GRCh38" | "mm10";
 };
 
 export interface BiosampleTableProps<T extends TableProps["rows"] = EncodeBiosample[]> extends Omit<

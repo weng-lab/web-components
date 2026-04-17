@@ -3,6 +3,10 @@ import { Preview, ReactRenderer } from "@storybook/react-vite";
 import { withThemeFromJSXProvider } from '@storybook/addon-themes';
 import { darkTheme, lightTheme } from "./theme";
 import { CssBaseline, ThemeProvider } from '@mui/material';
+import { initialize, mswLoader } from "msw-storybook-addon";
+import { genomeSearchHandlers } from "./mocks/genomeSearchHandlers";
+
+initialize({ onUnhandledRequest: "bypass" });
 
 export const decorators = [
   withThemeFromJSXProvider({
@@ -37,7 +41,9 @@ const preview: Preview = {
       // 'off' - skip a11y checks entirely
       test: "todo",
     },
+    msw: { handlers: genomeSearchHandlers },
   },
+  loaders: [mswLoader],
   decorators: [
     withThemeFromJSXProvider({
       themes: {

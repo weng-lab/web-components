@@ -510,10 +510,18 @@ export const ccreBedUrlCol: GridColDef<EncodeBiosample> = {
       const rowNode = gridRowNodeSelector(apiRef, id);
       const isGroupingByOntology = rowNode.type === "group" && rowNode.groupingField === "ontology";
       if (isGroupingByOntology && typeof rowNode.groupingKey === "string") {
-        return getAvailableFiles(rowNode.groupingKey)
-          .map((x) => `https://downloads.wenglab.org/${x.filename}`)
-          .join(",");
-      } else return null;
+        // Check the first child row's assembly
+        const childRowIds = rowNode.children;
+        if (childRowIds && childRowIds.length > 0) {
+          const firstChildData = gridRowSelector(apiRef, childRowIds[0]);
+          if (firstChildData?.assembly === "GRCh38") {
+            return getAvailableFiles(rowNode.groupingKey)
+              .map((x) => `https://downloads.wenglab.org/${x.filename}`)
+              .join(",");
+          }
+        }
+      }
+      return null;
     }
     const signalIDs = [
       row.dnase_file_accession,
@@ -526,10 +534,11 @@ export const ccreBedUrlCol: GridColDef<EncodeBiosample> = {
   },
   renderCell: (params) => {
     if (params.rowNode.type === "group") {
-      if (params.rowNode.groupingField === "ontology") {
+      if (params.rowNode.groupingField === "ontology" && params.value) {
         const ontology = (params.rowNode.groupingKey as string) ?? "";
         return <AggregateDownloadButton ontology={ontology} />;
-      } else return null;
+      }
+      return null;
     }
     return (
       <DownloadButton

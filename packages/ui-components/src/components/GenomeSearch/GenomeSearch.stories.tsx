@@ -1,9 +1,13 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
 import GenomeSearch from "./GenomeSearch";
-import { Result } from "./types";
+import { GenomeSearchProps, Result, ResultType } from "./types";
 import { Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import React, { useState } from "react";
+import { useState } from "react";
+import { http, HttpResponse, delay } from "msw";
+import { within, userEvent } from "storybook/test";
+
+const SCREEN_GQL_URL = "https://screen.api.wenglab.org/graphql";
 
 const meta = {
   title: "ui-components/GenomeSearch",
@@ -15,112 +19,72 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const baseArgs = {
+  assembly: "GRCh38" as const,
+  graphqlUrl: SCREEN_GQL_URL,
+  onSearchSubmit: (r: Result) => console.log("Going to", r),
+  queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate"] as ResultType[],
+  sx: { width: 400 },
+};
+
+const containedSearchButton: NonNullable<GenomeSearchProps["slotProps"]>["button"] = {
+  variant: "contained",
+  startIcon: <SearchIcon />,
+  color: "secondary",
+  children: "Search",
+  sx: { paddingInline: 3 },
+};
+
+const standardSecondaryInput: NonNullable<GenomeSearchProps["slotProps"]>["input"] = {
+  label: "Search",
+  variant: "standard",
+  color: "secondary",
+};
+
 export const Default: Story = {
   args: {
-    assembly: "GRCh38",
+    ...baseArgs,
+    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study", "Legacy cCRE", "Ome"],
     geneVersion: [29, 40],
-    onSearchSubmit: (r: Result) => console.log("Going to", r),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study", "Legacy cCRE", "Ome",],
-    ccreLimit: 3,
-    geneLimit: 3,
-    icreLimit: 3,
-    snpLimit: 3,
-    style: {},
     sx: { width: 300 },
-    slots: {},
-    slotProps: {},
   },
 };
+
 export const InputSlot: Story = {
   args: {
-    assembly: "GRCh38",
-    onSearchSubmit: (r: Result) => console.log("Going to", r.title),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate"],
-    ccreLimit: 3,
-    geneLimit: 3,
-    icreLimit: 3,
-    snpLimit: 3,
-    style: {},
+    ...baseArgs,
     sx: { width: 300 },
-    slots: {
-      input: <TextField label="Search" variant="standard" color="secondary" />,
-    },
+    slots: { input: TextField },
+    slotProps: { input: standardSecondaryInput },
   },
 };
 
 export const ButtonSlotProps: Story = {
   args: {
-    assembly: "GRCh38",
-    onSearchSubmit: (r: Result) => console.log("Going to", r.title),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate"],
-    ccreLimit: 3,
-    geneLimit: 3,
-    icreLimit: 3,
-    snpLimit: 3,
-    style: {},
-    sx: { width: 400 },
-    slots: {},
-    slotProps: {
-      button: {
-        variant: "contained",
-        startIcon: <SearchIcon />,
-        color: "secondary",
-        children: "Search",
-        sx: { paddingInline: 3 },
-      },
-    },
+    ...baseArgs,
+    slotProps: { button: containedSearchButton },
   },
 };
 
 export const ButtonAndInputSlot: Story = {
   args: {
-    assembly: "GRCh38",
-    onSearchSubmit: (r: Result) => console.log("Going to", r.title),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate"],
-    ccreLimit: 3,
-    geneLimit: 3,
-    icreLimit: 3,
-    snpLimit: 3,
-    style: {},
-    sx: { width: 400 },
-    slots: {
-      button: (
-        <Button variant="contained" color="secondary" startIcon={<SearchIcon />} sx={{ paddingInline: 3 }}>
-          Search
-        </Button>
-      ),
-      input: <TextField label="Search" variant="standard" color="secondary" />,
+    ...baseArgs,
+    slots: { button: Button, input: TextField },
+    slotProps: {
+      button: containedSearchButton,
+      input: standardSecondaryInput,
     },
-    slotProps: {},
   },
 };
 
 export const ClearOnAssemblyChange: Story = {
   args: {
-    assembly: "GRCh38",
-    onSearchSubmit: (r: Result) => console.log("Going to", r.title),
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate"],
-    ccreLimit: 3,
-    geneLimit: 3,
-    icreLimit: 3,
-    snpLimit: 3,
-    style: {},
-    sx: { width: 400 },
-    slots: {},
-    slotProps: {
-      button: {
-        variant: "contained",
-        startIcon: <SearchIcon />,
-        color: "secondary",
-        children: "Search",
-        sx: { paddingInline: 3 },
-      },
-    },
+    ...baseArgs,
+    slotProps: { button: containedSearchButton },
   },
   render: (args) => {
     const [assembly, setAssembly] = useState<"GRCh38" | "mm10">("GRCh38");
-
-    const { assembly: unused, ...Autocompleteprops } = args;
+    const { assembly: _unused, ...rest } = args;
 
     return (
       <Stack maxWidth={400} spacing={2}>
@@ -138,21 +102,36 @@ export const ClearOnAssemblyChange: Story = {
           </Select>
         </FormControl>
         <Typography>The assembly passed to component is: {assembly}</Typography>
-        <GenomeSearch assembly={assembly} {...Autocompleteprops} />
+        <GenomeSearch assembly={assembly} {...rest} />
       </Stack>
     );
   },
 };
 
+export const Loading: Story = {
+  args: { ...Default.args },
+  parameters: {
+    msw: {
+      handlers: [
+        http.post(SCREEN_GQL_URL, async () => {
+          await delay("infinite");
+          return HttpResponse.json({});
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = await canvas.findByRole("combobox");
+    await userEvent.click(input);
+    await userEvent.type(input, "SOX");
+  },
+};
+
 export const GencodeVersions: Story = {
   args: {
-    assembly: "GRCh38",
-    onSearchSubmit: (r: Result) => console.log("Going to", r),
+    ...baseArgs,
     queries: ["Gene"],
-    ccreLimit: 3,
-    geneLimit: 3,
-    icreLimit: 3,
-    snpLimit: 3,
     sx: { width: 300 },
   },
   render: (args) => {

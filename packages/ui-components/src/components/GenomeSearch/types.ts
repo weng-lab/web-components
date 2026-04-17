@@ -1,7 +1,33 @@
 import { AutocompleteProps, BoxProps, ButtonProps, TextFieldProps } from "@mui/material";
 
+type AutocompleteBase = AutocompleteProps<Result, false, false, false>;
+
+/**
+ * MUI Autocomplete props that GenomeSearch owns internally. Consumers cannot
+ * override these because doing so would break the component's data flow,
+ * rendering, or its single-select `Result`-shaped generics.
+ */
+type GenomeSearchOmittedProps =
+  | "options"
+  | "value"
+  | "onChange"
+  | "inputValue"
+  | "onInputChange"
+  | "renderInput"
+  | "renderOption"
+  | "renderGroup"
+  | "groupBy"
+  | "getOptionLabel"
+  | "isOptionEqualToValue"
+  | "filterOptions"
+  | "noOptionsText"
+  | "slots"
+  | "slotProps"
+  | "multiple"
+  | "freeSolo";
+
 // Props for the GenomeSearch component
-export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, false, React.ElementType>> & {
+export type GenomeSearchProps = Omit<Partial<AutocompleteBase>, GenomeSearchOmittedProps> & {
   assembly: "GRCh38" | "mm10";
   onSearchSubmit: (result: Result) => void;
   defaultResults?: Result[];
@@ -9,25 +35,32 @@ export type GenomeSearchProps = Partial<AutocompleteProps<Result, false, true, f
   geneVersion?: number | number[];
   // queries
   queries: ResultType[];
-  geneLimit?: number;
-  snpLimit?: number;
-  icreLimit?: number;
-  ccreLimit?: number;
-  legacyCcreLimit?: number;
-  studyLimit?: number;
 
-  // slot props for internal MUI components
-  slotProps?: {
+  /**
+   * Maximum number of results per group. Pass a single `number` to apply the same
+   * cap to every result type, or an object keyed by `ResultType` to override
+   * individual types (unspecified types fall back to the default of 3).
+   */
+  limit?: number | Partial<Record<ResultType, number>>;
+
+  /** GraphQL endpoint for autocomplete fetches. The wenglab gateway requires
+   *  a server-injected secret header, so this should point at an app route
+   *  handler (e.g. "/api/graphql") that attaches the key server-side. */
+  graphqlUrl: string;
+
+  /** Extend internal MUI component props, plus MUI Autocomplete's own slotProps. */
+  slotProps?: Partial<AutocompleteBase["slotProps"]> & {
     input?: Partial<TextFieldProps>;
     button?: Partial<ButtonProps>;
     box?: Partial<BoxProps>;
   };
 
-  // slots to replace internal MUI components
-  slots?: {
-    input?: React.ReactElement<TextFieldProps>;
-    button?: React.ReactElement<ButtonProps>;
-    box?: React.ReactElement<BoxProps>;
+  /** Replace internal components, plus MUI Autocomplete's own slots.
+   *  Pass a component type (e.g. `IconButton`); props go in `slotProps`. */
+  slots?: Partial<AutocompleteBase["slots"]> & {
+    input?: React.ElementType<TextFieldProps>;
+    button?: React.ElementType<ButtonProps>;
+    box?: React.ElementType<BoxProps>;
   };
 };
 

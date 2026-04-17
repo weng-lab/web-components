@@ -1,43 +1,29 @@
-import { GeneResponse, GenomeSearchProps } from "./types";
+import { GenomeSearchProps } from "./types";
 
 export const SNP_AUTOCOMPLETE_QUERY = `
-  query suggestions($assembly: String!, $snpid: String!) {
-      snpAutocompleteQuery(assembly: $assembly, snpid: $snpid) {
-          id
-          coordinates {
-              chromosome
-              start
-              end
-          }
+  query suggestions($assembly: String!, $snpid: String!, $limit: Int) {
+    snpAutocompleteQuery(assembly: $assembly, snpid: $snpid, limit: $limit) {
+      id
+      coordinates {
+        chromosome
+        start
+        end
       }
+    }
   }
 `;
 
 export const GENE_AUTOCOMPLETE_QUERY = `
   query Genes(
-      $id: [String]
-      $name: [String]
-      $strand: String
-      $chromosome: String
-      $start: Int
-      $end: Int
-      $gene_type: String
-      $havana_id: String
       $name_prefix: [String!]
+      $idprefix: [String!]
       $limit: Int
       $assembly: String!
       $version: Int
   ) {
       gene(
-          id: $id
-          name: $name
-          strand: $strand
-          chromosome: $chromosome
-          start: $start
-          end: $end
-          gene_type: $gene_type
-          havana_id: $havana_id
           name_prefix: $name_prefix
+          idprefix: $idprefix
           limit: $limit
           assembly: $assembly
           orderby: "name"
@@ -71,6 +57,7 @@ export const ICRE_AUTOCOMPLETE_QUERY = `
 
 export const CCRE_AUTOCOMPLETE_QUERY = `
   query cCREAutocompleteQuery(
+    $accession: [String!]
     $accession_prefix: [String!]
     $assembly: String!
     $includeiCREs: Boolean
@@ -80,6 +67,7 @@ export const CCRE_AUTOCOMPLETE_QUERY = `
       includeiCREs: $includeiCREs
       assembly: $assembly
       limit: $limit
+      accession: $accession
       accession_prefix: $accession_prefix
     ) {
       accession
@@ -109,8 +97,8 @@ export const LEGACY_CCRE_QUERY = `
 `
 
 export const GWAS_AUTOCOMPLETE_QUERY = `
-query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [String], $parent_terms: [String]){
-    getGWASStudiesMetadata(studyid: $studyid, limit: $limit, parent_terms: $parent_terms, studyname_prefix: $studyname_prefix )
+query getGWASStudyMetadata($limit: Int, $studyname_prefix: [String]){
+    getGWASStudiesMetadata(limit: $limit, studyname_prefix: $studyname_prefix )
     {
         studyid
         author
@@ -125,8 +113,8 @@ query getGWASStudyMetadata($studyid: [String], $limit: Int, $studyname_prefix: [
 }
 `;
 
-export const getICREs = async (value: string, limit: number, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getICREs = async (value: string, limit: number, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: ICRE_AUTOCOMPLETE_QUERY,
@@ -141,15 +129,18 @@ export const getICREs = async (value: string, limit: number, signal?: AbortSigna
   return response.json();
 };
 
-export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, showiCREFlag: boolean, url: string, signal?: AbortSignal) => {
+  const isExactAccession = value.length === 12;
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: CCRE_AUTOCOMPLETE_QUERY,
       variables: {
-        accession_prefix: [value],
-        assembly: assembly.toLowerCase(),
-        limit: limit,
+        ...(isExactAccession
+          ? { accession: [value.toUpperCase()] }
+          : { accession_prefix: [value] }),
+        assembly,
+        limit,
         includeiCREs: showiCREFlag,
       },
     }),
@@ -159,8 +150,8 @@ export const getCCREs = async (value: string, assembly: GenomeSearchProps["assem
   return response.json();
 };
 
-export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getLegacyCCREs = async (value: string, assembly: GenomeSearchProps["assembly"], url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: LEGACY_CCRE_QUERY,
@@ -180,6 +171,7 @@ export const getGenes = async (
   assembly: GenomeSearchProps["assembly"],
   limit: number,
   geneVersions: GenomeSearchProps["geneVersion"],
+  url: string,
   signal?: AbortSignal
 ) => {
   let versions = geneVersions
@@ -194,13 +186,13 @@ export const getGenes = async (
   // Fetch genes for all versions
   const versionResults = await Promise.all(
     versions.map((version) =>
-      fetch("https://screen.api.wenglab.org/graphql", {
+      fetch(url, {
         method: "POST",
         body: JSON.stringify({
           query: GENE_AUTOCOMPLETE_QUERY,
           variables: {
             assembly: assembly.toLowerCase(),
-            name_prefix: value,
+            ...(value.toUpperCase().startsWith("ENSG") ? { idprefix: value.split(".")[0] } : { name_prefix: value }),
             version: version,
             limit: limit,
           },
@@ -248,16 +240,20 @@ const toTitleCase = (str: string) =>
     .join(" ");
 
 async function getDescription(name: string): Promise<string | null> {
-  const response = await fetch(
-    "https://clinicaltables.nlm.nih.gov/api/ncbi_genes/v3/search?authenticity_token=&terms=" + name.toUpperCase()
-  );
-  const data = await response.json();
-  const matches = data[3] && data[3].filter((x: string[]) => x[3] === name.toUpperCase());
-  return matches && matches.length >= 1 ? matches[0][4] : null;
+  try {
+    const response = await fetch(
+      "https://clinicaltables.nlm.nih.gov/api/ncbi_genes/v3/search?authenticity_token=&terms=" + name.toUpperCase()
+    );
+    const data = await response.json();
+    const matches = data[3] && data[3].filter((x: string[]) => x[3] === name.toUpperCase());
+    return matches && matches.length >= 1 ? matches[0][4] : null;
+  } catch {
+    return null;
+  }
 }
 
-export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getSNPs = async (value: string, assembly: GenomeSearchProps["assembly"], limit: number, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: SNP_AUTOCOMPLETE_QUERY,
@@ -273,8 +269,8 @@ export const getSNPs = async (value: string, assembly: GenomeSearchProps["assemb
   return response.json();
 };
 
-export const getStudys = async (value: string, limit: number, signal?: AbortSignal) => {
-  const response = await fetch("https://screen.api.wenglab.org/graphql", {
+export const getStudys = async (value: string, limit: number, url: string, signal?: AbortSignal) => {
+  const response = await fetch(url, {
     method: "POST",
     body: JSON.stringify({
       query: GWAS_AUTOCOMPLETE_QUERY,

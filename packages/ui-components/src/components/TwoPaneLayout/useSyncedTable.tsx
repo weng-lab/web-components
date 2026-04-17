@@ -51,11 +51,11 @@ export function useSyncedTable<T>({
       onReady: composedOnReady,
       disableColumnSorting: isPresorted,
       initialState: { sorting: { sortModel: initialSort } },
-      toolbarSlot: <AutoSortSwitch autoSort={autoSort} setAutoSort={setAutoSort} />,
+      slotProps: { toolbar: { extra: <AutoSortSwitch autoSort={autoSort} setAutoSort={setAutoSort} /> } },
       columns: columnsWithCheckbox,
       ...restTableProps,
     }) satisfies Partial<TableProps>,
-    [apiRef, composedOnReady, isPresorted, initialSort, autoSort, setAutoSort, restTableProps]
+    [apiRef, composedOnReady, isPresorted, initialSort, autoSort, setAutoSort, restTableProps, columnsWithCheckbox]
   );
 
   return { syncedTableProps };

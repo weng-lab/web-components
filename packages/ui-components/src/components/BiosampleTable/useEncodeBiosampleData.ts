@@ -22,7 +22,11 @@ export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" 
         if (!biosamples) {
           throw new Error(`No biosamples present in return data`);
         }
-        setData(biosamples);
+        const biosamplesWithAssembly = biosamples.map((biosample: EncodeBiosample) => ({
+          ...biosample,
+          assembly,
+        }));
+        setData(biosamplesWithAssembly);
       } catch (err) {
         setError(true);
       } finally {
@@ -31,7 +35,7 @@ export const useEncodeBiosampleData = ({ assembly, skip }: { assembly: "GRCh38" 
     };
 
     if (!skip) fetchData();
-  }, [url, skip]);
+  }, [url, skip, assembly]);
 
   return { data, loading, error };
 };
