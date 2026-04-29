@@ -1,4 +1,4 @@
-import { Logo } from './logo';
+import { Logo } from './Logo';
 import React from 'react';
 import { CompleteLogoProps } from './types';
 import { CompleteAlphabet } from './utils/utils';

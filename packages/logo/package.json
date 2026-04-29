@@ -19,7 +19,6 @@
     "dist"
   ],
   "sideEffects": false,
-  "author": "NishiPhalke",
   "license": "MIT",
   "peerDependencies": {
     "react": "^19.1.0",

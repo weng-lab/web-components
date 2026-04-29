@@ -7,10 +7,10 @@ import {
   maxLabelLength,
 } from './utils/utils';
 
-import { XAxis } from './xaxis';
-import { YAxisWithNegatives } from './yaxisneg';
-import { YGridlines } from './ygridlines';
-import { _position } from './rawlogo';
+import { XAxis } from './XAxis';
+import { YAxisWithNegatives } from './YAxisWithNegatives';
+import { YGridlines } from './YGridlines';
+import { _position } from './RawLogo';
 import { Alphabets, LogoWithNegativesProps } from './types';
 
 /**

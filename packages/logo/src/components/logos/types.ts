@@ -72,7 +72,7 @@ export type CompleteLogoProps = {
   onSymbolClick?: (symbol: Alphabets) => void;
   noFastaNames?: boolean;
   countUnaligned?: boolean;
-  svgRef?: React.RefObject<SVGSVGElement>;
+  svgRef?: React.RefObject<SVGSVGElement | null>;
 };
 
 export type LogoWithNegativesProps = {
@@ -92,7 +92,7 @@ export type LogoWithNegativesProps = {
   onSymbolMouseOver?: (symbol: Alphabets) => void;
   onSymbolMouseOut?: (symbol: Alphabets) => void;
   onSymbolClick?: (symbol: Alphabets) => void;
-  svgRef?: React.RefObject<SVGSVGElement>;
+  svgRef?: React.RefObject<SVGSVGElement | null>;
 };
 
 export type LogoProps = {
@@ -121,7 +121,7 @@ export type LogoProps = {
   onSymbolClick?: (symbol: Alphabets) => void;
   noFastaNames?: boolean;
   countUnaligned?: boolean;
-  svgRef?: React.RefObject<SVGSVGElement>;
+  svgRef?: React.RefObject<SVGSVGElement | null>;
 };
 
 export type YGridlinesProps = {

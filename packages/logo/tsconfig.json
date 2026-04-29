@@ -4,7 +4,7 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "emitDeclarationOnly": false
+    "emitDeclarationOnly": false,
   },
   "include": ["src"],
   "exclude": ["**/*.stories.tsx", "dist", "node_modules"]

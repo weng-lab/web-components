@@ -25,7 +25,7 @@ import {
   Y,
   Z,
 } from '../glyphs';
-import { Logo } from './logo';
+import { Logo } from './Logo';
 import { Alphabets, ProteinLogoProps } from './types';
 
 /**

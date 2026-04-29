@@ -2,11 +2,11 @@ import React from 'react';
 import { parseFASTA, parseSequences } from './utils/fasta';
 import { FREQUENCY } from './utils/utils';
 import { maxLabelLength, logLikelihood } from './utils/utils';
-import { XAxis } from './xaxis';
-import { YAxis } from './yaxis';
-import { YAxisFrequency } from './yaxisfreq';
-import { YGridlines } from './ygridlines';
-import { RawLogo } from './rawlogo';
+import { XAxis } from './XAxis';
+import { YAxis } from './YAxis';
+import { YAxisFrequency } from './YAxisFrequency';
+import { YGridlines } from './YGridlines';
+import { RawLogo } from './RawLogo';
 import { LogoProps } from './types';
 
 /**
@@ -93,8 +93,14 @@ export const Logo: React.FC<LogoProps> = ({
             pseudocount * alphabet.length) || 1;
       return column.map((x: number) => (x + pseudocount) / sum);
     });
-  if (!ppm || (ppm && (ppm.length === 0 || ppm[0].length === 0))) {   
+  if (!ppm || (ppm && (ppm.length === 0 || ppm[0].length === 0))) {
     return <div />;
+  }
+
+  if (ppm[0].length !== alphabet.length) {
+    throw new Error(
+      `Logo: matrix has ${ppm[0].length} columns but alphabet has ${alphabet.length} symbols. Each row must have one value per alphabet entry.`
+    );
   }
 
   let alphabetSize = ppm[0].length;

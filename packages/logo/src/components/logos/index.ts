@@ -1,12 +1,12 @@
-import { GlyphStack } from "./glyphstack";
-import { YGridlines } from "./ygridlines";
-import { XAxis } from "./xaxis";
-import { YAxis } from "./yaxis";
-import { YAxisFrequency } from "./yaxisfreq";
-import { YAxisWithNegatives } from "./yaxisneg";
-import { RawLogo } from "./rawlogo";
-import { Logo } from "./logo";
-import { LogoWithNegatives } from "./logowithnegatives";
+import { GlyphStack } from "./GlyphStack";
+import { YGridlines } from "./YGridlines";
+import { XAxis } from "./XAxis";
+import { YAxis } from "./YAxis";
+import { YAxisFrequency } from "./YAxisFrequency";
+import { YAxisWithNegatives } from "./YAxisWithNegatives";
+import { RawLogo } from "./RawLogo";
+import { Logo } from "./Logo";
+import { LogoWithNegatives } from "./LogoWithNegatives";
 
 import {
   CompleteAlphabet,
@@ -14,9 +14,9 @@ import {
   FREQUENCY,
   loadGlyphComponents,
 } from "./utils/utils";
-import { DNALogo, DNAAlphabet } from "./dnalogo";
-import { ProteinLogo, ProteinAlphabet } from "./proteinlogo";
-import { RNALogo, RNAAlphabet } from "./rnalogo";
+import { DNALogo, DNAAlphabet } from "./DNALogo";
+import { ProteinLogo, ProteinAlphabet } from "./ProteinLogo";
+import { RNALogo, RNAAlphabet } from "./RNALogo";
 import type {
   LogoProps,
   DNALogoProps,

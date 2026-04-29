@@ -1,6 +1,6 @@
-import { a, b, d, e, f, g, h, i, j, k, l, m, n, p, q, r, t, u, y } from "./lc";
+import { a, b, d, e, f, g, h, i, j, k, l, m, n, p, q, r, t, u, y } from "./Lowercase";
 
-import { N1, N2, N3, N4, N5, N6, N7, N8, N9 } from "./n";
+import { N1, N2, N3, N4, N5, N6, N7, N8, N9 } from "./Numerals";
 import {
   A,
   B,
@@ -28,8 +28,8 @@ import {
   X,
   Y,
   Z,
-} from "./uc";
-import Glyph from "./glyph";
+} from "./Uppercase";
+import Glyph from "./Glyph";
 import type { LetterProps, GlyphProps } from "./types";
 
 export {

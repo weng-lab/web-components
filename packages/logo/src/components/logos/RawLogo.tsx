@@ -2,7 +2,7 @@ import React from "react";
 
 import { sortedIndices, loadGlyphComponents } from "./utils/utils";
 //import { parseFASTA, parseSequences } from '../../common/fasta';
-import { GlyphStack } from "./glyphstack";
+import { GlyphStack } from "./GlyphStack";
 import { Alphabets, RawLogoProps } from "./types";
 import { sortedIndicesNegative } from "./utils/utils";
 import { LetterProps } from "../glyphs/types";
@@ -81,6 +81,14 @@ export const RawLogo: React.FC<RawLogoProps> = ({
       break;
     }
   }
+  values.forEach((lv: number[], i: number) => {
+    if (lv.length !== alphabet.length) {
+      throw new Error(
+        `RawLogo: row ${i} has ${lv.length} values but alphabet has ${alphabet.length} symbols. Each row must have one value per alphabet entry.`
+      );
+    }
+  });
+
   const r: any = values.map((lv: number[], i: number) =>
     gposition(
       lv,
