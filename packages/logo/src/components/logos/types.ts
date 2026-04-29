@@ -79,11 +79,7 @@ export type LogoWithNegativesProps = {
   values: number[][];
   height?: number;
   width?: number;
-  alphabet: {
-    component: React.FC<LetterProps>[];
-    regex: string[];
-    color?: string[];
-  }[];
+  alphabet: Alphabets[];
   scale?: number;
   startPos?: number;
   negativealpha: number;
@@ -95,34 +91,7 @@ export type LogoWithNegativesProps = {
   svgRef?: React.RefObject<SVGSVGElement | null>;
 };
 
-export type LogoProps = {
-  ppm?: number[][];
-  pfm?: number[][];
-  values?: number[][];
-  fasta?: string;
-  mode?: string;
-  height?: number;
-  width?: number;
-  alphabet: {
-    component: React.FC<LetterProps>[];
-    regex: string[];
-    color?: string[];
-  }[];
-  glyphWidth?: number;
-  scale?: number;
-  startPos?: number;
-  showGridLines?: boolean;
-  backgroundFrequencies?: number[];
-  constantPseudocount?: number;
-  smallSampleCorrectionOff?: boolean;
-  yAxisMax?: number;
-  onSymbolMouseOver?: (symbol: Alphabets) => void;
-  onSymbolMouseOut?: (symbol: Alphabets) => void;
-  onSymbolClick?: (symbol: Alphabets) => void;
-  noFastaNames?: boolean;
-  countUnaligned?: boolean;
-  svgRef?: React.RefObject<SVGSVGElement | null>;
-};
+export type LogoProps = CompleteLogoProps & { alphabet: Alphabets[] };
 
 export type YGridlinesProps = {
   minrange: number;

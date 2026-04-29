@@ -61,6 +61,11 @@ export const FREQUENCY = "FREQUENCY";
 
 /**
  * A alphabet making use of all available symbols and a variety of colors.
+ * @note the hardcoded A/T/U colors in DNA and RNA Logo were swapped to:
+ * A: #228b22
+ * T: red
+ * U: red
+ * But this was left unmodified
  */
 export const CompleteAlphabet: Alphabets[] = [
   { component: [A], regex: ["A"], color: ["red"] },

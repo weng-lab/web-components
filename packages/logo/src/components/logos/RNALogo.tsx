@@ -9,10 +9,10 @@ import { Alphabets, RNALogoProps } from './types';
  * in a similar scheme to the MEME default.
  */
 export const RNAAlphabet: Alphabets[] = [
-  { component: [A], regex: ['A'], color: ['red'] },
+  { component: [A], regex: ['A'], color: ['#228b22'] },
   { component: [C], regex: ['C'], color: ['blue'] },
   { component: [G], regex: ['G'], color: ['orange'] },
-  { component: [U], regex: ['U'], color: ['seagreen'] },
+  { component: [U], regex: ['U'], color: ['red'] },
 ];
 
 /**
