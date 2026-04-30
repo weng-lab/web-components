@@ -325,33 +325,6 @@ export const ZoomDisabledButSelectable: Story = {
     }
 };
 
-// Controls Positioning
-export const ControlsPositioning: Story = {
-    args: {
-        controlsPosition: "bottom",
-        pointData: scatterData,
-        loading: false,
-        miniMap: miniMap,
-        leftAxisLabel: "Y-Axis Label",
-        bottomAxisLabel: "X-Axis Label",
-        selectable: true,
-        onSelectionChange: (selectedPoints) => {
-            window.alert(
-                `You Seleted Points: ${JSON.stringify(selectedPoints)}`
-            );
-        },
-        disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
-    }
-};
-
 // Controls Highlight
 export const ControlsHighlight: Story = {
     args: {

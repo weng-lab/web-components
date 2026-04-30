@@ -12,11 +12,19 @@ const ControlButtons = ({
     zoomIn,
     zoomOut,
     zoomReset,
-    position,
     highlight,
     downloadButton,
     downloadPlot
 }: ControlButtonsProps) => {
+    const theme = useTheme();
+    const color = highlight ?? theme.palette.primary.main;
+    const tooltipPlacement = "right";
+    
+    const buttonSx = {
+        borderRadius: 0,
+        color: theme.palette.text.primary,
+        padding: theme.spacing(1),
+    };
 
     useEffect(() => {
         // Function to handle key press
@@ -47,15 +55,6 @@ const ControlButtons = ({
         };
     }, [handleSelectionModeChange, selectMode, selectable]);
 
-    const theme = useTheme();
-    const color = highlight ?? theme.palette.primary.main;
-    const direction = position === "bottom" ? "row" : "column";
-    const tooltipPlacement = position === "right" ? "left" : position === "bottom" ? "top" : "right";
-    const buttonSx = {
-        borderRadius: 0,
-        color: theme.palette.text.primary,
-        padding: theme.spacing(1),
-    };
     const getToggleButtonSx = (mode: "pan" | "select") => ({
         ...buttonSx,
         color: selectMode === mode ? highlight || "primary.main" : theme.palette.text.primary,
@@ -73,8 +72,8 @@ const ControlButtons = ({
         <>
             {selectMode !== "none" && (
                 <Stack
-                    direction={direction}
-                    alignItems={position === "bottom" ? "center" : "flex-start"}
+                    direction="column"
+                    alignItems="flex-start"
                     justifyContent={"center"}
                     sx={{
                         background: "rgba(255, 255, 255, 0.6)",

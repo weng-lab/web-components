@@ -473,11 +473,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                     direction="column"
                                     sx={{
                                         position: 'absolute',
-                                        left: props.controlsPosition === "left" ? 10 : props.controlsPosition === "bottom" ? "50%" : null,
-                                        right: props.controlsPosition === "right" ? 10 : null,
-                                        top: props.controlsPosition === "bottom" ? null : '50%',
-                                        bottom: props.controlsPosition === "bottom" ? 10 : null,
-                                        transform: props.controlsPosition === "bottom" ? 'translateX(-50%)' : 'translateY(-50%)',
+                                        left: `max(10px, calc(45% - ${size / 2}px))`,
+                                        top: `calc(50% - ${size / 2}px + ${margin.top}px)`,
                                         zIndex: 10
                                     }}
                                 >
@@ -489,7 +486,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                         zoomIn={handleZoomIn}
                                         zoomOut={handleZoomOut}
                                         zoomReset={handleZoomReset}
-                                        position={props.controlsPosition}
                                         highlight={props.controlsHighlight}
                                         downloadButton={downloadButton}
                                         downloadPlot={handleDownload}

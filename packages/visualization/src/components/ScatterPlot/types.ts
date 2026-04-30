@@ -125,15 +125,6 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     disableTooltip?: boolean;
     /**
-     * Determines the placement of any controls that are being shown at the time.
-     * Positions are fixed and cannot be moved, they are 10 pixels from the specified side of the container
-     * and situated in the center
-     * 
-     * @default
-     * "left"
-     */
-    controlsPosition?: "left" | "bottom" | "right";
-    /**
      * Can specify a certain color to display what controls are being selected
      * (Pan/Select and Minimap open/closed)
      * 
@@ -244,7 +235,6 @@ export type ControlButtonsProps = {
     zoomIn: () => void;
     zoomOut: () => void;
     zoomReset: () => void;
-    position?: "left" | "bottom" | "right";
     highlight?: string;
     downloadButton: Download;
     downloadPlot: () => void;
