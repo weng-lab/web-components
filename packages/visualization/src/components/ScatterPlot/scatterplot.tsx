@@ -23,6 +23,7 @@ import { HandlerArgs } from '@visx/drag/lib/useDrag';
 import { useParentSize } from '@visx/responsive';
 import { downloadDivAsPNG, downloadDivAsSVG, getAnimationProps } from '../../utility';
 import { motion } from "framer-motion";
+import { getTicks, getTrianglePoints, isPointInLasso, rescaleX, rescaleY } from './helpers';
 
 const initialTransformMatrix = {
     scaleX: 1,
@@ -151,30 +152,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         }
     }, [hoveredPoint, props.groupPointsAnchor, props.pointData])
 
-    //rescale x and y scales when zooming
-    //converts to pixel values before applying transformations
-    const rescaleX = (scale: ScaleLinear<number, number, never>, translateX: number, scaleX: number) => {
-        const newXDomain = scale
-            .range()
-            .map((r) =>
-                scale.invert(
-                    (r - translateX) / scaleX
-                )
-            );
-        return scale.copy().domain(newXDomain);
-    };
-
-    const rescaleY = (scale: ScaleLinear<number, number, never>, translateY: number, scaleY: number) => {
-        const newXDomain = scale
-            .range()
-            .map((r) =>
-                scale.invert(
-                    (r - translateY) / scaleY
-                )
-            );
-        return scale.copy().domain(newXDomain);
-    };
-
     //scales for the x and y axes
     const xScale = useMemo(() => {
         if (!props.pointData || props.pointData.length === 0) return scaleLinear({ domain: [0, 1], range: [0, boundedWidth] });
@@ -228,23 +205,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         },
         [selectMode, margin.left, margin.top],
     );
-
-    //find all points within the drawn lasso for selection purposes
-    const isPointInLasso = (point: { x: number; y: number }, lasso: Line): boolean => {
-        let inside = false;
-        //itterate through lasso, j starting at last point (closing the polygon) and taking the value of the previous point on subsequent calls
-        for (let i = 0, j = lasso.length - 1; i < lasso.length; j = i++) {
-            const xi = lasso[i].x, yi = lasso[i].y; //current vertex
-            const xj = lasso[j].x, yj = lasso[j].y; //previous vertex
-
-            //ray tracing using imaginary horizontal ray coming from the point extending to the right
-            const intersect = ((yi > point.y) !== (yj > point.y)) && //does the ray intersect the line segment from the current to the previous vertex?
-                (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi); //is the point to the left of the segment?
-            if (intersect) inside = !inside; //toggles everytime the ray intersects the lasso, if twice it will go back to false since it crossed the lasso twice
-            //if the ray crosses the lasso an even amount of times -> outside, odd -> inside
-        }
-        return inside;
-    };
 
     const onDragEnd = useCallback(
         (zoom: ZoomType) => {
@@ -332,7 +292,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
             }
         }, [isDragging, props.pointData, margin.left, margin.top, xScale, yScale]
     );
-
 
     const handleMouseLeave = useCallback(() => {
         setTooltipOpen(false);
@@ -466,17 +425,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         </Text>
     );
 
-    const getTicks = (
-        scale: ScaleLinear<number, number, never>,
-        total = 5 // total ticks including endpoints
-    ) => {
-        const [min, max] = scale.domain();
-        if (total < 2) return [min, max];
-
-        const step = (max - min) / (total - 1);
-        return Array.from({ length: total }, (_, i) => min + i * step);
-    };
-
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(props.ref, () => ({
         downloadSVG: () => {
@@ -491,17 +439,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const handleDownload = () => {
         if (divRef.current) downloadDivAsSVG(divRef.current, props.downloadFileName ?? "scatter_plot.svg");
     };
-
-    function getTrianglePoints(cx: number, cy: number, r: number) {
-        // equilateral triangle centered at cx, cy
-        const height = r * Math.sqrt(3);
-
-        const p1 = `${cx},${cy - (2 / 3) * height}`;
-        const p2 = `${cx - r},${cy + (1 / 3) * height}`;
-        const p3 = `${cx + r},${cy + (1 / 3) * height}`;
-
-        return `${p1} ${p2} ${p3}`;
-    }
 
 
     return (
