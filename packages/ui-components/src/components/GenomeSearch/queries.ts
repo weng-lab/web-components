@@ -185,23 +185,30 @@ export const getGenes = async (
 
   // Fetch genes for all versions
   const versionResults = await Promise.all(
-    versions.map((version) =>
-      fetch(url, {
-        method: "POST",
-        body: JSON.stringify({
-          query: GENE_AUTOCOMPLETE_QUERY,
-          variables: {
-            assembly: assembly.toLowerCase(),
-            ...(value.toUpperCase().startsWith("ENSG") ? { idprefix: value.split(".")[0] } : { name_prefix: value }),
-            version: version,
-            limit: limit,
-          },
-        }),
-        headers: { "Content-Type": "application/json" },
-        signal,
-      }).then((res) => res.json())
-    )
-  );
+  versions.map((version) =>
+    fetch(url, {
+      method: "POST",
+      body: JSON.stringify({
+        query: GENE_AUTOCOMPLETE_QUERY,
+        variables: {
+          assembly: assembly.toLowerCase(),
+          ...(
+            (
+              (assembly.toLowerCase() === "mm10" && value.toUpperCase().startsWith("ENSMUSG")) ||
+              (assembly.toLowerCase() === "grch38" && value.toUpperCase().startsWith("ENSG"))
+            )
+              ? { idprefix: value.split(".")[0] }
+              : { name_prefix: value }
+          ),
+          version: version,
+          limit: limit,
+        },
+      }),
+      headers: { "Content-Type": "application/json" },
+      signal,
+    }).then((res) => res.json())
+  )
+);
 
   // Combine and deduplicate results
   const geneMap = new Map<string, { gene: any; versions: { id: string; version: number }[] }>();
