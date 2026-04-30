@@ -1,5 +1,5 @@
 import React from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { A, B, Glyph, GlyphStack, Alphabets } from "../../index";
 
 const ALPHABET: Alphabets[] = [
@@ -9,7 +9,7 @@ const ALPHABET: Alphabets[] = [
 ];
 
 const meta = {
-  title: "logo/Glyph",
+  title: "seq-logo/Glyph",
   component: Glyph,
   parameters: {
     layout: "centered",
@@ -99,7 +99,7 @@ export const GlyphWithOpacity: Story = {
 };
 
 const glyphStackMeta = {
-  title: "logo/GlyphStack",
+  title: "seq-logo/GlyphStack",
   component: GlyphStack,
   parameters: {
     layout: "centered",

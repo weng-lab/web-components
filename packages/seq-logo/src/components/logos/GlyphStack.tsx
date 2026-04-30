@@ -38,13 +38,13 @@ export const GlyphStack: React.FC<GlyphStackProps> = ({
     cy -= lv[index] * 100.0;
     const ccy = inverted ? cy + lv[index] * 100.0 : cy;
 
-    let _xscale = (xscale * 0.8) / alphabet[index].component.length;
+    let _xscale = (xscale * 0.96) / alphabet[index].component.length;
 
     return alphabet[index].component.map((G: any, i: number) => (
       <g
         transform={
           'translate(' +
-          ((i * width * 0.8) / alphabet[index].component.length + width * 0.1) +
+          ((i * width * 0.96) / alphabet[index].component.length + width * 0.02) +
           ',' +
           ccy +
           ')'

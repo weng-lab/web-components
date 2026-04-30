@@ -1,9 +1,9 @@
 import React from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { XAxis } from "../../index";
 
 const meta = {
-  title: "logo/XAxis",
+  title: "seq-logo/XAxis",
   component: XAxis,
   parameters: {
     layout: "centered",

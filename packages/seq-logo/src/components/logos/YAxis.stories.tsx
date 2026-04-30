@@ -1,5 +1,5 @@
 import React from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   YAxis,
   YAxisFrequency,
@@ -8,7 +8,7 @@ import {
 } from "../../index";
 
 const meta = {
-  title: "logo/YAxis",
+  title: "seq-logo/YAxis",
   component: YAxis,
   parameters: {
     layout: "centered",
@@ -49,7 +49,7 @@ export const ZeroPoint: Story = {
 };
 
 const frequencyMeta = {
-  title: "logo/YAxisFrequency",
+  title: "seq-logo/YAxisFrequency",
   component: YAxisFrequency,
   parameters: {
     layout: "centered",
@@ -72,7 +72,7 @@ export const ByFrequency: StoryObj<typeof frequencyMeta> = {
 };
 
 const withNegativesMeta = {
-  title: "logo/YAxisWithNegatives",
+  title: "seq-logo/YAxisWithNegatives",
   component: YAxisWithNegatives,
   parameters: {
     layout: "centered",
@@ -111,7 +111,7 @@ export const WithNegativeMinAndMax: StoryObj<typeof withNegativesMeta> = {
 };
 
 const gridlinesMeta = {
-  title: "logo/YGridlines",
+  title: "seq-logo/YGridlines",
   component: YGridlines,
   parameters: {
     layout: "centered",

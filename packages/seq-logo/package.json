@@ -1,6 +1,6 @@
 {
-  "name": "@weng-lab/logo",
-  "version": "0.0.1-alpha.0",
+  "name": "@weng-lab/seq-logo",
+  "version": "0.0.1",
   "description": "Sequence logo components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "clean": "rimraf dist",

@@ -1,5 +1,4 @@
-import React from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { A, C, G, T } from "../glyphs";
 import {
   RawLogo,
@@ -73,7 +72,7 @@ const NEG_PPM = [
 ];
 
 const meta = {
-  title: "logo/Logo",
+  title: "seq-logo/Logo",
   component: Logo,
   parameters: {
     layout: "centered",
