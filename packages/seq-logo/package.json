@@ -1,0 +1,32 @@
+{
+  "name": "@weng-lab/seq-logo",
+  "version": "0.0.1",
+  "description": "Sequence logo components for the Weng/Moore Labs suite of genomics web resources",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "pnpm run clean && vite build"
+  },
+  "type": "module",
+  "module": "dist/logo.es.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/logo.es.js",
+      "types": "./dist/src/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rimraf": "^6.0.1"
+  }
+}
