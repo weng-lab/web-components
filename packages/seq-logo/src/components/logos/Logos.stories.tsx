@@ -91,7 +91,7 @@ export const RawLogos: StoryObj<Meta<typeof RawLogo>> = {
     values: PPM,
   },
   render: (args) => (
-    <svg viewBox={`0 0 ${PPM.length * 200 + 30} 1000`}>
+    <svg width={300} viewBox={`0 0 ${PPM.length * 200 + 30} 1000`}>
       <RawLogo
         {...args}
         onSymbolClick={(s) => {
@@ -187,6 +187,7 @@ export const DnaLogo: StoryObj<Meta<typeof DNALogo>> = {
 export const CTCFLogo: StoryObj<Meta<typeof DNALogo>> = {
   args: {
     ppm: CTCF_PPM,
+    width: 500
   },
   render: (args) => <DNALogo {...args} />,
 };
@@ -213,11 +214,11 @@ export const ProteinLogos: StoryObj<Meta<typeof ProteinLogo>> = {
     glyphWidth: 5,
     height: 500,
     ppm: [
-      [0, 0, 1, 0],
-      [0, 0.8, 0, 0],
-      [0, 1, 0, 0],
-      [0, 0.5, 0, 0.5],
-      [0, 0, 1, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0.5, 0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ],
   },
   render: (args) => <ProteinLogo {...args} />,
@@ -307,11 +308,11 @@ export const EmbedProteinLogo: StoryObj<Meta<typeof ProteinLogo>> = {
     glyphWidth: 5,
     height: 500,
     ppm: [
-      [0, 0, 1, 0],
-      [0, 0.8, 0, 0],
-      [0, 1, 0, 0],
-      [0, 0.5, 0, 0.5],
-      [0, 0, 1, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0.5, 0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ],
   },
   render: (args) => <ProteinLogo {...args} />,
@@ -319,13 +320,13 @@ export const EmbedProteinLogo: StoryObj<Meta<typeof ProteinLogo>> = {
 
 export const EmbedRawLogo: StoryObj<Meta<typeof RawLogo>> = {
   args: {
-    glyphWidth: 20,
+    glyphWidth: 100,
     stackHeight: 300,
     alphabet: ALPHABET,
     values: PPM,
   },
   render: (args) => (
-    <svg viewBox={`0 0 ${PPM.length * 200 + 30} 1000`}>
+    <svg width={300} viewBox={`0 0 ${PPM.length * 200 + 30} 1000`}>
       <RawLogo {...args} />
     </svg>
   ),
