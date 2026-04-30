@@ -89,6 +89,7 @@ export const Default: Story = {
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
+        downloadButton: true,
         initialState: {
             minimap: {
                 open: true,

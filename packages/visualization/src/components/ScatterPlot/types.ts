@@ -3,8 +3,6 @@ import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 
-type Download = "none" | "inline" | "topRight" | "topLeft" | "bottomRight" | "bottomLeft"
-
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
     which can be any amount of strings used to display in the tooltip
@@ -200,10 +198,11 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
     /**
-     * Download Button positioning to internally download component
-     * Default none
+     * If true, shows a download button inside the controls panel.
+     * @default
+     * false
      */
-    downloadButton?: Download;
+    downloadButton?: boolean;
     animation?: AnimationType;
     animationBuffer?: number;
     animationGroupSize?: number;
@@ -236,7 +235,7 @@ export type ControlButtonsProps = {
     zoomOut: () => void;
     zoomReset: () => void;
     highlight?: string;
-    downloadButton: Download;
+    downloadButton: boolean;
     downloadPlot: () => void;
 }
 

@@ -125,7 +125,7 @@ const ControlButtons = ({
                             <SettingsBackupRestore fontSize="small" />
                         </IconButton>
                     </Tooltip>
-                    {downloadButton === "inline" && (
+                    {downloadButton && (
                         <Tooltip title="Download Plot as SVG" placement={tooltipPlacement}>
                             <IconButton aria-label="download" onClick={() => downloadPlot()} sx={buttonSx}>
                                 <Download fontSize="small" />

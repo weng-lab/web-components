@@ -17,7 +17,7 @@ import ScatterTooltip from './tooltip';
 import ControlButtons from './controls';
 import { Box, IconButton, Stack, Tooltip } from '@mui/material';
 import { ScaleLinear } from '@visx/vendor/d3-scale';
-import { HighlightAlt, Download } from "@mui/icons-material"
+import { HighlightAlt } from "@mui/icons-material"
 import MiniMap from './minimap';
 import { HandlerArgs } from '@visx/drag/lib/useDrag';
 import { useParentSize } from '@visx/responsive';
@@ -75,7 +75,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const boundedHeight = boundedWidth;
     const hoveredPoint = tooltipData ? props.pointData.find(point => point.x === tooltipData.x && point.y === tooltipData.y) : null;
     const [previousDisplayedPoints, setPreviousDisplayedPoints] = useState<Point<T>[]>([])
-    const downloadButton = props.downloadButton ?? "none"
+    const downloadButton = props.downloadButton ?? false
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(props.animation));
 
     useEffect(() => {
@@ -491,25 +491,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                         downloadPlot={handleDownload}
                                     />
                                 </Stack>
-                            )}
-                            {/* download button based on positioning */}
-                            {["topRight", "topLeft", "bottomRight", "bottomLeft"].includes(downloadButton) && (
-                                <Tooltip title="Download Plot as PNG">
-                                    <IconButton
-                                        aria-label="download"
-                                        onClick={() => handleDownload()}
-                                        sx={{
-                                            position: "absolute",
-                                            zIndex: 10,
-                                            ...(downloadButton === "topRight" && { top: 10, right: 10 }),
-                                            ...(downloadButton === "topLeft" && { top: 10, left: 10 }),
-                                            ...(downloadButton === "bottomRight" && { bottom: 10, right: 10 }),
-                                            ...(downloadButton === "bottomLeft" && { bottom: 10, left: 10 }),
-                                        }}
-                                    >
-                                        <Download />
-                                    </IconButton>
-                                </Tooltip>
                             )}
                             {/* Zoomable Group for Points */}
                             <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>
