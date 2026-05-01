@@ -125,6 +125,7 @@ export default function PhyloTree({
   labelPadding = 135,
   defaultScaling = "scaled",
   tooltipContents,
+  leafOrder,
 }: PhyloTreeProps) {
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(defaultScaling === "scaled");
 
@@ -200,19 +201,25 @@ export default function PhyloTree({
       // sorts first by least number of children, and then by branch length to create nice looking plot
       .sum((d) => (d.children ? 0 : 1))
       .sort((a, b) => {
+        if (leafOrder) {
+          const indexMap = new Map(leafOrder.map((id, i) => [id, i]));
+          const minIdx = (node: typeof a) =>
+            Math.min(...node.leaves().map((l) => indexMap.get(l.data.id) ?? Infinity));
+          return minIdx(a) - minIdx(b);
+        }
+
         // Float the Homo_sapiens subtree to the end so it appears at the top
         const aHasHuman = a.leaves().some((l) => l.data.id === "Homo_sapiens");
         const bHasHuman = b.leaves().some((l) => l.data.id === "Homo_sapiens");
         if (aHasHuman !== bHasHuman) return aHasHuman ? -1 : 1;
 
-        // Original sort
         return (
           (a.value || 0) - (b.value || 0) ||
           ascending(a.data.branch_length ?? undefined, b.data.branch_length ?? undefined)
         );
       });
     return r;
-  }, [data, getColor, circleRadius]);
+  }, [data, getColor, circleRadius, leafOrder]);
 
   /* Add layout/render properties */
   const rootNode = useMemo(() => {
@@ -335,8 +342,24 @@ export default function PhyloTree({
       node.descendantIds = descendantIds
     })
 
+    if (leafOrder) {
+      const achievedOrder = clusterRoot.leaves().map((l) => l.data.id);
+      const treeLeafSet = new Set(achievedOrder);
+      const leafOrderSet = new Set(leafOrder);
+      const requestedFiltered = leafOrder.filter((id) => treeLeafSet.has(id));
+      const achievedFiltered = achievedOrder.filter((id) => leafOrderSet.has(id));
+      const mismatch = requestedFiltered.some((id, i) => id !== achievedFiltered[i]);
+      if (mismatch) {
+        console.error(
+          "[PhyloTree] Requested leafOrder is not achievable given the tree topology.\n" +
+          "Requested: " + requestedFiltered.join(", ") + "\n" +
+          "Achieved:  " + achievedFiltered.join(", ")
+        );
+      }
+    }
+
     return clusterRoot;
-  }, [data, size, circleRadius, root, highlighted, linkStrokeWidth]);
+  }, [data, size, circleRadius, root, highlighted, linkStrokeWidth, leafOrder]);
 
   const toggleBranchLength = useCallback(() => setEnableBranchLengths((prev) => !prev), []);
 
