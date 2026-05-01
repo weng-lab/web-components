@@ -11,7 +11,7 @@ import { Stack } from '@mui/material';
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { useParentSize } from '@visx/responsive';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
-import { rescaleX, rescaleY } from './helpers';
+import { getPointExtents, rescaleX, rescaleY } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import { useScatterPlotInteraction } from './useScatterPlotInteraction';
 
@@ -72,28 +72,22 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         return () => window.clearTimeout(t);
     }, [props.animation, props.animationBuffer, props.animationGroupSize, props.pointData.length]);
 
+    const pointExtents = useMemo(() => getPointExtents(props.pointData), [props.pointData]);
+
     //scales for the x and y axes
     const xScale = useMemo(() => {
-        if (!props.pointData || props.pointData.length === 0) return scaleLinear({ domain: [0, 1], range: [0, boundedWidth] });
         return scaleLinear({
-            domain: [
-                Math.min(...props.pointData.map(d => d.x)) - 1,
-                Math.max(...props.pointData.map(d => d.x)) + 1,
-            ],
+            domain: [pointExtents.x[0] - 1, pointExtents.x[1] + 1],
             range: [0, boundedWidth],
         });
-    }, [props.pointData, boundedWidth]);
+    }, [boundedWidth, pointExtents]);
 
     const yScale = useMemo(() => {
-        if (!props.pointData || props.pointData.length === 0) return scaleLinear({ domain: [0, 1], range: [boundedHeight, 0] });
         return scaleLinear({
-            domain: [
-                Math.min(...props.pointData.map(d => d.y)) - 1,
-                Math.max(...props.pointData.map(d => d.y)) + 1,
-            ],
+            domain: [pointExtents.y[0] - 1, pointExtents.y[1] + 1],
             range: [boundedHeight, 0], // Y-axis is inverted
         });
-    }, [props.pointData, boundedHeight]);
+    }, [boundedHeight, pointExtents]);
 
     const {
         graphRef,

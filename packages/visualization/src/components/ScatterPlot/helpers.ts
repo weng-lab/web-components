@@ -1,5 +1,5 @@
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { Line } from "./types";
+import { Line, Point } from "./types";
 
 //rescale x and y scales when zooming
 //converts to pixel values before applying transformations
@@ -63,3 +63,29 @@ export function getTrianglePoints(cx: number, cy: number, r: number) {
 
     return `${p1} ${p2} ${p3}`;
 }
+
+export const getPointExtents = <T extends object>(pointData: Point<T>[]) => {
+    if (pointData.length === 0) {
+        return {
+            x: [0, 1] as [number, number],
+            y: [0, 1] as [number, number],
+        };
+    }
+
+    let minX = pointData[0].x;
+    let maxX = pointData[0].x;
+    let minY = pointData[0].y;
+    let maxY = pointData[0].y;
+
+    for (const point of pointData) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+    }
+
+    return {
+        x: [minX, maxX] as [number, number],
+        y: [minY, maxY] as [number, number],
+    };
+};

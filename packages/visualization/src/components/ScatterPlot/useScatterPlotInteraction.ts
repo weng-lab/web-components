@@ -23,6 +23,19 @@ type UseScatterPlotInteractionProps<T extends object> = {
     onPointClicked?: (point: Point<T>) => void;
 };
 
+type TransformedPointCache<T extends object> = {
+    pointData: Point<T>[];
+    translateX: number;
+    translateY: number;
+    scaleX: number;
+    scaleY: number;
+    points: Array<{
+        point: Point<T>;
+        x: number;
+        y: number;
+    }>;
+};
+
 export const useScatterPlotInteraction = <T extends object>({
     pointData,
     selectable,
@@ -42,6 +55,7 @@ export const useScatterPlotInteraction = <T extends object>({
     const [showMiniMap, setShowMiniMap] = useState(initialMiniMapOpen);
     const [mouseX, setMouseX] = useState(0);
     const [mouseY, setMouseY] = useState(0);
+    const transformedPointCacheRef = useRef<TransformedPointCache<T> | null>(null);
 
     const hoveredPoint = useMemo(
         () => tooltipData
@@ -134,14 +148,45 @@ export const useScatterPlotInteraction = <T extends object>({
 
         const adjustedX = point.x - margin.left;
         const adjustedY = point.y - margin.top;
-        const xScaleTransformed = rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX);
-        const yScaleTransformed = rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY);
+        const { translateX, translateY, scaleX, scaleY } = zoom.transformMatrix;
+        //cache tranformed points for faster hover lookup times (more for larger datasets)
+        const cachedTransformedPoints = transformedPointCacheRef.current;
+        const shouldReuseCachedPoints =
+            cachedTransformedPoints &&
+            cachedTransformedPoints.pointData === pointData &&
+            cachedTransformedPoints.translateX === translateX &&
+            cachedTransformedPoints.translateY === translateY &&
+            cachedTransformedPoints.scaleX === scaleX &&
+            cachedTransformedPoints.scaleY === scaleY;
+
+        const transformedPoints = shouldReuseCachedPoints
+            ? cachedTransformedPoints.points
+            : (() => {
+                const xScaleTransformed = rescaleX(xScale, translateX, scaleX);
+                const yScaleTransformed = rescaleY(yScale, translateY, scaleY);
+                const nextPoints = pointData.map((curr) => ({
+                    point: curr,
+                    x: xScaleTransformed(curr.x),
+                    y: yScaleTransformed(curr.y),
+                }));
+
+                transformedPointCacheRef.current = {
+                    pointData,
+                    translateX,
+                    translateY,
+                    scaleX,
+                    scaleY,
+                    points: nextPoints,
+                };
+
+                return nextPoints;
+            })();
         const threshold = 5;
 
-        const nextHoveredPoint = pointData.find((curr) => (
-            Math.abs(adjustedX - xScaleTransformed(curr.x)) < threshold &&
-            Math.abs(adjustedY - yScaleTransformed(curr.y)) < threshold
-        )) ?? null;
+        const nextHoveredPoint = transformedPoints.find((curr) => (
+            Math.abs(adjustedX - curr.x) < threshold &&
+            Math.abs(adjustedY - curr.y) < threshold
+        ))?.point ?? null;
 
         setTooltipData(nextHoveredPoint);
         setTooltipOpen(Boolean(nextHoveredPoint));
