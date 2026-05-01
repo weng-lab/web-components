@@ -51,7 +51,7 @@ const tooltipContents = (tooltipData: TooltipData) => (
     }}
   >
     {tooltipData.label} • {tooltipData.order}
-    {tooltipData.basePair && tooltipData.position ? ` • pos ${tooltipData.position} • ${tooltipData.basePair}` : ""}
+    {tooltipData.basePair && tooltipData.position !== undefined ? ` • pos ${tooltipData.position} • ${tooltipData.basePair}` : ""}
   </div>
 );
 
