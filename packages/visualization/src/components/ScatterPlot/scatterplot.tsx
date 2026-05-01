@@ -1,29 +1,19 @@
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import CircularProgress from '@mui/material/CircularProgress';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Zoom as VisxZoom } from '@visx/zoom'
 import { ZoomProps } from '@visx/zoom/lib/Zoom'
-import { ChartProps, Line, Lines, Point, ZoomType } from './types';
-import { Tooltip as VisxTooltip, Portal } from '@visx/tooltip';
+import { ChartProps, Point, ZoomType } from './types';
+import { Tooltip as VisxTooltip } from '@visx/tooltip';
 import { TooltipProps } from '@visx/tooltip/lib/tooltips/Tooltip';
-import { Group } from '@visx/group';
 import { scaleLinear } from '@visx/scale';
-import { AxisBottom, AxisLeft } from '@visx/axis';
-import { LinePath } from '@visx/shape';
 import { localPoint } from '@visx/event';
-import { Text } from '@visx/text';
-import { useDrag } from '@visx/drag';
-import { curveBasis } from '@visx/curve';
-import ScatterTooltip from './tooltip';
 import ControlButtons from './controls';
-import { Box, IconButton, Stack, Tooltip } from '@mui/material';
+import { Stack } from '@mui/material';
 import { ScaleLinear } from '@visx/vendor/d3-scale';
-import { HighlightAlt } from "@mui/icons-material"
-import MiniMap from './minimap';
-import { HandlerArgs } from '@visx/drag/lib/useDrag';
 import { useParentSize } from '@visx/responsive';
-import { downloadDivAsPNG, downloadDivAsSVG, getAnimationProps } from '../../utility';
-import { motion } from "framer-motion";
-import { getTicks, getTrianglePoints, isPointInLasso, rescaleX, rescaleY } from './helpers';
+import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
+import { rescaleX, rescaleY } from './helpers';
+import ScatterPlotViewport from './ScatterPlotViewport';
+import { useScatterPlotInteraction } from './useScatterPlotInteraction';
 
 const initialTransformMatrix = {
     scaleX: 1,
@@ -59,21 +49,11 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
     const size = Math.min(parentHeight, parentWidth)
 
-    const graphRef = useRef<SVGRectElement | null>(null);
     const divRef = React.useRef<HTMLDivElement>(null);
-
-    const [tooltipData, setTooltipData] = React.useState<Point<T> | null>(null);
-    const [tooltipOpen, setTooltipOpen] = React.useState(false);
-    const [lines, setLines] = useState<Lines>([]);
-    const [selectMode, setSelectMode] = useState<"select" | "pan" | "none">(initialState.controls.selectionType);
-    const [showMiniMap, setShowMiniMap] = useState<boolean>(initialState.minimap.open);
-    const [mouseX, setMouseX] = useState(0);
-    const [mouseY, setMouseY] = useState(0);
     const selectable = props.selectable ? props.selectable : false;
     const margin = { top: 20, right: 20, bottom: 70, left: 70 };
     const boundedWidth = Math.min(size * 0.9, size * 0.9) - margin.left;
     const boundedHeight = boundedWidth;
-    const hoveredPoint = tooltipData ? props.pointData.find(point => point.x === tooltipData.x && point.y === tooltipData.y) : null;
     const [previousDisplayedPoints, setPreviousDisplayedPoints] = useState<Point<T>[]>([])
     const downloadButton = props.downloadButton ?? false
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(props.animation));
@@ -92,65 +72,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         const t = window.setTimeout(() => setShowPointAnimation(false), total);
         return () => window.clearTimeout(t);
     }, [props.animation, props.animationBuffer, props.animationGroupSize, props.pointData.length]);
-
-
-    useEffect(() => {
-        const graphElement = graphRef.current;
-
-        const handleWheel = (event: WheelEvent) => {
-            event.preventDefault(); //prevent scrolling using wheel
-        };
-
-        const handleTouchMove = (event: TouchEvent) => {
-            event.preventDefault(); // Prevent scrolling during any touch movement
-        };
-
-        const handleTouchStart = (event: TouchEvent) => {
-            event.preventDefault(); // Prevent scrolling on touch start
-        };
-
-        if (graphElement) {
-            graphElement.addEventListener('wheel', handleWheel, { passive: false });
-            graphElement.addEventListener('touchstart', handleTouchStart, { passive: false });
-            graphElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-        }
-
-        return () => {
-            if (graphElement) {
-                graphElement.removeEventListener('wheel', handleWheel);
-                graphElement.removeEventListener('touchstart', handleTouchStart);
-                graphElement.removeEventListener('touchmove', handleTouchMove);
-            }
-        };
-    }, [graphRef]);
-
-    const handleSelectionModeChange = (mode: "select" | "pan" | "none") => {
-        setSelectMode(mode);
-    };
-
-    const toggleMiniMap = () => {
-        setShowMiniMap(!showMiniMap);
-    };
-
-    const groupedPoints: Point<T>[] = useMemo(() => {
-        const anchor = props.groupPointsAnchor
-        if (anchor && hoveredPoint) {
-            return props.pointData.filter((point) => {
-                if (anchor in point) {
-                    // If the anchor is a key of Point<T>, compare directly
-                    return point[anchor as keyof Point<T>] === hoveredPoint[anchor as keyof Point<T>];
-                } else if (point.metaData && hoveredPoint.metaData) {
-                    // If the anchor is a key of T (metaData), compare inside metaData
-                    return point.metaData[anchor as keyof T] === hoveredPoint.metaData[anchor as keyof T];
-                }
-                return false;
-            });
-        } else if (hoveredPoint) {
-            return ([hoveredPoint]);
-        } else {
-            return ([])
-        }
-    }, [hoveredPoint, props.groupPointsAnchor, props.pointData])
 
     //scales for the x and y axes
     const xScale = useMemo(() => {
@@ -175,136 +96,88 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         });
     }, [props.pointData, boundedHeight]);
 
-    // Setup dragging for lasso drawing
-    const onDragStart = useCallback(
-        (currDrag: HandlerArgs) => {
-            if (selectMode === "select" && currDrag?.x !== undefined && currDrag?.y !== undefined) {
-                // add the new line with the starting point
-                const adjustedX = (currDrag.x - margin.left);
-                const adjustedY = (currDrag.y - margin.top);
-                setLines((currLines) => [...currLines, [{ x: adjustedX, y: adjustedY }]]);
-            }
-        },
-        [selectMode, margin.left, margin.top],
-    );
-
-    const onDragMove = useCallback(
-        (currDrag: HandlerArgs) => {
-            if (selectMode === "select" && currDrag?.x !== undefined && currDrag?.y !== undefined) {
-                // add the new point to the current line
-                const adjustedX = (currDrag.x - margin.left);
-                const adjustedY = (currDrag.y - margin.top);
-                setLines((currLines) => {
-                    const nextLines = [...currLines];
-                    const newPoint = { x: adjustedX + currDrag.dx, y: adjustedY + currDrag.dy };
-                    const lastIndex = nextLines.length - 1;
-                    nextLines[lastIndex] = [...(nextLines[lastIndex] || []), newPoint];
-                    return nextLines;
-                });
-            }
-        },
-        [selectMode, margin.left, margin.top],
-    );
-
-    const onDragEnd = useCallback(
-        (zoom: ZoomType) => {
-            if (selectMode === "select") {
-                if (lines.length === 0) return;
-
-                const lasso = lines[lines.length - 1];
-                const xScaleTransformed = rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX);
-                const yScaleTransformed = rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY);
-
-                const pointsInsideLasso = props.pointData.filter((point) => {
-                    const scaledPoint = {
-                        x: xScaleTransformed(point.x),
-                        y: yScaleTransformed(point.y),
-                    };
-                    return isPointInLasso(scaledPoint, lasso);
-                });
-
-                if (props.onSelectionChange) {
-                    props.onSelectionChange(pointsInsideLasso);
-                }
-                setLines([]);
-            } else {
-                setLines([]);
-            }
-        },
-        [selectMode, lines, xScale, yScale, props]
-    );
-
-    //visx draggable variables (canot declare before functions)
     const {
-        x = 0,
-        y = 0,
+        graphRef,
+        tooltipData,
+        tooltipOpen,
+        lines,
+        selectMode,
+        showMiniMap,
+        mouseX,
+        mouseY,
+        hoveredPoint,
+        isDragging,
+        x,
+        y,
         dx,
         dy,
-        isDragging,
         dragStart,
         dragEnd,
         dragMove,
-    } = useDrag({
-        onDragStart,
-        onDragMove,
-        resetOnStart: true,
+        handleSelectionModeChange,
+        toggleMiniMap,
+        completeSelection,
+        handleMouseMove,
+        handleMouseLeave,
+        handlePointClick,
+    } = useScatterPlotInteraction({
+        pointData: props.pointData,
+        selectable,
+        initialSelectionMode: initialState.controls.selectionType,
+        initialMiniMapOpen: initialState.minimap.open,
+        margin,
+        xScale,
+        yScale,
+        onSelectionChange: props.onSelectionChange,
+        onPointClicked: props.onPointClicked,
     });
 
-    //find the closest point to cursor within threshold to show the tooltip
-    const handleMouseMove = useCallback(
-        (event: React.MouseEvent<SVGElement>, zoom: ZoomType) => {
-            if (isDragging || zoom.isDragging) {
-                setTooltipOpen(false);
-                setTooltipData(null);
-                return;
-            }
+    useEffect(() => {
+        const graphElement = graphRef.current;
 
-            setMouseX(event.pageX);
-            setMouseY(event.pageY);
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+        };
 
-            const point = localPoint(event.currentTarget, event);
-            if (!point) return;
-            const adjustedX = point.x - margin.left;
-            const adjustedY = point.y - margin.top;
+        const handleTouchMove = (event: TouchEvent) => {
+            event.preventDefault();
+        };
 
-            //rescale the x and y coordinates with the current zoom state
-            const xScaleTransformed = rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX);
-            const yScaleTransformed = rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY);
+        const handleTouchStart = (event: TouchEvent) => {
+            event.preventDefault();
+        };
 
-            const threshhold = 5;
-
-            //find the exact point being hovered over within the threshhold
-            const hoveredPoint = props.pointData.find((curr) => {
-                const transformedX = xScaleTransformed(curr.x);
-                const transformedY = yScaleTransformed(curr.y);
-                return (
-                    Math.abs(adjustedX - transformedX) < threshhold &&
-                    Math.abs(adjustedY - transformedY) < threshhold
-                );
-            });
-
-            if (hoveredPoint) {
-                setTooltipData(hoveredPoint);
-                setTooltipOpen(true);
-            } else {
-                setTooltipData(null);
-                setTooltipOpen(false);
-            }
-        }, [isDragging, props.pointData, margin.left, margin.top, xScale, yScale]
-    );
-
-    const handleMouseLeave = useCallback(() => {
-        setTooltipOpen(false);
-        setTooltipData(null);
-    }, []);
-
-    const handleClick = () => {
-        if (!props.onPointClicked || !hoveredPoint) return;
-
-        if (hoveredPoint) {
-            props.onPointClicked(hoveredPoint);
+        if (graphElement) {
+            graphElement.addEventListener('wheel', handleWheel, { passive: false });
+            graphElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+            graphElement.addEventListener('touchmove', handleTouchMove, { passive: false });
         }
-    };
+
+        return () => {
+            if (graphElement) {
+                graphElement.removeEventListener('wheel', handleWheel);
+                graphElement.removeEventListener('touchstart', handleTouchStart);
+                graphElement.removeEventListener('touchmove', handleTouchMove);
+            }
+        };
+    }, [graphRef]);
+
+    const groupedPoints: Point<T>[] = useMemo(() => {
+        const anchor = props.groupPointsAnchor
+        if (anchor && hoveredPoint) {
+            return props.pointData.filter((point) => {
+                if (anchor in point) {
+                    return point[anchor as keyof Point<T>] === hoveredPoint[anchor as keyof Point<T>];
+                }
+                if (point.metaData && hoveredPoint.metaData) {
+                    return point.metaData[anchor as keyof T] === hoveredPoint.metaData[anchor as keyof T];
+                }
+                return false;
+            });
+        }
+
+        return hoveredPoint ? [hoveredPoint] : [];
+    }, [hoveredPoint, props.groupPointsAnchor, props.pointData])
 
     const drawPoints = useCallback((xScaleTransformed: ScaleLinear<number, number, never>, yScaleTransformed: ScaleLinear<number, number, never>, canvas: HTMLCanvasElement) => {
         if (canvas) {
@@ -397,34 +270,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         }
     }, [boundedWidth, boundedHeight, groupedPoints, props, previousDisplayedPoints])
 
-    //Axis styling
-    const axisLeftLabel = (
-        <Text
-            textAnchor="middle"
-            verticalAnchor="end"
-            angle={-90}
-            fontSize={15}
-            y={boundedHeight / 2}
-            x={0}
-            dx={-50} //adjust to move outside of chart area
-        >
-            {props.leftAxisLabel}
-        </Text>
-    );
-
-    const axisBottomLabel = (
-        <Text
-            textAnchor="middle"
-            verticalAnchor="start"
-            fontSize={15}
-            y={boundedHeight}
-            x={boundedWidth / 2}
-            dy={50}
-        >
-            {props.bottomAxisLabel}
-        </Text>
-    );
-
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(props.ref, () => ({
         downloadSVG: () => {
@@ -448,11 +293,11 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     // rescale as we zoom and pan
                     const xScaleTransformed = rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX);
                     const yScaleTransformed = rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY);
-                    const isHoveredPointWithinBounds = hoveredPoint &&
+                    const isHoveredPointWithinBounds = Boolean(hoveredPoint &&
                         xScaleTransformed(hoveredPoint.x) >= 0 &&
                         xScaleTransformed(hoveredPoint.x) <= boundedWidth &&
                         yScaleTransformed(hoveredPoint.y) >= 0 &&
-                        yScaleTransformed(hoveredPoint.y) <= boundedHeight;
+                        yScaleTransformed(hoveredPoint.y) <= boundedHeight);
 
                     const handleZoomIn = () => {
                         zoom.scale({ scaleX: 1.2, scaleY: 1.2 });
@@ -465,6 +310,81 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     const handleZoomReset = () => {
                         zoom.reset();
                     }
+
+                    const surfaceCursor = props.disableZoom
+                        ? props.selectable
+                            ? isDragging ? 'none' : 'crosshair'
+                            : isDragging ? 'none' : 'default'
+                        : hoveredPoint
+                            ? 'default'
+                            : selectMode === 'select'
+                                ? isDragging ? 'none' : 'crosshair'
+                                : zoom.isDragging
+                                    ? 'grabbing'
+                                    : 'grab';
+
+                    const handleSelectionEnd = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
+                        dragEnd(event);
+                        completeSelection(zoom);
+                    };
+
+                    const onSurfaceMouseDown = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? dragStart
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragStart;
+                    const onSurfaceMouseUp = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? handleSelectionEnd
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragEnd;
+                    const onSurfaceMouseMove = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? (isDragging ? dragMove : undefined)
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragMove;
+                    const onSurfaceMouseLeave = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? handleSelectionEnd
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragEnd;
+                    const onSurfaceTouchStart = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? dragStart
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragStart;
+                    const onSurfaceTouchEnd = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? handleSelectionEnd
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragEnd;
+                    const onSurfaceTouchMove = selectMode === "none"
+                        ? undefined
+                        : selectMode === "select"
+                            ? (isDragging ? dragMove : undefined)
+                            : props.disableZoom
+                                ? undefined
+                                : zoom.dragMove;
+                    const onSurfaceWheel: React.WheelEventHandler<SVGRectElement> = (event) => {
+                        setShowPointAnimation(false);
+                        if (!props.disableZoom) {
+                            const point = localPoint(event) || { x: 0, y: 0 };
+                            const zoomDirection = event.deltaY < 0 ? 1.1 : 0.9;
+                            zoom.scale({ scaleX: zoomDirection, scaleY: zoomDirection, point });
+                        }
+                    };
 
                     return (
                         <>
@@ -492,234 +412,60 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                     />
                                 </Stack>
                             )}
-                            {/* Zoomable Group for Points */}
-                            <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>
-                                <Box sx={{ width: size, height: size }} >
-                                    {props.loading ? (
-                                        <Box display="flex" width={"100%"} height={"100%"} sx={{ justifyContent: "center", alignItems: "center" }}>
-                                            <CircularProgress />
-                                        </Box>
-                                    ) : (
-                                        <div style={{ position: 'relative' }} ref={divRef} >
-                                            <canvas
-                                                ref={(canvas) => {
-                                                    if (canvas && !showPointAnimation) {
-                                                        drawPoints(xScaleTransformed, yScaleTransformed, canvas);
-                                                    }
-                                                }}
-                                                width={boundedWidth * 2}
-                                                height={boundedHeight * 2}
-                                                style={{
-                                                    userSelect: 'none',
-                                                    position: "absolute",
-                                                    top: margin.top,
-                                                    left: margin.left,
-                                                    width: boundedWidth,
-                                                    height: boundedHeight,
-                                                    backgroundColor: "transparent"
-                                                }}
-                                            />
-                                            <svg
-                                                width={size}
-                                                height={size}
-                                                style={{
-                                                    position: "absolute",
-                                                    userSelect: 'none',
-                                                }}
-                                                onMouseMove={(e) => handleMouseMove(e, zoom)} onMouseLeave={handleMouseLeave}
-                                            >
-                                                <Group top={margin.top} left={margin.left}>
-                                                    {/* Animate points */}
-                                                    {showPointAnimation && props.animation && (
-                                                    <g>
-                                                        {props.pointData.map((pt, i) => {
-                                                            const Wrapper = motion.g;
-                                                            const index = Math.floor(i / (props.animationGroupSize ?? 1));
-                                                            const animProps = getAnimationProps(props.animation, index, props.animationBuffer ?? 0.03);
-
-                                                            const cx = xScaleTransformed(pt.x);
-                                                            const cy = yScaleTransformed(pt.y);
-                                                            if (cx < 0 || cx > boundedWidth || cy < 0 || cy > boundedHeight) return null;
-
-                                                            const r = pt.r ?? 3;
-
-                                                            return (
-                                                                <Wrapper key={`pt-${i}`} {...animProps}>
-                                                                    {pt.shape === "triangle" ? (
-                                                                        <polygon
-                                                                            points={getTrianglePoints(cx, cy, r)}
-                                                                            fill={pt.color ?? "black"}
-                                                                            opacity={pt.opacity ?? 1}
-                                                                        />
-                                                                    ) : (
-                                                                        <circle
-                                                                            cx={cx}
-                                                                            cy={cy}
-                                                                            r={r}
-                                                                            fill={pt.color ?? "black"}
-                                                                            opacity={pt.opacity ?? 1}
-                                                                        />
-                                                                    )}
-                                                                </Wrapper>
-                                                            );
-                                                        })}
-                                                    </g>
-                                                    )}
-                                                    {selectMode === "select" && (
-                                                        <>
-                                                            {/* Render lasso */}
-                                                            {lines.map((line, i) => (
-                                                                <LinePath
-                                                                    key={`line-${i}`}
-                                                                    fill="transparent"
-                                                                    stroke="black"
-                                                                    strokeWidth={3}
-                                                                    data={line}
-                                                                    curve={curveBasis}
-                                                                    x={(d) => d.x}
-                                                                    y={(d) => d.y}
-                                                                />
-                                                            ))}
-
-                                                            {isDragging && (
-                                                                <g>
-                                                                    {/* Crosshair styling */}
-                                                                    <line
-                                                                        x1={x - margin.left + dx - 6}
-                                                                        y1={y - margin.top + dy}
-                                                                        x2={x - margin.left + dx + 6}
-                                                                        y2={y - margin.top + dy}
-                                                                        stroke="black"
-                                                                        strokeWidth={1}
-                                                                    />
-                                                                    <line
-                                                                        x1={x - margin.left + dx}
-                                                                        y1={y - margin.top + dy - 6}
-                                                                        x2={x - margin.left + dx}
-                                                                        y2={y - margin.top + dy + 6}
-                                                                        stroke="black"
-                                                                        strokeWidth={1}
-                                                                    />
-                                                                    <circle cx={x - margin.left} cy={y - margin.top} r={4} fill="transparent" stroke="black" pointerEvents="none" />
-                                                                </g>
-                                                            )}
-                                                        </>
-                                                    )}
-
-                                                    {/* Interactable surface */}
-                                                    <rect
-                                                        ref={graphRef}
-                                                        fill="transparent"
-                                                        width={boundedWidth}
-                                                        height={boundedHeight}
-                                                        style={{
-                                                            cursor: props.disableZoom
-                                                                ? props.selectable
-                                                                    ? isDragging ? 'none' : 'crosshair'
-                                                                    : isDragging ? 'none' : 'default'
-                                                                : hoveredPoint
-                                                                    ? 'default'
-                                                                    : selectMode === 'select'
-                                                                        ? isDragging ? 'none' : 'crosshair'
-                                                                        : zoom.isDragging
-                                                                            ? 'grabbing'
-                                                                            : 'grab',
-                                                        }}
-                                                        onMouseDown={selectMode === "none" ? undefined : selectMode === "select" ? dragStart : props.disableZoom ? undefined : zoom.dragStart}
-                                                        onMouseUp={selectMode === "none" ? undefined : selectMode === "select" ? (event) => {
-                                                            dragEnd(event);
-                                                            onDragEnd(zoom);
-                                                        } : props.disableZoom ? undefined : zoom.dragEnd}
-                                                        onMouseMove={selectMode === "none" ? undefined : selectMode === "select" ? (isDragging ? dragMove : undefined) : props.disableZoom ? undefined : zoom.dragMove}
-                                                        onMouseLeave={selectMode === "none" ? undefined : selectMode === "select" ? (event) => {
-                                                            dragEnd(event);
-                                                            onDragEnd(zoom);
-                                                        } : props.disableZoom ? undefined : zoom.dragEnd}
-                                                        onTouchStart={selectMode === "none" ? undefined : selectMode === "select" ? dragStart : props.disableZoom ? undefined : zoom.dragStart}
-                                                        onTouchEnd={selectMode === "none" ? undefined : selectMode === "select" ? (event) => {
-                                                            dragEnd(event);
-                                                            onDragEnd(zoom);
-                                                        } : props.disableZoom ? undefined : zoom.dragEnd}
-                                                        onTouchMove={selectMode === "none" ? undefined : selectMode === "select" ? (isDragging ? dragMove : undefined) : props.disableZoom ? undefined : zoom.dragMove}
-                                                        onWheel={(event) => {
-                                                            setShowPointAnimation(false);
-                                                            if (!props.disableZoom) {
-                                                                const point = localPoint(event) || { x: 0, y: 0 };
-                                                                const zoomDirection = event.deltaY < 0 ? 1.1 : 0.9;
-                                                                zoom.scale({ scaleX: zoomDirection, scaleY: zoomDirection, point });
-                                                            }
-                                                        }}
-                                                        onClick={handleClick}
-                                                    />
-                                                </Group>
-
-                                                {/* Static Axes Group */}
-                                                <Group top={margin.top} left={margin.left}>
-                                                    <AxisLeft
-                                                        scale={yScaleTransformed}
-                                                        tickLabelProps={() => ({
-                                                            fill: '#1c1917',
-                                                            fontSize: 10,
-                                                            textAnchor: 'end',
-                                                            verticalAnchor: 'middle',
-                                                            x: -10,
-                                                        })}
-                                                        tickValues={getTicks(yScaleTransformed, 5)}
-                                                    />
-                                                    <AxisBottom
-                                                        top={boundedHeight}
-                                                        scale={xScaleTransformed}
-                                                        tickLabelProps={() => ({
-                                                            fill: '#1c1917',
-                                                            fontSize: 11,
-                                                            textAnchor: 'middle',
-                                                        })}
-                                                        tickValues={getTicks(xScaleTransformed, 5)}
-                                                    />
-                                                    {axisLeftLabel}
-                                                    {axisBottomLabel}
-                                                </Group>
-                                            </svg >
-                                        </div>
-                                    )}
-                                </Box>
-                            </Stack>
-                            {
-                                props.miniMap && !props.disableZoom && (
-                                    <Tooltip title="Toggle Minimap">
-                                        <IconButton sx={{ position: 'absolute', right: 10, bottom: 10, zIndex: 10, width: 'auto', height: 'auto', color: showMiniMap ? props.controlsHighlight ? props.controlsHighlight : "primary.main" : "default" }} size="small" onClick={toggleMiniMap}>
-                                            <HighlightAlt />
-                                        </IconButton>
-                                    </Tooltip>
-                                )
-                            }
-                            {
-                                showMiniMap && props.miniMap && !props.disableZoom && !props.loading && (
-                                    <MiniMap
-                                        miniMap={props.miniMap}
-                                        width={size}
-                                        height={size}
-                                        pointData={props.pointData}
-                                        xScale={xScale}
-                                        yScale={yScale}
-                                        zoom={zoom}
-                                    />
-                                )
-                            }
-
-                            {/* tooltip */}
-                            {
-                                !props.disableTooltip && tooltipOpen && tooltipData && isHoveredPointWithinBounds && (
-                                    <Portal>
-                                        <VisTooltip left={(mouseX + 10)} top={(mouseY)}>
-                                            <ScatterTooltip
-                                                tooltipBody={props.tooltipBody}
-                                                tooltipData={tooltipData}
-                                            />
-                                        </VisTooltip>
-                                    </Portal>
-                                )
-                            }
+                            <ScatterPlotViewport
+                                size={size}
+                                margin={margin}
+                                boundedWidth={boundedWidth}
+                                boundedHeight={boundedHeight}
+                                loading={props.loading}
+                                pointData={props.pointData}
+                                showPointAnimation={showPointAnimation}
+                                animation={props.animation}
+                                animationGroupSize={props.animationGroupSize}
+                                animationBuffer={props.animationBuffer}
+                                xScale={xScale}
+                                yScale={yScale}
+                                xScaleTransformed={xScaleTransformed}
+                                yScaleTransformed={yScaleTransformed}
+                                drawPoints={drawPoints}
+                                divRef={divRef}
+                                handleMouseMove={handleMouseMove}
+                                handleMouseLeave={handleMouseLeave}
+                                zoom={zoom}
+                                selectMode={selectMode}
+                                lines={lines}
+                                isDragging={isDragging}
+                                x={x}
+                                y={y}
+                                dx={dx}
+                                dy={dy}
+                                graphRef={graphRef}
+                                surfaceCursor={surfaceCursor}
+                                onSurfaceMouseDown={onSurfaceMouseDown}
+                                onSurfaceMouseUp={onSurfaceMouseUp}
+                                onSurfaceMouseMove={onSurfaceMouseMove}
+                                onSurfaceMouseLeave={onSurfaceMouseLeave}
+                                onSurfaceTouchStart={onSurfaceTouchStart}
+                                onSurfaceTouchEnd={onSurfaceTouchEnd}
+                                onSurfaceTouchMove={onSurfaceTouchMove}
+                                onSurfaceWheel={onSurfaceWheel}
+                                onSurfaceClick={handlePointClick}
+                                leftAxisLabel={props.leftAxisLabel}
+                                bottomAxisLabel={props.bottomAxisLabel}
+                                miniMap={props.miniMap}
+                                disableZoom={props.disableZoom}
+                                showMiniMap={showMiniMap}
+                                toggleMiniMap={toggleMiniMap}
+                                controlsHighlight={props.controlsHighlight}
+                                disableTooltip={props.disableTooltip}
+                                tooltipOpen={tooltipOpen}
+                                tooltipData={tooltipData}
+                                tooltipBody={props.tooltipBody}
+                                isHoveredPointWithinBounds={isHoveredPointWithinBounds}
+                                mouseX={mouseX}
+                                mouseY={mouseY}
+                                VisTooltip={VisTooltip as React.FC<{ left?: number; top?: number; children?: React.ReactNode }>}
+                            />
                         </>
                     )
                 }}

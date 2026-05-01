@@ -51,6 +51,8 @@ export type Point<T> = {
     metaData?: T;
 };
 
+export type SelectionMode = "select" | "pan" | "none";
+
 /**
     Positioning props given to the minimap in realtion to the container
     @todo
@@ -229,8 +231,8 @@ export type TooltipProps<T> = {
 export type ControlButtonsProps = {
     selectable: boolean;
     resetable: boolean;
-    handleSelectionModeChange: (mode: "select" | "pan" | "none") => void;
-    selectMode: "select" | "pan" | "none";
+    handleSelectionModeChange: (mode: SelectionMode) => void;
+    selectMode: SelectionMode;
     zoomIn: () => void;
     zoomOut: () => void;
     zoomReset: () => void;
