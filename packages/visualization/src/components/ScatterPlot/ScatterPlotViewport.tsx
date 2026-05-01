@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import { Box, IconButton, Stack, Tooltip } from "@mui/material";
 import { Group } from "@visx/group";
@@ -36,6 +36,8 @@ type ScatterPlotViewportProps<T extends object> = {
     yScale: ScaleLinear<number, number, never>;
     xScaleTransformed: ScaleLinear<number, number, never>;
     yScaleTransformed: ScaleLinear<number, number, never>;
+    displayedPoints: Point<T>[];
+    onDisplayedPointsChange?: (points: Point<T>[]) => void;
     drawPoints: (xScaleTransformed: ScaleLinear<number, number, never>, yScaleTransformed: ScaleLinear<number, number, never>, canvas: HTMLCanvasElement) => void;
     divRef: React.RefObject<HTMLDivElement | null>;
     handleMouseMove: (event: React.MouseEvent<SVGElement>, zoom: ZoomType) => void;
@@ -91,6 +93,8 @@ const ScatterPlotViewport = <T extends object>({
     yScale,
     xScaleTransformed,
     yScaleTransformed,
+    displayedPoints,
+    onDisplayedPointsChange,
     drawPoints,
     divRef,
     handleMouseMove,
@@ -130,6 +134,30 @@ const ScatterPlotViewport = <T extends object>({
     mouseY,
     VisTooltip,
 }: ScatterPlotViewportProps<T>) => {
+    const previousDisplayedPoints = useRef<Point<T>[]>([]);
+
+    useEffect(() => {
+        const haveDisplayedPointsChanged = (prevPoints: Point<T>[], nextPoints: Point<T>[]) => {
+            if (prevPoints.length !== nextPoints.length) return true;
+            return !prevPoints.every((point, index) => {
+                const nextPoint = nextPoints[index];
+                return (
+                    point.x === nextPoint.x &&
+                    point.y === nextPoint.y &&
+                    point.r === nextPoint.r &&
+                    point.shape === nextPoint.shape &&
+                    point.color === nextPoint.color &&
+                    point.opacity === nextPoint.opacity
+                );
+            });
+        };
+
+        if (haveDisplayedPointsChanged(previousDisplayedPoints.current, displayedPoints)) {
+            onDisplayedPointsChange?.(displayedPoints);
+            previousDisplayedPoints.current = displayedPoints;
+        }
+    }, [displayedPoints, onDisplayedPointsChange]);
+
     return (
         <>
             <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>

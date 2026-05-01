@@ -54,7 +54,6 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const margin = { top: 20, right: 20, bottom: 70, left: 70 };
     const boundedWidth = Math.min(size * 0.9, size * 0.9) - margin.left;
     const boundedHeight = boundedWidth;
-    const [previousDisplayedPoints, setPreviousDisplayedPoints] = useState<Point<T>[]>([])
     const downloadButton = props.downloadButton ?? false
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(props.animation));
 
@@ -179,96 +178,78 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         return hoveredPoint ? [hoveredPoint] : [];
     }, [hoveredPoint, props.groupPointsAnchor, props.pointData])
 
+    const hoveredPointKeys = useMemo(
+        () => new Set(groupedPoints.map((point) => `${point.x},${point.y}`)),
+        [groupedPoints]
+    );
+
+    const displayedPoints = useCallback(
+        (xScaleTransformed: ScaleLinear<number, number, never>, yScaleTransformed: ScaleLinear<number, number, never>) => (
+            props.pointData.filter((point) => {
+                const transformedX = xScaleTransformed(point.x);
+                const transformedY = yScaleTransformed(point.y);
+                return (
+                    transformedX >= 0 &&
+                    transformedX <= boundedWidth &&
+                    transformedY >= 0 &&
+                    transformedY <= boundedHeight
+                );
+            })
+        ),
+        [boundedHeight, boundedWidth, props.pointData]
+    );
+
     const drawPoints = useCallback((xScaleTransformed: ScaleLinear<number, number, never>, yScaleTransformed: ScaleLinear<number, number, never>, canvas: HTMLCanvasElement) => {
-        if (canvas) {
-            const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d');
+        if (!context) return;
 
-            if (context) {
-                context.setTransform(2, 0, 0, 2, 0, 0);
+        context.setTransform(2, 0, 0, 2, 0, 0);
+        context.clearRect(0, 0, boundedWidth, boundedHeight);
 
-                // Clear the canvas before rendering
-                context.clearRect(0, 0, boundedWidth, boundedHeight);
+        const nonHoveredPoints = props.pointData.filter(
+            (point) => !hoveredPointKeys.has(`${point.x},${point.y}`)
+        );
+        const hoveredOnlyPoints = props.pointData.filter(
+            (point) => hoveredPointKeys.has(`${point.x},${point.y}`)
+        );
 
-                const hoveredPoints = new Set(groupedPoints.map(gp => `${gp.x},${gp.y}`));
+        const drawPoint = (point: Point<T>, isHovered: boolean) => {
+            const transformedX = xScaleTransformed(point.x);
+            const transformedY = yScaleTransformed(point.y);
+            const isPointWithinBounds =
+                transformedX >= 0 &&
+                transformedX <= boundedWidth &&
+                transformedY >= 0 &&
+                transformedY <= boundedHeight;
 
-                const nonHoveredPoints = props.pointData.filter(
-                    (point) => !hoveredPoints.has(`${point.x},${point.y}`)
-                );
-                const hoveredOnlyPoints = props.pointData.filter(
-                    (point) => hoveredPoints.has(`${point.x},${point.y}`)
-                );
+            if (!isPointWithinBounds) return;
 
-                const displayedPoints: Point<T>[] = [];
+            const size = (point.r || 3) + (isHovered ? 2 : 0);
+            context.beginPath();
 
-                const drawPoint = (point: Point<T>, isHovered: boolean) => {
-
-                    const transformedX = xScaleTransformed(point.x);
-                    const transformedY = yScaleTransformed(point.y);
-
-                    const isPointWithinBounds =
-                        xScaleTransformed(point.x) >= 0 &&
-                        xScaleTransformed(point.x) <= boundedWidth &&
-                        yScaleTransformed(point.y) >= 0 &&
-                        yScaleTransformed(point.y) <= boundedHeight;
-
-                    const size = (point.r || 3) + (isHovered ? 2 : 0);
-
-                    if (isPointWithinBounds) {
-                        displayedPoints.push(point);
-
-                        context.beginPath();
-
-                        if (!point.shape || point.shape === "circle") {
-                            context.arc(transformedX, transformedY, size, 0, Math.PI * 2);
-                        } else if (point.shape === "triangle") {
-                            context.moveTo(transformedX, transformedY - size);
-                            context.lineTo(transformedX - size, transformedY + size);
-                            context.lineTo(transformedX + size, transformedY + size);
-                            context.closePath();
-                        }
-
-                        context.fillStyle = point.color ? point.color : "black";
-                        context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
-                        context.fill();
-
-                        if (isHovered) {
-                            context.lineWidth = 1;
-                            context.strokeStyle = "black";
-                            context.stroke();
-                        }
-                    }
-
-                };
-
-                // First draw all non-hovered points then render hovered points on top
-                nonHoveredPoints.forEach((point) => drawPoint(point, false));
-                hoveredOnlyPoints.forEach((point) => drawPoint(point, true));
-
-                const haveDisplayedPointsChanged = (prevPoints: Point<T>[], newPoints: Point<T>[]): boolean => {
-                    if (prevPoints.length !== newPoints.length) return true;
-                    return !prevPoints.every((point, index) => {
-                        const newPoint = newPoints[index];
-                        return (
-                            point.x === newPoint.x &&
-                            point.y === newPoint.y &&
-                            point.r === newPoint.r &&
-                            point.shape === newPoint.shape &&
-                            point.color === newPoint.color &&
-                            point.opacity === newPoint.opacity
-                        );
-                    });
-                };
-
-                if (haveDisplayedPointsChanged(previousDisplayedPoints, displayedPoints)) {
-                    if (props.onDisplayedPointsChange) {
-                        props.onDisplayedPointsChange(displayedPoints);
-                    }
-                    setPreviousDisplayedPoints(displayedPoints); // Update the reference to the current set
-                }
-
+            if (!point.shape || point.shape === "circle") {
+                context.arc(transformedX, transformedY, size, 0, Math.PI * 2);
+            } else if (point.shape === "triangle") {
+                context.moveTo(transformedX, transformedY - size);
+                context.lineTo(transformedX - size, transformedY + size);
+                context.lineTo(transformedX + size, transformedY + size);
+                context.closePath();
             }
-        }
-    }, [boundedWidth, boundedHeight, groupedPoints, props, previousDisplayedPoints])
+
+            context.fillStyle = point.color ? point.color : "black";
+            context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
+            context.fill();
+
+            if (isHovered) {
+                context.lineWidth = 1;
+                context.strokeStyle = "black";
+                context.stroke();
+            }
+        };
+
+        nonHoveredPoints.forEach((point) => drawPoint(point, false));
+        hoveredOnlyPoints.forEach((point) => drawPoint(point, true));
+    }, [boundedHeight, boundedWidth, hoveredPointKeys, props.pointData])
 
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(props.ref, () => ({
@@ -310,6 +291,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     const handleZoomReset = () => {
                         zoom.reset();
                     }
+                    const currentDisplayedPoints = displayedPoints(xScaleTransformed, yScaleTransformed);
 
                     const surfaceCursor = props.disableZoom
                         ? props.selectable
@@ -427,6 +409,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                 yScale={yScale}
                                 xScaleTransformed={xScaleTransformed}
                                 yScaleTransformed={yScaleTransformed}
+                                displayedPoints={currentDisplayedPoints}
+                                onDisplayedPointsChange={props.onDisplayedPointsChange}
                                 drawPoints={drawPoints}
                                 divRef={divRef}
                                 handleMouseMove={handleMouseMove}
