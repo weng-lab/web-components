@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import { Box, IconButton, Stack, Tooltip } from "@mui/material";
 import { Group } from "@visx/group";
-import { AxisBottom, AxisLeft } from "@visx/axis";
+import { AxisBottom, AxisLeft, AxisRight, AxisTop } from "@visx/axis";
 import { LinePath } from "@visx/shape";
 import { Text } from "@visx/text";
 import { curveBasis } from "@visx/curve";
@@ -76,6 +76,7 @@ type ScatterPlotViewportProps<T extends object> = {
     mouseX: number;
     mouseY: number;
     VisTooltip: React.FC<{ left?: number; top?: number; children?: React.ReactNode }>;
+    border: boolean;
 };
 
 const ScatterPlotViewport = <T extends object>({
@@ -133,6 +134,7 @@ const ScatterPlotViewport = <T extends object>({
     mouseX,
     mouseY,
     VisTooltip,
+    border,
 }: ScatterPlotViewportProps<T>) => {
     const previousDisplayedPoints = useRef<Point<T>[]>([]);
 
@@ -305,6 +307,20 @@ const ScatterPlotViewport = <T extends object>({
                                         })}
                                         tickValues={getTicks(xScaleTransformed, 5)}
                                     />
+                                    {border && (
+                                        <>
+                                            <AxisTop
+                                                top={0}
+                                                scale={xScaleTransformed}
+                                                tickValues={[]}
+                                            />
+                                            <AxisRight
+                                                scale={yScaleTransformed}
+                                                tickValues={[]}
+                                                left={boundedWidth}
+                                            />
+                                        </>
+                                    )}
                                     <Text textAnchor="middle" verticalAnchor="end" angle={-90} fontSize={15} y={boundedHeight / 2} x={0} dx={-50}>
                                         {leftAxisLabel}
                                     </Text>

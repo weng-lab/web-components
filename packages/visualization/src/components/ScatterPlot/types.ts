@@ -208,6 +208,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     animation?: AnimationType;
     animationBuffer?: number;
     animationGroupSize?: number;
+    border?: boolean;
 };
 
 export type Line = { x: number; y: number }[];

@@ -409,6 +409,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                 mouseX={mouseX}
                                 mouseY={mouseY}
                                 VisTooltip={VisTooltip as React.FC<{ left?: number; top?: number; children?: React.ReactNode }>}
+                                border={props.border ?? false}
                             />
                         </>
                     )
