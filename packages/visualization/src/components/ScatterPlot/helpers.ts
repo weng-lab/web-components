@@ -89,3 +89,62 @@ export const getPointExtents = <T extends object>(pointData: Point<T>[]) => {
         y: [minY, maxY] as [number, number],
     };
 };
+
+export const prepareCanvas = (
+    context: CanvasRenderingContext2D,
+    width: number,
+    height: number
+) => {
+    context.setTransform(2, 0, 0, 2, 0, 0);
+    context.clearRect(0, 0, width, height);
+};
+
+export const isPointVisible = (
+    x: number,
+    y: number,
+    width: number,
+    height: number
+) => (
+    x >= 0 &&
+    x <= width &&
+    y >= 0 &&
+    y <= height
+);
+
+export const partitionPointsByHover = <T extends object>(
+    pointData: Point<T>[],
+    hoveredPointKeys: Set<string>
+) => ({
+    nonHovered: pointData.filter((point) => !hoveredPointKeys.has(`${point.x},${point.y}`)),
+    hovered: pointData.filter((point) => hoveredPointKeys.has(`${point.x},${point.y}`)),
+});
+
+export const drawCanvasPoint = <T extends object>(
+    context: CanvasRenderingContext2D,
+    point: Point<T>,
+    x: number,
+    y: number,
+    isHovered: boolean
+) => {
+    const size = (point.r || 3) + (isHovered ? 2 : 0);
+    context.beginPath();
+
+    if (!point.shape || point.shape === "circle") {
+        context.arc(x, y, size, 0, Math.PI * 2);
+    } else if (point.shape === "triangle") {
+        context.moveTo(x, y - size);
+        context.lineTo(x - size, y + size);
+        context.lineTo(x + size, y + size);
+        context.closePath();
+    }
+
+    context.fillStyle = point.color ? point.color : "black";
+    context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
+    context.fill();
+
+    if (isHovered) {
+        context.lineWidth = 1;
+        context.strokeStyle = "black";
+        context.stroke();
+    }
+};

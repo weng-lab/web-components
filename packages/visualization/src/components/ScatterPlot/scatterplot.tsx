@@ -11,7 +11,7 @@ import { Stack } from '@mui/material';
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { useParentSize } from '@visx/responsive';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
-import { getPointExtents, rescaleX, rescaleY } from './helpers';
+import { drawCanvasPoint, getPointExtents, isPointVisible, partitionPointsByHover, prepareCanvas, rescaleX, rescaleY } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import { useScatterPlotInteraction } from './useScatterPlotInteraction';
 
@@ -197,52 +197,18 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         const context = canvas.getContext('2d');
         if (!context) return;
 
-        context.setTransform(2, 0, 0, 2, 0, 0);
-        context.clearRect(0, 0, boundedWidth, boundedHeight);
+        prepareCanvas(context, boundedWidth, boundedHeight);
+        const { nonHovered, hovered } = partitionPointsByHover(props.pointData, hoveredPointKeys);
 
-        const nonHoveredPoints = props.pointData.filter(
-            (point) => !hoveredPointKeys.has(`${point.x},${point.y}`)
-        );
-        const hoveredOnlyPoints = props.pointData.filter(
-            (point) => hoveredPointKeys.has(`${point.x},${point.y}`)
-        );
-
-        const drawPoint = (point: Point<T>, isHovered: boolean) => {
+        const drawRenderedPoint = (point: Point<T>, isHovered: boolean) => {
             const transformedX = xScaleTransformed(point.x);
             const transformedY = yScaleTransformed(point.y);
-            const isPointWithinBounds =
-                transformedX >= 0 &&
-                transformedX <= boundedWidth &&
-                transformedY >= 0 &&
-                transformedY <= boundedHeight;
-
-            if (!isPointWithinBounds) return;
-
-            const size = (point.r || 3) + (isHovered ? 2 : 0);
-            context.beginPath();
-
-            if (!point.shape || point.shape === "circle") {
-                context.arc(transformedX, transformedY, size, 0, Math.PI * 2);
-            } else if (point.shape === "triangle") {
-                context.moveTo(transformedX, transformedY - size);
-                context.lineTo(transformedX - size, transformedY + size);
-                context.lineTo(transformedX + size, transformedY + size);
-                context.closePath();
-            }
-
-            context.fillStyle = point.color ? point.color : "black";
-            context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
-            context.fill();
-
-            if (isHovered) {
-                context.lineWidth = 1;
-                context.strokeStyle = "black";
-                context.stroke();
-            }
+            if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
+            drawCanvasPoint(context, point, transformedX, transformedY, isHovered);
         };
 
-        nonHoveredPoints.forEach((point) => drawPoint(point, false));
-        hoveredOnlyPoints.forEach((point) => drawPoint(point, true));
+        nonHovered.forEach((point) => drawRenderedPoint(point, false));
+        hovered.forEach((point) => drawRenderedPoint(point, true));
     }, [boundedHeight, boundedWidth, hoveredPointKeys, props.pointData])
 
     //Download the plot as svg or png using the passed ref from the parent
