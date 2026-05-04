@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import { Box, IconButton, Stack, Tooltip } from "@mui/material";
 import { Group } from "@visx/group";
@@ -10,7 +10,7 @@ import { Portal } from "@visx/tooltip";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { HighlightAlt } from "@mui/icons-material";
 import { motion } from "framer-motion";
-import { ChartProps, Lines, Point, SelectionMode, ZoomType } from "./types";
+import { BackgroundGradient, ChartProps, Lines, Point, SelectionMode, ZoomType } from "./types";
 import { getTicks, getTrianglePoints } from "./helpers";
 import { getAnimationProps } from "../../utility";
 import ScatterTooltip from "./tooltip";
@@ -78,6 +78,7 @@ type ScatterPlotViewportProps<T extends object> = {
     VisTooltip: React.FC<{ left?: number; top?: number; children?: React.ReactNode }>;
     border: boolean;
     originLine?: boolean;
+    backgroundGradient?: BackgroundGradient;
 };
 
 const ScatterPlotViewport = <T extends object>({
@@ -137,8 +138,10 @@ const ScatterPlotViewport = <T extends object>({
     VisTooltip,
     border,
     originLine,
+    backgroundGradient,
 }: ScatterPlotViewportProps<T>) => {
     const previousDisplayedPoints = useRef<Point<T>[]>([]);
+    const colorbarGradId = `sg-${useId().replace(/:/g, "")}`;
 
     useEffect(() => {
         const haveDisplayedPointsChanged = (prevPoints: Point<T>[], nextPoints: Point<T>[]) => {
@@ -194,10 +197,20 @@ const ScatterPlotViewport = <T extends object>({
                             <svg
                                 width={size}
                                 height={size}
+                                overflow="visible"
                                 style={{ position: "absolute", userSelect: "none" }}
                                 onMouseMove={(event) => handleMouseMove(event, zoom)}
                                 onMouseLeave={handleMouseLeave}
                             >
+                                {backgroundGradient?.legend && (
+                                    <defs>
+                                        <linearGradient id={colorbarGradId} x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor={(backgroundGradient.colorScale ?? ["red", "white", "blue"])[2]} />
+                                            <stop offset="50%" stopColor={(backgroundGradient.colorScale ?? ["red", "white", "blue"])[1]} />
+                                            <stop offset="100%" stopColor={(backgroundGradient.colorScale ?? ["red", "white", "blue"])[0]} />
+                                        </linearGradient>
+                                    </defs>
+                                )}
                                 <Group top={margin.top} left={margin.left}>
                                     {showPointAnimation && animation && (
                                         <g>
@@ -277,10 +290,10 @@ const ScatterPlotViewport = <T extends object>({
                                         return (
                                             <>
                                                 {y0 >= 0 && y0 <= boundedHeight && (
-                                                    <line x1={0} x2={boundedWidth} y1={y0} y2={y0} stroke="#888" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
+                                                    <line x1={0} x2={boundedWidth} y1={y0} y2={y0} stroke="#000" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
                                                 )}
                                                 {x0 >= 0 && x0 <= boundedWidth && (
-                                                    <line x1={x0} x2={x0} y1={0} y2={boundedHeight} stroke="#888" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
+                                                    <line x1={x0} x2={x0} y1={0} y2={boundedHeight} stroke="#000" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
                                                 )}
                                             </>
                                         );
@@ -346,6 +359,27 @@ const ScatterPlotViewport = <T extends object>({
                                         {bottomAxisLabel}
                                     </Text>
                                 </Group>
+                                {backgroundGradient?.legend && (() => {
+                                    const { label, minLabel, midLabel, maxLabel } = backgroundGradient.legend;
+                                    const barLeft = margin.left + boundedWidth + 25;
+                                    const barHeight = boundedHeight;
+                                    return (
+                                        <Group top={margin.top} left={barLeft}>
+                                            <rect x={0} y={0} width={16} height={barHeight} fill={`url(#${colorbarGradId})`} stroke="#aaa" strokeWidth={0.5} />
+                                            <line x1={16} x2={22} y1={0} y2={0} stroke="#555" strokeWidth={1} />
+                                            <line x1={16} x2={22} y1={barHeight / 2} y2={barHeight / 2} stroke="#555" strokeWidth={1} />
+                                            <line x1={16} x2={22} y1={barHeight} y2={barHeight} stroke="#555" strokeWidth={1} />
+                                            {maxLabel && <text x={26} y={0} dy="0.35em" fontSize={10} fill="#1c1917">{maxLabel}</text>}
+                                            <text x={26} y={barHeight / 2} dy="0.35em" fontSize={10} fill="#1c1917">{midLabel ?? "0"}</text>
+                                            {minLabel && <text x={26} y={barHeight} dy="0.35em" fontSize={10} fill="#1c1917">{minLabel}</text>}
+                                            {label && (
+                                                <Text textAnchor="middle" verticalAnchor="end" angle={90} fontSize={14} y={barHeight / 2} x={0} dx={65}>
+                                                    {label}
+                                                </Text>
+                                            )}
+                                        </Group>
+                                    );
+                                })()}
                             </svg>
                         </div>
                     )}

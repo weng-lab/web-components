@@ -131,6 +131,17 @@ export const CustomTooltip: Story = {
         pointData: scatterData,
         loading: false,
         miniMap: miniMap,
+        backgroundGradient:{
+    colorScale: ["red", "white", "blue"],
+    legend: {
+      label: "L2FC TRvUT",
+      minLabel: "-0.8",
+      midLabel: "0",
+      maxLabel: "0.8",
+    }
+  },
+  originLine: true,
+  border: true,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         tooltipBody: (point) => (

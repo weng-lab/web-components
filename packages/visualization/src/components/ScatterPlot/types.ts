@@ -209,7 +209,31 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     animationBuffer?: number;
     animationGroupSize?: number;
     border?: boolean;
+    /**
+     * If true, renders dotted reference lines at x=0 and y=0.
+     * Lines are only shown when the origin is within the current view.
+     * @default
+     * false
+     */
     originLine?: boolean;
+    /**
+     * If provided, renders a diagonal gradient background (bottom-left → top-right)
+     * centered at the data origin (0, 0), plus an optional colorbar legend.
+     */
+    backgroundGradient?: BackgroundGradient;
+};
+
+export type BackgroundGradient = {
+    /** Three-stop color scale [low, mid, high]. Defaults to ["red", "white", "blue"]. */
+    colorScale?: [string, string, string];
+    /** Opacity of the gradient layer (0–1). Default: 1 */
+    opacity?: number;
+    legend?: {
+        label?: string;
+        minLabel?: string;
+        midLabel?: string;
+        maxLabel?: string;
+    };
 };
 
 export type Line = { x: number; y: number }[];

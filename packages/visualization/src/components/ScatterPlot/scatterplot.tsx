@@ -198,6 +198,25 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         if (!context) return;
 
         prepareCanvas(context, boundedWidth, boundedHeight);
+
+        if (props.backgroundGradient) {
+            const [colorLow, colorMid, colorHigh] = props.backgroundGradient.colorScale ?? ["red", "white", "blue"];
+            const W = boundedWidth;
+            const H = boundedHeight;
+            const x0 = xScaleTransformed(0);
+            const y0 = yScaleTransformed(0);
+            // Fraction along the bottom-left→top-right diagonal where origin projects
+            const fraction = Math.max(0.001, Math.min(0.999, (x0 * W - y0 * H + H * H) / (W * W + H * H)));
+            const gradient = context.createLinearGradient(0, H, W, 0);
+            gradient.addColorStop(0, colorLow);
+            gradient.addColorStop(fraction, colorMid);
+            gradient.addColorStop(1, colorHigh);
+            context.globalAlpha = props.backgroundGradient.opacity ?? 1;
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, W, H);
+            context.globalAlpha = 1;
+        }
+
         const { nonHovered, hovered } = partitionPointsByHover(props.pointData, hoveredPointKeys);
 
         const drawRenderedPoint = (point: Point<T>, isHovered: boolean) => {
@@ -209,7 +228,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
         nonHovered.forEach((point) => drawRenderedPoint(point, false));
         hovered.forEach((point) => drawRenderedPoint(point, true));
-    }, [boundedHeight, boundedWidth, hoveredPointKeys, props.pointData])
+    }, [boundedHeight, boundedWidth, hoveredPointKeys, props.pointData, props.backgroundGradient])
 
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(props.ref, () => ({
@@ -411,6 +430,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                 VisTooltip={VisTooltip as React.FC<{ left?: number; top?: number; children?: React.ReactNode }>}
                                 border={props.border ?? false}
                                 originLine={props.originLine}
+                                backgroundGradient={props.backgroundGradient}
                             />
                         </>
                     )
