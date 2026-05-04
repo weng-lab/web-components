@@ -34,6 +34,11 @@ export type Point<T> = {
      */
     color?: string;
     /**
+     * If provided, renders a callout label with a leader line next to the point.
+     * The label is positioned radially outward from the center of the plot.
+     */
+    label?: string;
+    /**
      * Transparency ofe the point
      * @default
      * 1 (opaque)

@@ -25,6 +25,7 @@ type Point = {
     y: number;
     color: string;
     shape?: "circle" | "triangle";
+    label?: string ;
 };
 
 export default meta;
@@ -32,10 +33,10 @@ type Story = StoryObj<typeof meta>;
 
 // Example data for the scatter plot
 const scatterData: Point[] = [
-    { x: 1, y: 2, color: 'red' },
+    { x: 1, y: 2, color: 'red', label: "Red" },
     { x: 3, y: 4, color: 'blue' },
-    { x: 5, y: 6, color: 'green' },
-    { x:-5, y: -6, color: 'green' },
+    { x: 5, y: 6, color: 'green', label: "Green" },
+    { x:-5, y: -6, color: 'green', label: "Green" },
 ];
 
 
@@ -131,17 +132,6 @@ export const CustomTooltip: Story = {
         pointData: scatterData,
         loading: false,
         miniMap: miniMap,
-        backgroundGradient:{
-    colorScale: ["red", "white", "blue"],
-    legend: {
-      label: "L2FC TRvUT",
-      minLabel: "-0.8",
-      midLabel: "0",
-      maxLabel: "0.8",
-    }
-  },
-  originLine: true,
-  border: true,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         tooltipBody: (point) => (
@@ -183,6 +173,17 @@ export const SelectablePoints: Story = {
                 `You Seleted Points: ${JSON.stringify(selectedPoints)}`
             );
         },
+         backgroundGradient:{
+    colorScale: ["red", "white", "blue"],
+    legend: {
+      label: "L2FC TRvUT",
+      minLabel: "-0.8",
+      midLabel: "0",
+      maxLabel: "0.8",
+    }
+  },
+  originLine: true,
+  border: true,
         pointData: scatterData,
         loading: false,
         miniMap: miniMap,

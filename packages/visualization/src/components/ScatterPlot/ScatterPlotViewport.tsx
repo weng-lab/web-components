@@ -359,6 +359,45 @@ const ScatterPlotViewport = <T extends object>({
                                         {bottomAxisLabel}
                                     </Text>
                                 </Group>
+                                {pointData.some(p => p.label) && (
+                                    <Group top={margin.top} left={margin.left}>
+                                        {pointData.map((point, i) => {
+                                            if (!point.label) return null;
+                                            const cx = xScaleTransformed(point.x);
+                                            const cy = yScaleTransformed(point.y);
+                                            if (cx < 0 || cx > boundedWidth || cy < 0 || cy > boundedHeight) return null;
+
+                                            const lineLen = 20;
+                                            const estTextWidth = point.label.length * 7;
+                                            const circleR = (point.r ?? 3) + 3;
+                                            const angle = Math.atan2(cy - boundedHeight / 2, cx - boundedWidth / 2);
+                                            let cosA = Math.cos(angle);
+                                            let sinA = Math.sin(angle);
+
+                                            // Flip horizontal component if text would overflow left/right
+                                            const lxRaw = cx + cosA * lineLen;
+                                            const textEndX = cosA >= 0 ? lxRaw + 4 + estTextWidth : lxRaw - 4 - estTextWidth;
+                                            if (textEndX > boundedWidth || textEndX < 0) cosA = -cosA;
+
+                                            // Flip vertical component if line endpoint would overflow top/bottom
+                                            const lyRaw = cy + sinA * lineLen;
+                                            if (lyRaw < 0 || lyRaw > boundedHeight) sinA = -sinA;
+
+                                            const lx = cx + cosA * lineLen;
+                                            const ly = cy + sinA * lineLen;
+                                            const anchor = cosA >= 0 ? "start" : "end";
+
+                                            return (
+                                                <g key={`lbl-${i}`} pointerEvents="none">
+                                                    <line x1={cx + cosA * circleR} y1={cy + sinA * circleR} x2={lx} y2={ly} stroke="#555" strokeWidth={1} />
+                                                    <text x={lx + (cosA >= 0 ? 4 : -4)} y={ly} textAnchor={anchor} dominantBaseline="middle" fontSize={11} fontWeight="bold" fill="#1c1917">
+                                                        {point.label}
+                                                    </text>
+                                                </g>
+                                            );
+                                        })}
+                                    </Group>
+                                )}
                                 {backgroundGradient?.legend && (() => {
                                     const { label, minLabel, midLabel, maxLabel } = backgroundGradient.legend;
                                     const barLeft = margin.left + boundedWidth + 25;
