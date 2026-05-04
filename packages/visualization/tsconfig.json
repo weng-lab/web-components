@@ -7,5 +7,5 @@
     "emitDeclarationOnly": false,
   },
   "include": ["src"],
-  "exclude": ["**/*.stories.tsx", "dist", "node_modules"]
+  "exclude": ["**/*.stories.tsx", "**/example-data/**", "dist", "node_modules"]
 }

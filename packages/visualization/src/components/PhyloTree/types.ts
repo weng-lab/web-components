@@ -98,4 +98,11 @@ export type PhyloTreeProps = {
    * @default 1
    */
   linkStrokeWidth?: number
+  /**
+   * Desired display order of leaf node IDs (top → bottom for radial layout).
+   * Best-effort: not all orderings are topologically achievable given the tree structure.
+   * A console.error is emitted if the achieved order differs from the requested order.
+   * When omitted, the default sort (Homo_sapiens float + subtree size/branch length) is used.
+   */
+  leafOrder?: string[]
 };
