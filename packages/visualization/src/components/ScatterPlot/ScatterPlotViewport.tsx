@@ -170,6 +170,7 @@ const ScatterPlotViewport = <T extends object>({
                         </Box>
                     ) : (
                         <div style={{ position: "relative" }} ref={divRef}>
+                            {/* canvas for points */}
                             <canvas
                                 ref={(canvas) => {
                                     if (canvas && !showPointAnimation) {
@@ -267,6 +268,7 @@ const ScatterPlotViewport = <T extends object>({
                                             )}
                                         </>
                                     )}
+                                    {/* interactable surface */}
                                     <rect
                                         ref={graphRef}
                                         fill="transparent"
@@ -284,7 +286,6 @@ const ScatterPlotViewport = <T extends object>({
                                         onClick={onSurfaceClick}
                                     />
                                 </Group>
-
                                 <Group top={margin.top} left={margin.left}>
                                     <AxisLeft
                                         scale={yScaleTransformed}
@@ -333,7 +334,6 @@ const ScatterPlotViewport = <T extends object>({
                     )}
                 </Box>
             </Stack>
-
             {miniMap && !disableZoom && (
                 <Tooltip title="Toggle Minimap">
                     <IconButton
@@ -353,7 +353,6 @@ const ScatterPlotViewport = <T extends object>({
                     </IconButton>
                 </Tooltip>
             )}
-
             {showMiniMap && miniMap && !disableZoom && !loading && (
                 <MiniMap
                     miniMap={miniMap}
@@ -365,7 +364,6 @@ const ScatterPlotViewport = <T extends object>({
                     zoom={zoom}
                 />
             )}
-
             {!disableTooltip && tooltipOpen && tooltipData && isHoveredPointWithinBounds && (
                 <Portal>
                     <VisTooltip left={mouseX + 10} top={mouseY}>
