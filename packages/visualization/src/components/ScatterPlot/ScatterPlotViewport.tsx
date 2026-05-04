@@ -77,6 +77,7 @@ type ScatterPlotViewportProps<T extends object> = {
     mouseY: number;
     VisTooltip: React.FC<{ left?: number; top?: number; children?: React.ReactNode }>;
     border: boolean;
+    originLine?: boolean;
 };
 
 const ScatterPlotViewport = <T extends object>({
@@ -135,6 +136,7 @@ const ScatterPlotViewport = <T extends object>({
     mouseY,
     VisTooltip,
     border,
+    originLine,
 }: ScatterPlotViewportProps<T>) => {
     const previousDisplayedPoints = useRef<Point<T>[]>([]);
 
@@ -268,6 +270,21 @@ const ScatterPlotViewport = <T extends object>({
                                             )}
                                         </>
                                     )}
+                                    {/* dotted line @ 0,0 */}
+                                    {originLine && (() => {
+                                        const x0 = xScaleTransformed(0);
+                                        const y0 = yScaleTransformed(0);
+                                        return (
+                                            <>
+                                                {y0 >= 0 && y0 <= boundedHeight && (
+                                                    <line x1={0} x2={boundedWidth} y1={y0} y2={y0} stroke="#888" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
+                                                )}
+                                                {x0 >= 0 && x0 <= boundedWidth && (
+                                                    <line x1={x0} x2={x0} y1={0} y2={boundedHeight} stroke="#888" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                     {/* interactable surface */}
                                     <rect
                                         ref={graphRef}

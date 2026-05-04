@@ -209,6 +209,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     animationBuffer?: number;
     animationGroupSize?: number;
     border?: boolean;
+    originLine?: boolean;
 };
 
 export type Line = { x: number; y: number }[];
