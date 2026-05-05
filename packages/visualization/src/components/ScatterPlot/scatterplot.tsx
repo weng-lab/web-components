@@ -2,14 +2,22 @@ import React, { useImperativeHandle, useMemo } from 'react';
 import { Zoom as VisxZoom } from '@visx/zoom'
 import { ZoomProps } from '@visx/zoom/lib/Zoom'
 import { ChartProps } from './types';
+import { Tooltip as VisxTooltip } from '@visx/tooltip';
+import { TooltipProps } from '@visx/tooltip/lib/tooltips/Tooltip';
+import { Portal } from '@visx/tooltip';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
-import { Stack } from '@mui/material';
+import { IconButton, Stack, Tooltip } from '@mui/material';
+import { HighlightAlt } from '@mui/icons-material';
 import { useParentSize } from '@visx/responsive';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 import { getPointExtents } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
+import MiniMap from './minimap';
+import ScatterTooltip from './tooltip';
 import { useSelectionMode } from './hooks/useSelectionMode';
+import { useMiniMapToggle } from './hooks/useMiniMapToggle';
+import { useHoverTooltip } from './hooks/useHoverTooltip';
 
 const initialTransformMatrix = {
     scaleX: 1,
@@ -28,6 +36,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
  * @todo remove this when possible
  */
     const Zoom = VisxZoom as unknown as React.FC<ZoomProps<React.ReactElement>>;
+    const VisTooltip = VisxTooltip as unknown as React.FC<TooltipProps>;
 
     const initialState: {
         minimap: { open: boolean };
@@ -55,6 +64,10 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         initialSelectionMode: initialState.controls.selectionType,
     });
 
+    const { showMiniMap, toggleMiniMap } = useMiniMapToggle({
+        initialOpen: initialState.minimap.open,
+    });
+
     const pointExtents = useMemo(() => getPointExtents(props.pointData), [props.pointData]);
 
     const xScale = useMemo(() => {
@@ -70,6 +83,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
             range: [boundedHeight, 0],
         });
     }, [boundedHeight, pointExtents]);
+
+    const { hoveredPoint, tooltipData, tooltipOpen, mouseX, mouseY, handleMouseMove, handleMouseLeave } =
+        useHoverTooltip({ pointData: props.pointData, margin, xScale, yScale });
 
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(props.ref, () => ({
@@ -136,21 +152,56 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                 selectable={selectable}
                                 disableZoom={props.disableZoom}
                                 groupPointsAnchor={props.groupPointsAnchor}
+                                hoveredPoint={hoveredPoint}
+                                handleMouseMove={handleMouseMove}
+                                handleMouseLeave={handleMouseLeave}
                                 onDisplayedPointsChange={props.onDisplayedPointsChange}
                                 onSelectionChange={props.onSelectionChange}
                                 onPointClicked={props.onPointClicked}
                                 leftAxisLabel={props.leftAxisLabel}
                                 bottomAxisLabel={props.bottomAxisLabel}
-                                miniMap={props.miniMap}
-                                initialMiniMapOpen={initialState.minimap.open}
-                                controlsHighlight={props.controlsHighlight}
-                                disableTooltip={props.disableTooltip}
-                                tooltipBody={props.tooltipBody}
                                 border={props.border ?? false}
                                 originLine={props.originLine}
                                 backgroundGradient={props.backgroundGradient}
                                 divRef={divRef}
                             />
+                            {props.miniMap && !props.disableZoom && (
+                                <Tooltip title="Toggle Minimap">
+                                    <IconButton
+                                        sx={{
+                                            position: "absolute",
+                                            right: 10,
+                                            bottom: 10,
+                                            zIndex: 10,
+                                            width: "auto",
+                                            height: "auto",
+                                            color: showMiniMap ? props.controlsHighlight ?? "primary.main" : "default",
+                                        }}
+                                        size="small"
+                                        onClick={toggleMiniMap}
+                                    >
+                                        <HighlightAlt />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
+                            {showMiniMap && props.miniMap && !props.disableZoom && !props.loading && (
+                                <MiniMap
+                                    miniMap={props.miniMap}
+                                    width={size}
+                                    height={size}
+                                    pointData={props.pointData}
+                                    xScale={xScale}
+                                    yScale={yScale}
+                                    zoom={zoom}
+                                />
+                            )}
+                            {!props.disableTooltip && tooltipOpen && tooltipData && (
+                                <Portal>
+                                    <VisTooltip left={mouseX + 10} top={mouseY}>
+                                        <ScatterTooltip tooltipBody={props.tooltipBody} tooltipData={tooltipData} />
+                                    </VisTooltip>
+                                </Portal>
+                            )}
                         </>
                     )
                 }}
