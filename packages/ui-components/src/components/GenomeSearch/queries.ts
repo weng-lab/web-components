@@ -20,6 +20,7 @@ export const GENE_AUTOCOMPLETE_QUERY = `
       $limit: Int
       $assembly: String!
       $version: Int
+      $includealiassearch: Boolean
   ) {
       gene(
           name_prefix: $name_prefix
@@ -28,6 +29,7 @@ export const GENE_AUTOCOMPLETE_QUERY = `
           assembly: $assembly
           orderby: "name"
           version: $version
+          includealiassearch: $includealiassearch
       ) {
           id
           name
@@ -36,6 +38,7 @@ export const GENE_AUTOCOMPLETE_QUERY = `
               start
               end
           }
+          alias    
       }
   }
 `;
@@ -202,6 +205,7 @@ export const getGenes = async (
           ),
           version: version,
           limit: limit,
+          includealiassearch: true
         },
       }),
       headers: { "Content-Type": "application/json" },
@@ -232,7 +236,7 @@ export const getGenes = async (
       const description = await getDescription(gene.name);
       return {
         ...gene,
-        description: `${toTitleCase(description || gene.name)}`,
+        description: `${toTitleCase(description || gene.name)} ${gene.alias ? `(${gene.alias})` : ''}`,
         versions,
       };
     })
