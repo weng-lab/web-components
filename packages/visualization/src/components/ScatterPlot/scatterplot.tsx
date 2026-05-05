@@ -38,35 +38,22 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const Zoom = VisxZoom as unknown as React.FC<ZoomProps<React.ReactElement>>;
     const VisTooltip = VisxTooltip as unknown as React.FC<TooltipProps>;
 
-    const initialState: {
-        minimap: { open: boolean };
-        controls: { selectionType: "pan" | "select" | "none" }
-    } = {
-        minimap: {
-            open: props.initialState?.minimap?.open ?? false,
-        },
-        controls: {
-            selectionType: props.initialState?.controls?.selectionType ? props.initialState?.controls?.selectionType : props.selectable ? "select" : "pan",
-        }
-    }
+    const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
+    const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
 
     const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
     const size = Math.min(parentHeight, parentWidth)
 
     const divRef = React.useRef<HTMLDivElement>(null);
-    const selectable = props.selectable ? props.selectable : false;
+    const selectable = props.selectable ?? false;
     const margin = { top: 20, right: 20, bottom: 70, left: 70 };
-    const boundedWidth = Math.min(size * 0.9, size * 0.9) - margin.left;
+    const boundedWidth = size * 0.9 - margin.left;
     const boundedHeight = boundedWidth;
     const downloadButton = props.downloadButton ?? false
 
-    const { selectMode, handleSelectionModeChange } = useSelectionMode({
-        initialSelectionMode: initialState.controls.selectionType,
-    });
+    const { selectMode, handleSelectionModeChange } = useSelectionMode({ initialSelectionMode });
 
-    const { showMiniMap, toggleMiniMap } = useMiniMapToggle({
-        initialOpen: initialState.minimap.open,
-    });
+    const { showMiniMap, toggleMiniMap } = useMiniMapToggle({ initialOpen: initialMiniMapOpen });
 
     const pointExtents = useMemo(() => getPointExtents(props.pointData), [props.pointData]);
 

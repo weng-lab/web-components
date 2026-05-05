@@ -77,6 +77,7 @@ const ScatterPlotViewport = <T extends object>({
     divRef,
 }: ScatterPlotViewportProps<T>) => {
     const graphRef = useRef<SVGRectElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     // Animation state — viewport owns what it renders
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(animation));
@@ -120,10 +121,16 @@ const ScatterPlotViewport = <T extends object>({
                 graphElement.removeEventListener('touchmove', handleTouchMove);
             }
         };
-    }, [graphRef]);
+    }, []);
 
-    const xScaleTransformed = rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX);
-    const yScaleTransformed = rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY);
+    const xScaleTransformed = useMemo(
+        () => rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX),
+        [xScale, zoom.transformMatrix]
+    );
+    const yScaleTransformed = useMemo(
+        () => rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY),
+        [yScale, zoom.transformMatrix]
+    );
 
     const groupedPoints: Point<T>[] = useMemo(() => {
         const anchor = groupPointsAnchor;
@@ -152,8 +159,7 @@ const ScatterPlotViewport = <T extends object>({
             const ty = yScaleTransformed(point.y);
             return tx >= 0 && tx <= boundedWidth && ty >= 0 && ty <= boundedHeight;
         }),
-        // xScaleTransformed/yScaleTransformed are new objects each zoom change, so this correctly recomputes
-        [pointData, zoom.transformMatrix, boundedWidth, boundedHeight]
+        [pointData, xScaleTransformed, yScaleTransformed, boundedWidth, boundedHeight]
     );
 
     const drawPoints = useCallback((
@@ -195,6 +201,12 @@ const ScatterPlotViewport = <T extends object>({
         nonHovered.forEach((point) => drawRenderedPoint(point, false));
         hovered.forEach((point) => drawRenderedPoint(point, true));
     }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient]);
+
+    useEffect(() => {
+        if (canvasRef.current && !showPointAnimation) {
+            drawPoints(xScaleTransformed, yScaleTransformed, canvasRef.current);
+        }
+    }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation]);
 
     const handlePointClick = useCallback(() => {
         if (hoveredPoint) onPointClicked?.(hoveredPoint);
@@ -295,11 +307,7 @@ const ScatterPlotViewport = <T extends object>({
                 ) : (
                     <div style={{ position: "relative" }} ref={divRef}>
                         <canvas
-                            ref={(canvas) => {
-                                if (canvas && !showPointAnimation) {
-                                    drawPoints(xScaleTransformed, yScaleTransformed, canvas);
-                                }
-                            }}
+                            ref={canvasRef}
                             width={boundedWidth * 2}
                             height={boundedHeight * 2}
                             style={{
