@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import { Box, IconButton, Stack, Tooltip } from "@mui/material";
 import { Group } from "@visx/group";
@@ -7,79 +7,53 @@ import { LinePath } from "@visx/shape";
 import { Text } from "@visx/text";
 import { curveBasis } from "@visx/curve";
 import { Portal } from "@visx/tooltip";
+import { Tooltip as VisxTooltip } from "@visx/tooltip";
+import { TooltipProps } from "@visx/tooltip/lib/tooltips/Tooltip";
+import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { HighlightAlt } from "@mui/icons-material";
-import { BackgroundGradient, ChartProps, Lines, Point, SelectionMode, ZoomType } from "./types";
-import { getTicks } from "./helpers";
+import { BackgroundGradient, ChartProps, Point, SelectionMode, ZoomType } from "./types";
+import { drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, prepareCanvas, rescaleX, rescaleY } from "./helpers";
 import ScatterTooltip from "./tooltip";
 import MiniMap from "./minimap";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
-
-type PlotMargin = {
-    top: number;
-    left: number;
-};
+import { useMiniMapToggle } from "./hooks/useMiniMapToggle";
+import { useHoverTooltip } from "./hooks/useHoverTooltip";
+import { useDragSelection } from "./hooks/useDragSelection";
 
 type ScatterPlotViewportProps<T extends object> = {
     size: number;
-    margin: PlotMargin;
+    margin: { top: number; left: number };
     boundedWidth: number;
     boundedHeight: number;
     loading: boolean;
     pointData: Point<T>[];
-    showPointAnimation: boolean;
     animation?: ChartProps<T, boolean | undefined, boolean | undefined>["animation"];
     animationGroupSize?: number;
     animationBuffer?: number;
     xScale: ScaleLinear<number, number, never>;
     yScale: ScaleLinear<number, number, never>;
-    xScaleTransformed: ScaleLinear<number, number, never>;
-    yScaleTransformed: ScaleLinear<number, number, never>;
-    displayedPoints: Point<T>[];
-    onDisplayedPointsChange?: (points: Point<T>[]) => void;
-    drawPoints: (xScaleTransformed: ScaleLinear<number, number, never>, yScaleTransformed: ScaleLinear<number, number, never>, canvas: HTMLCanvasElement) => void;
-    divRef: React.RefObject<HTMLDivElement | null>;
-    handleMouseMove: (event: React.MouseEvent<SVGElement>, zoom: ZoomType) => void;
-    handleMouseLeave: () => void;
     zoom: ZoomType;
     selectMode: SelectionMode;
-    lines: Lines;
-    isDragging: boolean;
-    x: number;
-    y: number;
-    dx: number;
-    dy: number;
-    graphRef: React.RefObject<SVGRectElement | null>;
-    surfaceCursor: string;
-    onSurfaceMouseDown?: React.MouseEventHandler<SVGRectElement>;
-    onSurfaceMouseUp?: React.MouseEventHandler<SVGRectElement>;
-    onSurfaceMouseMove?: React.MouseEventHandler<SVGRectElement>;
-    onSurfaceMouseLeave?: React.MouseEventHandler<SVGRectElement>;
-    onSurfaceTouchStart?: React.TouchEventHandler<SVGRectElement>;
-    onSurfaceTouchEnd?: React.TouchEventHandler<SVGRectElement>;
-    onSurfaceTouchMove?: React.TouchEventHandler<SVGRectElement>;
-    onSurfaceWheel: React.WheelEventHandler<SVGRectElement>;
-    onSurfaceClick: React.MouseEventHandler<SVGRectElement>;
+    selectable: boolean;
+    disableZoom?: boolean;
+    groupPointsAnchor?: keyof Point<T> | keyof T;
+    onDisplayedPointsChange?: (points: Point<T>[]) => void;
+    onSelectionChange?: (selectedPoints: Point<T>[]) => void;
+    onPointClicked?: (point: Point<T>) => void;
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
     miniMap?: ChartProps<T, boolean | undefined, boolean | undefined>["miniMap"];
-    disableZoom?: boolean;
-    showMiniMap: boolean;
-    toggleMiniMap: () => void;
+    initialMiniMapOpen: boolean;
     controlsHighlight?: string;
     disableTooltip?: boolean;
-    tooltipOpen: boolean;
-    tooltipData: Point<T> | null;
     tooltipBody?: (point: Point<T>) => React.ReactElement;
-    isHoveredPointWithinBounds: boolean;
-    mouseX: number;
-    mouseY: number;
-    VisTooltip: React.FC<{ left?: number; top?: number; children?: React.ReactNode }>;
     border: boolean;
     originLine?: boolean;
     backgroundGradient?: BackgroundGradient;
+    divRef: React.RefObject<HTMLDivElement | null>;
 };
 
 const ScatterPlotViewport = <T extends object>({
@@ -89,58 +63,230 @@ const ScatterPlotViewport = <T extends object>({
     boundedHeight,
     loading,
     pointData,
-    showPointAnimation,
     animation,
     animationGroupSize,
     animationBuffer,
     xScale,
     yScale,
-    xScaleTransformed,
-    yScaleTransformed,
-    displayedPoints,
-    onDisplayedPointsChange,
-    drawPoints,
-    divRef,
-    handleMouseMove,
-    handleMouseLeave,
     zoom,
     selectMode,
-    lines,
-    isDragging,
-    x,
-    y,
-    dx,
-    dy,
-    graphRef,
-    surfaceCursor,
-    onSurfaceMouseDown,
-    onSurfaceMouseUp,
-    onSurfaceMouseMove,
-    onSurfaceMouseLeave,
-    onSurfaceTouchStart,
-    onSurfaceTouchEnd,
-    onSurfaceTouchMove,
-    onSurfaceWheel,
-    onSurfaceClick,
+    selectable,
+    disableZoom,
+    groupPointsAnchor,
+    onDisplayedPointsChange,
+    onSelectionChange,
+    onPointClicked,
     leftAxisLabel,
     bottomAxisLabel,
     miniMap,
-    disableZoom,
-    showMiniMap,
-    toggleMiniMap,
+    initialMiniMapOpen,
     controlsHighlight,
     disableTooltip,
-    tooltipOpen,
-    tooltipData,
     tooltipBody,
-    isHoveredPointWithinBounds,
-    mouseX,
-    mouseY,
-    VisTooltip,
     border,
     originLine,
     backgroundGradient,
+    divRef,
 }: ScatterPlotViewportProps<T>) => {
+    const VisTooltip = VisxTooltip as unknown as React.FC<TooltipProps>;
+    const graphRef = useRef<SVGRectElement | null>(null);
+
+    // Animation state — viewport owns what it renders
+    const [showPointAnimation, setShowPointAnimation] = useState(Boolean(animation));
+
+    useEffect(() => {
+        if (!animation) return;
+        if (pointData.length > 2500) {
+            setShowPointAnimation(false);
+            return;
+        }
+        const duration = 450;
+        const buffer = (animationBuffer ?? 0.03) * 1000;
+        const groups = Math.ceil(pointData.length / (animationGroupSize ?? 1));
+        const total = duration + groups * buffer;
+
+        const t = window.setTimeout(() => setShowPointAnimation(false), total);
+        return () => window.clearTimeout(t);
+    }, [animation, animationBuffer, animationGroupSize, pointData.length]);
+
+    const { showMiniMap, toggleMiniMap } = useMiniMapToggle({ initialOpen: initialMiniMapOpen });
+
+    const { hoveredPoint, tooltipData, tooltipOpen, mouseX, mouseY, handleMouseMove, handleMouseLeave } =
+        useHoverTooltip({ pointData, margin, xScale, yScale });
+
+    const { lines, isDragging, x, y, dx, dy, dragStart, dragMove, dragEnd, completeSelection } =
+        useDragSelection({ pointData, margin, xScale, yScale, onSelectionChange });
+
+    // Passive event listeners to prevent default scroll/touch behavior on the chart surface
+    useEffect(() => {
+        const graphElement = graphRef.current;
+
+        const handleWheel = (event: WheelEvent) => { event.preventDefault(); };
+        const handleTouchMove = (event: TouchEvent) => { event.preventDefault(); };
+        const handleTouchStart = (event: TouchEvent) => { event.preventDefault(); };
+
+        if (graphElement) {
+            graphElement.addEventListener('wheel', handleWheel, { passive: false });
+            graphElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+            graphElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        }
+
+        return () => {
+            if (graphElement) {
+                graphElement.removeEventListener('wheel', handleWheel);
+                graphElement.removeEventListener('touchstart', handleTouchStart);
+                graphElement.removeEventListener('touchmove', handleTouchMove);
+            }
+        };
+    }, [graphRef]);
+
+    const xScaleTransformed = rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX);
+    const yScaleTransformed = rescaleY(yScale, zoom.transformMatrix.translateY, zoom.transformMatrix.scaleY);
+
+    const groupedPoints: Point<T>[] = useMemo(() => {
+        const anchor = groupPointsAnchor;
+        if (anchor && hoveredPoint) {
+            return pointData.filter((point) => {
+                if (anchor in point) {
+                    return point[anchor as keyof Point<T>] === hoveredPoint[anchor as keyof Point<T>];
+                }
+                if (point.metaData && hoveredPoint.metaData) {
+                    return point.metaData[anchor as keyof T] === hoveredPoint.metaData[anchor as keyof T];
+                }
+                return false;
+            });
+        }
+        return hoveredPoint ? [hoveredPoint] : [];
+    }, [hoveredPoint, groupPointsAnchor, pointData]);
+
+    const hoveredPointKeys = useMemo(
+        () => new Set(groupedPoints.map((point) => `${point.x},${point.y}`)),
+        [groupedPoints]
+    );
+
+    const currentDisplayedPoints = useMemo(
+        () => pointData.filter((point) => {
+            const tx = xScaleTransformed(point.x);
+            const ty = yScaleTransformed(point.y);
+            return tx >= 0 && tx <= boundedWidth && ty >= 0 && ty <= boundedHeight;
+        }),
+        // xScaleTransformed/yScaleTransformed are new objects each zoom change, so this correctly recomputes
+        [pointData, zoom.transformMatrix, boundedWidth, boundedHeight]
+    );
+
+    const isHoveredPointWithinBounds = Boolean(
+        hoveredPoint &&
+        xScaleTransformed(hoveredPoint.x) >= 0 &&
+        xScaleTransformed(hoveredPoint.x) <= boundedWidth &&
+        yScaleTransformed(hoveredPoint.y) >= 0 &&
+        yScaleTransformed(hoveredPoint.y) <= boundedHeight
+    );
+
+    const drawPoints = useCallback((
+        xST: ScaleLinear<number, number, never>,
+        yST: ScaleLinear<number, number, never>,
+        canvas: HTMLCanvasElement
+    ) => {
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        prepareCanvas(context, boundedWidth, boundedHeight);
+
+        if (backgroundGradient) {
+            const [colorLow, colorMid, colorHigh] = backgroundGradient.colorScale ?? ["red", "white", "blue"];
+            const W = boundedWidth;
+            const H = boundedHeight;
+            const x0 = xST(0);
+            const y0 = yST(0);
+            const fraction = Math.max(0.001, Math.min(0.999, (x0 * W - y0 * H + H * H) / (W * W + H * H)));
+            const gradient = context.createLinearGradient(0, H, W, 0);
+            gradient.addColorStop(0, colorLow);
+            gradient.addColorStop(fraction, colorMid);
+            gradient.addColorStop(1, colorHigh);
+            context.globalAlpha = backgroundGradient.opacity ?? 1;
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, W, H);
+            context.globalAlpha = 1;
+        }
+
+        const { nonHovered, hovered } = partitionPointsByHover(pointData, hoveredPointKeys);
+
+        const drawRenderedPoint = (point: Point<T>, isHovered: boolean) => {
+            const transformedX = xST(point.x);
+            const transformedY = yST(point.y);
+            if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
+            drawCanvasPoint(context, point, transformedX, transformedY, isHovered);
+        };
+
+        nonHovered.forEach((point) => drawRenderedPoint(point, false));
+        hovered.forEach((point) => drawRenderedPoint(point, true));
+    }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient]);
+
+    const handlePointClick = useCallback(() => {
+        if (hoveredPoint) onPointClicked?.(hoveredPoint);
+    }, [hoveredPoint, onPointClicked]);
+
+    const surfaceCursor = disableZoom
+        ? selectable
+            ? isDragging ? 'none' : 'crosshair'
+            : isDragging ? 'none' : 'default'
+        : hoveredPoint
+            ? 'default'
+            : selectMode === 'select'
+                ? isDragging ? 'none' : 'crosshair'
+                : zoom.isDragging
+                    ? 'grabbing'
+                    : 'grab';
+
+    const handleSelectionEnd = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
+        dragEnd(event);
+        completeSelection(zoom);
+    };
+
+    const onSurfaceMouseDown = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? dragStart
+            : disableZoom ? undefined : zoom.dragStart;
+    const onSurfaceMouseUp = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? handleSelectionEnd
+            : disableZoom ? undefined : zoom.dragEnd;
+    const onSurfaceMouseMove = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? (isDragging ? dragMove : undefined)
+            : disableZoom ? undefined : zoom.dragMove;
+    const onSurfaceMouseLeave = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? handleSelectionEnd
+            : disableZoom ? undefined : zoom.dragEnd;
+    const onSurfaceTouchStart = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? dragStart
+            : disableZoom ? undefined : zoom.dragStart;
+    const onSurfaceTouchEnd = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? handleSelectionEnd
+            : disableZoom ? undefined : zoom.dragEnd;
+    const onSurfaceTouchMove = selectMode === "none"
+        ? undefined
+        : selectMode === "select"
+            ? (isDragging ? dragMove : undefined)
+            : disableZoom ? undefined : zoom.dragMove;
+    const onSurfaceWheel: React.WheelEventHandler<SVGRectElement> = (event) => {
+        setShowPointAnimation(false);
+        if (!disableZoom) {
+            const point = localPoint(event) || { x: 0, y: 0 };
+            const zoomDirection = event.deltaY < 0 ? 1.1 : 0.9;
+            zoom.scale({ scaleX: zoomDirection, scaleY: zoomDirection, point });
+        }
+    };
+
     const previousDisplayedPoints = useRef<Point<T>[]>([]);
 
     useEffect(() => {
@@ -159,11 +305,11 @@ const ScatterPlotViewport = <T extends object>({
             });
         };
 
-        if (haveDisplayedPointsChanged(previousDisplayedPoints.current, displayedPoints)) {
-            onDisplayedPointsChange?.(displayedPoints);
-            previousDisplayedPoints.current = displayedPoints;
+        if (haveDisplayedPointsChanged(previousDisplayedPoints.current, currentDisplayedPoints)) {
+            onDisplayedPointsChange?.(currentDisplayedPoints);
+            previousDisplayedPoints.current = currentDisplayedPoints;
         }
-    }, [displayedPoints, onDisplayedPointsChange]);
+    }, [currentDisplayedPoints, onDisplayedPointsChange]);
 
     return (
         <>
@@ -198,7 +344,10 @@ const ScatterPlotViewport = <T extends object>({
                                 height={size}
                                 overflow="visible"
                                 style={{ position: "absolute", userSelect: "none" }}
-                                onMouseMove={(event) => handleMouseMove(event, zoom)}
+                                onMouseMove={(event) => {
+                                    if (isDragging) handleMouseLeave();
+                                    else handleMouseMove(event, zoom);
+                                }}
                                 onMouseLeave={handleMouseLeave}
                             >
                                 <Group top={margin.top} left={margin.left}>
@@ -265,7 +414,7 @@ const ScatterPlotViewport = <T extends object>({
                                         onTouchEnd={onSurfaceTouchEnd}
                                         onTouchMove={onSurfaceTouchMove}
                                         onWheel={onSurfaceWheel}
-                                        onClick={onSurfaceClick}
+                                        onClick={handlePointClick}
                                     />
                                 </Group>
                                 <Group top={margin.top} left={margin.left}>
