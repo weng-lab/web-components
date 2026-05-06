@@ -1,4 +1,3 @@
-import React from 'react';
 import { Meta, StoryObj } from '@storybook/react-vite';
 import Histogram from './Histogram';
 
@@ -75,6 +74,45 @@ export const CustomTooltip: Story = {
                 <div><strong>% of total:</strong> {((bin.count / normalData.length) * 100).toFixed(1)}%</div>
             </div>
         ),
+    },
+};
+
+export const WithDistributionLine: Story = {
+    args: {
+        data: normalData,
+        xLabel: 'Value',
+        yLabel: 'Count',
+        title: 'With Distribution Line',
+        distributionLine: true,
+        distributionLineColor: '#e45c5c',
+    },
+};
+
+export const MultiSeries: Story = {
+    args: {
+        data: [
+            { values: Array.from({ length: 300 }, () => normalSample(-1, 1)), label: 'Group A', color: '#4c78a8' },
+            { values: Array.from({ length: 300 }, () => normalSample(1, 1)),  label: 'Group B', color: '#e45c5c' },
+            { values: Array.from({ length: 300 }, () => normalSample(0, 2)),  label: 'Group C', color: '#2ca02c' },
+        ],
+        xLabel: 'Value',
+        yLabel: 'Count',
+        title: 'Multi-Series',
+        numBins: 25,
+    },
+};
+
+export const MultiSeriesWithLine: Story = {
+    args: {
+        data: [
+            { values: Array.from({ length: 300 }, () => normalSample(-1, 1)), label: 'Group A', color: '#4c78a8' },
+            { values: Array.from({ length: 300 }, () => normalSample(1, 1)),  label: 'Group B', color: '#e45c5c' },
+        ],
+        xLabel: 'Value',
+        yLabel: 'Count',
+        title: 'Multi-Series with Distribution Lines',
+        distributionLine: true,
+        numBins: 25,
     },
 };
 
