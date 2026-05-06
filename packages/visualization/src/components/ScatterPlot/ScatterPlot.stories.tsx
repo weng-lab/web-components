@@ -89,6 +89,7 @@ export const Default: Story = {
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
+        downloadButton: true,
         initialState: {
             minimap: {
                 open: true,
@@ -122,6 +123,18 @@ export const Default: Story = {
         )
     }
 };
+
+// backgroundGradient:{
+//     colorScale: ["red", "white", "blue"],
+//     legend: {
+//       label: "L2FC TRvUT",
+//       minLabel: "-0.8",
+//       midLabel: "0",
+//       maxLabel: "0.8",
+//     }
+//   },
+//   originLine: true,
+//   border: true,
 
 // Default story with tooltip
 export const CustomTooltip: Story = {
@@ -320,33 +333,6 @@ export const ZoomDisabledButSelectable: Story = {
             },
             controls: {
                 selectionType: "select"
-            }
-        }
-    }
-};
-
-// Controls Positioning
-export const ControlsPositioning: Story = {
-    args: {
-        controlsPosition: "bottom",
-        pointData: scatterData,
-        loading: false,
-        miniMap: miniMap,
-        leftAxisLabel: "Y-Axis Label",
-        bottomAxisLabel: "X-Axis Label",
-        selectable: true,
-        onSelectionChange: (selectedPoints) => {
-            window.alert(
-                `You Seleted Points: ${JSON.stringify(selectedPoints)}`
-            );
-        },
-        disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
             }
         }
     }

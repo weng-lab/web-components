@@ -3,8 +3,6 @@ import { ProvidedZoom } from "@visx/zoom/lib/types";
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 
-type Download = "none" | "inline" | "topRight" | "topLeft" | "bottomRight" | "bottomLeft"
-
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
     which can be any amount of strings used to display in the tooltip
@@ -36,6 +34,11 @@ export type Point<T> = {
      */
     color?: string;
     /**
+     * If provided, renders a callout label with a leader line next to the point.
+     * The label is positioned radially outward from the center of the plot.
+     */
+    label?: string;
+    /**
      * Transparency ofe the point
      * @default
      * 1 (opaque)
@@ -52,6 +55,8 @@ export type Point<T> = {
      */
     metaData?: T;
 };
+
+export type SelectionMode = "select" | "pan" | "none";
 
 /**
     Positioning props given to the minimap in realtion to the container
@@ -124,15 +129,6 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      * false
      */
     disableTooltip?: boolean;
-    /**
-     * Determines the placement of any controls that are being shown at the time.
-     * Positions are fixed and cannot be moved, they are 10 pixels from the specified side of the container
-     * and situated in the center
-     * 
-     * @default
-     * "left"
-     */
-    controlsPosition?: "left" | "bottom" | "right";
     /**
      * Can specify a certain color to display what controls are being selected
      * (Pan/Select and Minimap open/closed)
@@ -209,13 +205,40 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     ref?: React.Ref<DownloadPlotHandle>;
     downloadFileName?: string;
     /**
-     * Download Button positioning to internally download component
-     * Default none
+     * If true, shows a download button inside the controls panel.
+     * @default
+     * false
      */
-    downloadButton?: Download;
+    downloadButton?: boolean;
     animation?: AnimationType;
     animationBuffer?: number;
     animationGroupSize?: number;
+    border?: boolean;
+    /**
+     * If true, renders dotted reference lines at x=0 and y=0.
+     * Lines are only shown when the origin is within the current view.
+     * @default
+     * false
+     */
+    originLine?: boolean;
+    /**
+     * If provided, renders a diagonal gradient background (bottom-left → top-right)
+     * centered at the data origin (0, 0), plus an optional colorbar legend.
+     */
+    backgroundGradient?: BackgroundGradient;
+};
+
+export type BackgroundGradient = {
+    /** Three-stop color scale [low, mid, high]. Defaults to ["red", "white", "blue"]. */
+    colorScale?: [string, string, string];
+    /** Opacity of the gradient layer (0–1). Default: 1 */
+    opacity?: number;
+    legend?: {
+        label?: string;
+        minLabel?: string;
+        midLabel?: string;
+        maxLabel?: string;
+    };
 };
 
 export type Line = { x: number; y: number }[];
@@ -239,14 +262,13 @@ export type TooltipProps<T> = {
 export type ControlButtonsProps = {
     selectable: boolean;
     resetable: boolean;
-    handleSelectionModeChange: (mode: "select" | "pan" | "none") => void;
-    selectMode: "select" | "pan" | "none";
+    handleSelectionModeChange: (mode: SelectionMode) => void;
+    selectMode: SelectionMode;
     zoomIn: () => void;
     zoomOut: () => void;
     zoomReset: () => void;
-    position?: "left" | "bottom" | "right";
     highlight?: string;
-    downloadButton: Download;
+    downloadButton: boolean;
     downloadPlot: () => void;
 }
 
