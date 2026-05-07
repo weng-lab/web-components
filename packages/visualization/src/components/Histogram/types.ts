@@ -41,8 +41,8 @@ export interface HistogramProps {
     title?: string;
     tooltipBody?: (bin: HistogramBin) => React.ReactElement;
     onBarClicked?: (bin: HistogramBin) => void;
-    distributionLine?: boolean;
-    distributionLineColor?: string;
+    densityLine?: boolean;
+    densityLineColor?: string;
     animationType?: AnimationType;
     downloadFileName?: string;
     ref?: React.Ref<DownloadPlotHandle>;

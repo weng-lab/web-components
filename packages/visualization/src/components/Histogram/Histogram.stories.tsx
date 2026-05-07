@@ -57,6 +57,7 @@ export const WithAnimation: Story = {
         yLabel: 'Count',
         title: 'Skewed Distribution',
         animationType: 'slideUp',
+        densityLine: true,
         color: '#2ca02c',
     },
 };
@@ -69,7 +70,7 @@ export const CustomTooltip: Story = {
         title: 'Custom Tooltip',
         tooltipBody: (bin) => (
             <div style={{ fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontSize: 12, padding: 4 }}>
-                <div><strong>Range:</strong> [{bin.x0.toFixed(2)}, {bin.x1.toFixed(2)})</div>
+                <div><strong>Range:</strong> {bin.x0.toFixed(2)}, {bin.x1.toFixed(2)}</div>
                 <div><strong>Count:</strong> {bin.count}</div>
                 <div><strong>% of total:</strong> {((bin.count / normalData.length) * 100).toFixed(1)}%</div>
             </div>
@@ -83,8 +84,8 @@ export const WithDistributionLine: Story = {
         xLabel: 'Value',
         yLabel: 'Count',
         title: 'With Distribution Line',
-        distributionLine: true,
-        distributionLineColor: '#e45c5c',
+        densityLine: true,
+        densityLineColor: '#e45c5c',
     },
 };
 
@@ -111,7 +112,7 @@ export const MultiSeriesWithLine: Story = {
         xLabel: 'Value',
         yLabel: 'Count',
         title: 'Multi-Series with Distribution Lines',
-        distributionLine: true,
+        densityLine: true,
         thresholds: 25,
     },
 };

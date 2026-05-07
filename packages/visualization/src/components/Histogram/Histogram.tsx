@@ -2,8 +2,9 @@ import { useImperativeHandle, useMemo, useRef } from 'react';
 import { scaleLinear } from '@visx/scale';
 import { AxisBottom, AxisLeft } from '@visx/axis';
 import { Group } from '@visx/group';
-import { LinePath } from '@visx/shape';
+import { line } from '@visx/shape';
 import { curveBasis } from '@visx/curve';
+import { motion } from 'framer-motion';
 import { Text } from '@visx/text';
 import { useParentSize } from '@visx/responsive';
 import { bin as d3bin, range } from '@visx/vendor/d3-array';
@@ -32,8 +33,8 @@ const Histogram = ({
     title,
     tooltipBody,
     onBarClicked,
-    distributionLine = false,
-    distributionLineColor = '#1c1917',
+    densityLine = false,
+    densityLineColor = '#1c1917',
     animationType,
     downloadFileName,
 }: HistogramProps) => {
@@ -81,7 +82,7 @@ const Histogram = ({
     }, [allValues, series, thresholds]);
 
     const kdePoints = useMemo(() => {
-        if (!distributionLine || bins.length === 0) return [];
+        if (!densityLine || bins.length === 0) return [];
         const x0 = bins[0].x0;
         const x1 = bins[bins.length - 1].x1;
         const avgBinWidth = (x1 - x0) / bins.length;
@@ -97,7 +98,7 @@ const Histogram = ({
                 points: densityPoints.map((d) => ({ x: d.value, y: d.count * scale })),
             };
         });
-    }, [distributionLine, bins, series]);
+    }, [densityLine, bins, series]);
 
     const xScale = useMemo(() => {
         if (bins.length === 0) return scaleLinear({ domain: [0, 1], range: [0, xMax] });
@@ -117,6 +118,14 @@ const Histogram = ({
             nice: true,
         });
     }, [bins, kdePoints, yMax]);
+
+    const lineGenerator = useMemo(
+        () => line<{ x: number; y: number }>()
+            .x((d) => xScale(d.x))
+            .y((d) => yScale(d.y))
+            .curve(curveBasis),
+        [xScale, yScale]
+    );
 
     useImperativeHandle(ref, () => ({
         downloadSVG: () => {
@@ -157,20 +166,22 @@ const Histogram = ({
                             onBarClicked={onBarClicked}
                         />
                     ))}
-                    {distributionLine && kdePoints.map((s, si) => (
-                        s.points.length > 0 && (
-                            <LinePath
+                    {densityLine && kdePoints.map((s, si) => {
+                        const pathD = lineGenerator(s.points);
+                        if (!pathD) return null;
+                        return (
+                            <motion.path
                                 key={`kde-${si}`}
-                                data={s.points}
-                                x={(d) => xScale(d.x)}
-                                y={(d) => yScale(d.y)}
-                                curve={curveBasis}
-                                stroke={multiSeries ? s.color : distributionLineColor}
+                                d={pathD}
+                                stroke={multiSeries ? s.color : densityLineColor}
                                 strokeWidth={2}
                                 fill="none"
+                                initial={animationType ? { pathLength: 0 } : false}
+                                animate={animationType ? { pathLength: 1 } : {}}
+                                transition={{ duration: .75, ease: 'easeInOut' }}
                             />
-                        )
-                    ))}
+                        );
+                    })}
                     <AxisBottom
                         scale={xScale}
                         top={yMax}
