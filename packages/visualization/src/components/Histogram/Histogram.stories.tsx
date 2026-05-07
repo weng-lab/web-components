@@ -46,7 +46,7 @@ export const CustomColor: Story = {
         xLabel: 'Measurement',
         yLabel: 'Frequency',
         title: 'Custom Color',
-        numBins: 30,
+        thresholds: 30,
     },
 };
 
@@ -98,7 +98,7 @@ export const MultiSeries: Story = {
         xLabel: 'Value',
         yLabel: 'Count',
         title: 'Multi-Series',
-        numBins: 25,
+        thresholds: 25,
     },
 };
 
@@ -112,14 +112,14 @@ export const MultiSeriesWithLine: Story = {
         yLabel: 'Count',
         title: 'Multi-Series with Distribution Lines',
         distributionLine: true,
-        numBins: 25,
+        thresholds: 25,
     },
 };
 
 export const FewBins: Story = {
     args: {
         data: normalData,
-        numBins: 10,
+        thresholds: 10,
         xLabel: 'Value',
         yLabel: 'Count',
         title: '10 Bins',

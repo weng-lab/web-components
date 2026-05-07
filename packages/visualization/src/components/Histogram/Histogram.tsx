@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, useMemo, useRef } from 'react';
+import React, { useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { scaleLinear } from '@visx/scale';
 import { AxisBottom, AxisLeft } from '@visx/axis';
 import { Group } from '@visx/group';
@@ -6,39 +6,31 @@ import { Bar, LinePath } from '@visx/shape';
 import { curveBasis } from '@visx/curve';
 import { Text } from '@visx/text';
 import { useParentSize } from '@visx/responsive';
-import { useTooltip, TooltipWithBounds } from '@visx/tooltip';
+import { useTooltip } from '@visx/tooltip';
 import { bin as d3bin, range } from '@visx/vendor/d3-array';
 import { motion } from 'framer-motion';
 import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from '../../utility';
 import { kernelDensityEstimator, gaussian, scottRule } from '../ViolinPlot/helpers';
 import { HistogramBin, HistogramProps, HistogramSeries } from './types';
+import HistogramLegend from './HistogramLegend';
+import HistogramTooltip from './HistogramTooltip';
 
 const DEFAULT_COLOR = '#4c78a8';
 
-const margin = { top: 40, right: 30, bottom: 60, left: 60 };
-
-const LEGEND_ROW_HEIGHT = 18;
-const LEGEND_SWATCH = 12;
-const LEGEND_GAP = 6;
-const LEGEND_PADDING = 8;
+const margin = { top: 40, right: 30, bottom: 80, left: 80 };
 
 function isSeriesData(data: number[] | HistogramSeries[]): data is HistogramSeries[] {
     return data.length > 0 && typeof data[0] === 'object' && 'values' in (data[0] as object);
 }
 
 //TODO
-// fix tooltip
-// seperate legend and maybe tooltip into files
-// look through and clean up code
-// on hover highlight bin
 // animate distribution line?
+// look through and clean up code
 // check performance with react scan
-// xlabel and ylabel don't show up
 
 const Histogram = ({
     data,
     ref,
-    numBins,
     thresholds,
     color = DEFAULT_COLOR,
     xLabel,
@@ -56,6 +48,8 @@ const Histogram = ({
 
     const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } =
         useTooltip<HistogramBin>();
+
+    const [hoveredBinIndex, setHoveredBinIndex] = useState<number | null>(null);
 
     const multiSeries = isSeriesData(data);
 
@@ -75,7 +69,7 @@ const Histogram = ({
         // Bin the combined data to get consistent edges
         const binner = Array.isArray(thresholds)
             ? d3bin().thresholds(thresholds)
-            : d3bin().thresholds(thresholds ?? numBins ?? 20);
+            : d3bin().thresholds(thresholds ?? 20);
         const allBins = binner(allValues);
 
         // Re-bin each series using the same edges so counts are aligned
@@ -96,8 +90,9 @@ const Histogram = ({
                 count: seriesBins[si][i]?.length ?? 0,
             })),
         }));
-    }, [allValues, series, numBins, thresholds]);
+    }, [allValues, series, thresholds]);
 
+    //used for distribution line
     const kdePoints = useMemo(() => {
         if (!distributionLine || bins.length === 0) return [];
         const x0 = bins[0].x0;
@@ -136,14 +131,6 @@ const Histogram = ({
         });
     }, [bins, kdePoints, yMax]);
 
-    // Legend dimensions
-    const legendHeight = multiSeries
-        ? series.length * LEGEND_ROW_HEIGHT + LEGEND_PADDING * 2
-        : 0;
-    const legendWidth = multiSeries
-        ? Math.max(...series.map((s) => s.label.length)) * 7 + LEGEND_SWATCH + LEGEND_GAP + LEGEND_PADDING * 2
-        : 0;
-
     useImperativeHandle(ref, () => ({
         downloadSVG: () => {
             if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? 'histogram.svg');
@@ -154,7 +141,7 @@ const Histogram = ({
     }));
 
     return (
-        <div ref={parentRef} style={{ width: '100%', height: '100%' }}>
+        <div ref={parentRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
             <svg ref={svgRef} width={width} height={height}>
                 {title && (
                     <Text
@@ -163,8 +150,6 @@ const Histogram = ({
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fontSize={14}
-                        fontFamily="Roboto,Helvetica,Arial,sans-serif"
-                        fill="#1c1917"
                         fontWeight={600}
                     >
                         {title}
@@ -178,14 +163,15 @@ const Histogram = ({
                         const Wrapper = animationType ? motion.g : 'g';
                         const animProps = getAnimationProps(animationType, i);
 
-                        let cumCount = 0;
+                        let totCount = 0;
+                        const isHovered = hoveredBinIndex === i;
 
                         return (
                             <Wrapper key={`bin-${i}`} {...animProps}>
                                 {bin.series.map((s, si) => {
-                                    const segY = yScale(cumCount + s.count);
-                                    const segHeight = Math.max(yScale(cumCount) - yScale(cumCount + s.count), 0);
-                                    cumCount += s.count;
+                                    const segY = yScale(totCount + s.count);
+                                    const segHeight = Math.max(yScale(totCount) - yScale(totCount + s.count), 0);
+                                    totCount += s.count;
 
                                     return (
                                         <Bar
@@ -196,23 +182,36 @@ const Histogram = ({
                                             height={segHeight}
                                             fill={s.color}
                                             opacity={0.85}
+                                            stroke={isHovered ? '#000000' : 'none'}
                                             style={{ cursor: onBarClicked ? 'pointer' : 'default' }}
                                             onClick={() => onBarClicked?.(bin)}
                                             onMouseEnter={(e: React.MouseEvent) => {
+                                                setHoveredBinIndex(i);
+                                                const rect = svgRef.current?.getBoundingClientRect();
                                                 showTooltip({
                                                     tooltipData: bin,
-                                                    tooltipLeft: e.pageX,
-                                                    tooltipTop: e.pageY,
+                                                    tooltipLeft: rect ? e.clientX - rect.left + 10 : e.pageX,
+                                                    tooltipTop: rect ? e.clientY - rect.top : e.pageY,
                                                 });
                                             }}
-                                            onMouseLeave={hideTooltip}
+                                            onMouseMove={(e: React.MouseEvent) => {
+                                                const rect = svgRef.current?.getBoundingClientRect();
+                                                showTooltip({
+                                                    tooltipData: bin,
+                                                    tooltipLeft: rect ? e.clientX - rect.left + 10 : e.pageX,
+                                                    tooltipTop: rect ? e.clientY - rect.top : e.pageY,
+                                                });
+                                            }}
+                                            onMouseLeave={() => {
+                                                setHoveredBinIndex(null);
+                                                hideTooltip();
+                                            }}
                                         />
                                     );
                                 })}
                             </Wrapper>
                         );
                     })}
-
                     {distributionLine && kdePoints.map((s, si) => (
                         s.points.length > 0 && (
                             <LinePath
@@ -236,7 +235,7 @@ const Histogram = ({
                             fontFamily: 'Roboto,Helvetica,Arial,sans-serif',
                             textAnchor: 'middle',
                             fill: '#1c1917',
-                            dy: 36,
+                            dy: 15,
                         }}
                         tickLabelProps={{
                             fontSize: 11,
@@ -253,7 +252,7 @@ const Histogram = ({
                             fontFamily: 'Roboto,Helvetica,Arial,sans-serif',
                             textAnchor: 'middle',
                             fill: '#1c1917',
-                            dx: -44,
+                            dx: -15,
                         }}
                         tickLabelProps={{
                             fontSize: 11,
@@ -263,66 +262,17 @@ const Histogram = ({
                             dx: -4,
                         }}
                     />
-                    {multiSeries && (
-                        <Group left={xMax - legendWidth - 4} top={4}>
-                            <rect
-                                width={legendWidth}
-                                height={legendHeight}
-                                fill="white"
-                                stroke="#d4d4d4"
-                                strokeWidth={1}
-                                rx={3}
-                            />
-                            {series.map((s, i) => (
-                                <Group key={`legend-${i}`} top={LEGEND_PADDING + i * LEGEND_ROW_HEIGHT}>
-                                    <rect
-                                        x={LEGEND_PADDING}
-                                        y={2}
-                                        width={LEGEND_SWATCH}
-                                        height={LEGEND_SWATCH}
-                                        fill={s.color}
-                                        opacity={0.85}
-                                        rx={2}
-                                    />
-                                    <text
-                                        x={LEGEND_PADDING + LEGEND_SWATCH + LEGEND_GAP}
-                                        y={LEGEND_SWATCH / 2 + 2}
-                                        dominantBaseline="middle"
-                                        fontSize={11}
-                                        fontFamily="Roboto,Helvetica,Arial,sans-serif"
-                                        fill="#1c1917"
-                                    >
-                                        {s.label}
-                                    </text>
-                                </Group>
-                            ))}
-                        </Group>
-                    )}
+                    {multiSeries && <HistogramLegend series={series} xMax={xMax} />}
                 </Group>
             </svg>
-            {tooltipOpen && tooltipData && (
-                <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
-                    {tooltipBody ? (
-                        tooltipBody(tooltipData)
-                    ) : (
-                        <div style={{ fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontSize: 12 }}>
-                            <div>
-                                <strong>Range:</strong> [{tooltipData.x0.toFixed(2)}, {tooltipData.x1.toFixed(2)})
-                            </div>
-                            {multiSeries ? (
-                                tooltipData.series.map((s) => (
-                                    <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: s.color, display: 'inline-block' }} />
-                                        <span><strong>{s.label}:</strong> {s.count}</span>
-                                    </div>
-                                ))
-                            ) : (
-                                <div><strong>Count:</strong> {tooltipData.count}</div>
-                            )}
-                        </div>
-                    )}
-                </TooltipWithBounds>
-            )}
+            <HistogramTooltip
+                open={tooltipOpen}
+                data={tooltipData}
+                left={tooltipLeft}
+                top={tooltipTop}
+                multiSeries={multiSeries}
+                tooltipBody={tooltipBody}
+            />
         </div>
     );
 };

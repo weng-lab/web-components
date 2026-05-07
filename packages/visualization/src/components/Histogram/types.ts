@@ -23,7 +23,17 @@ export interface HistogramBin {
 
 export interface HistogramProps {
     data: number[] | HistogramSeries[];
-    numBins?: number;
+    /**
+     * thresholds: number ->
+     * a hint to d3 for approximately how many bins to create. 
+     * d3 may produce a different count depending on the data's range and nice tick values.
+     * 
+     * thresholds: number[] ->
+     * explicit bin boundary values (e.g. [0, 25, 50, 75, 100]), 
+     * giving you full control over where bins start and end
+     * 
+     * @default 20
+     */
     thresholds?: number | number[];
     color?: string;
     xLabel?: string;
