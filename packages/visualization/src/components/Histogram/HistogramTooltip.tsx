@@ -1,25 +1,36 @@
-import React from 'react';
+import React, { useImperativeHandle, useState } from 'react';
 import { TooltipWithBounds } from '@visx/tooltip';
 import { HistogramBin } from './types';
 
-interface HistogramTooltipProps {
-    open: boolean;
-    data: HistogramBin | undefined;
-    left: number | undefined;
-    top: number | undefined;
-    multiSeries: boolean;
-    tooltipBody?: (bin: HistogramBin) => React.ReactElement;
+export interface HistogramTooltipHandle {
+    show: (bin: HistogramBin, left: number, top: number) => void;
+    hide: () => void;
 }
 
-const HistogramTooltip = ({ open, data, left, top, multiSeries, tooltipBody }: HistogramTooltipProps) => {
-    if (!open || !data) return null;
+interface HistogramTooltipProps {
+    multiSeries: boolean;
+    tooltipBody?: (bin: HistogramBin) => React.ReactElement;
+    ref: React.Ref<HistogramTooltipHandle>;
+}
+
+const HistogramTooltip = ({ multiSeries, tooltipBody, ref }: HistogramTooltipProps) => {
+    const [state, setState] = useState<{ open: boolean; data?: HistogramBin; left?: number; top?: number }>({ open: false });
+
+    useImperativeHandle(ref, () => ({
+        show: (bin, left, top) => setState({ open: true, data: bin, left, top }),
+        hide: () => setState((s) => ({ ...s, open: false })),
+    }));
+
+    if (!state.open || !state.data) return null;
+
+    const { data, left, top } = state;
 
     return (
         <TooltipWithBounds left={left} top={top}>
             {tooltipBody ? (
                 tooltipBody(data)
             ) : (
-                <div style={{ fontFamily: 'Roboto,Helvetica,Arial,sans-serif', fontSize: 12 }}>
+                <div style={{ fontSize: 12 }}>
                     <div>
                         <strong>Range:</strong> {data.x0.toFixed(2)}, {data.x1.toFixed(2)}
                     </div>
