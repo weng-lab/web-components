@@ -21,3 +21,6 @@ export type {ProportionsBarProps} from './components/ProportionsBar'
 export * from './components/PhyloTree'
 
 export * from './components/SequenceAlignmentPlot'
+
+export { Histogram } from './components/Histogram';
+export type { HistogramProps, HistogramBin } from './components/Histogram';
