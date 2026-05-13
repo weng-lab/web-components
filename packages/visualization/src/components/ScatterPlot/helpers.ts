@@ -50,7 +50,7 @@ export const getTicks = (
     if (total < 2) return [min, max];
 
     const step = (max - min) / (total - 1);
-    return Array.from({ length: total }, (_, i) => min + i * step);
+    return Array.from({ length: total }, (_, i) => parseFloat((min + i * step).toPrecision(10)));
 };
 
 export function getTrianglePoints(cx: number, cy: number, r: number) {

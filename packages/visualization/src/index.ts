@@ -22,5 +22,7 @@ export * from './components/PhyloTree'
 
 export * from './components/SequenceAlignmentPlot'
 
+export * from './components/Heatmap'
+
 export { Histogram } from './components/Histogram';
 export type { HistogramProps, HistogramBin } from './components/Histogram';
