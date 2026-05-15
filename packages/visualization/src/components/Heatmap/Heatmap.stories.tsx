@@ -8,6 +8,13 @@ const meta = {
     component: Heatmap,
     tags: ['autodocs'],
     argTypes: {
+        animationType: {
+            control: { type: 'select' },
+            options: [undefined, 'fade', 'scale', 'slideUp', 'slideRight', 'pop'],
+        },
+        showLegend: {
+            control: { type: 'boolean' },
+        },
     },
     parameters: {
         controls: { expanded: true },
@@ -60,5 +67,25 @@ export const Default: Story = {
         xLabel: 'X-Axis Label',
         yLabel: 'Y-Axis Label',
         colors: ['#20619e', '#fff36e', '#c92b16'],
+    },
+};
+
+export const WithAnimation: Story = {
+    args: {
+        data: heatmapData,
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+        animationType: 'scale',
+    },
+};
+
+export const NoLegend: Story = {
+    args: {
+        data: heatmapData,
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+        showLegend: false,
     },
 };

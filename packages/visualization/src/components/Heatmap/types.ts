@@ -1,5 +1,5 @@
 import { ReactElement } from "react";
-import { DownloadPlotHandle } from "../../utility";
+import { DownloadPlotHandle, AnimationType } from "../../utility";
 import { RectCell } from "@visx/heatmap/lib/heatmaps/HeatmapRect";
 import { CircleCell } from "@visx/heatmap/lib/heatmaps/HeatmapCircle";
 
@@ -49,4 +49,6 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   gap?: number;
   isRect?: boolean;
   margin?: { top: number; right: number; bottom: number; left: number };
+  animationType?: AnimationType;
+  showLegend?: boolean;
 };

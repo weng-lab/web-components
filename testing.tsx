@@ -1,27 +1,32 @@
 import ReactDOM from 'react-dom/client';
-import { Histogram } from './packages/visualization/src/components/Histogram';
+import { Heatmap } from './packages/visualization/src/components/Heatmap';
+import { Box } from '@mui/material';
 
-function normalSample(mean: number, std: number): number {
-    const u1 = Math.random();
-    const u2 = Math.random();
-    return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
-const data = [
-    { values: Array.from({ length: 300 }, () => normalSample(-1, 1)), label: 'Group A', color: '#4c78a8' },
-    { values: Array.from({ length: 300 }, () => normalSample(1, 1)),  label: 'Group B', color: '#e45c5c' },
-];
+const data = Array.from({ length: 10 }, (_, colIndex) => ({
+    columnName: `Group ${colIndex + 1}`,
+    rows: Array.from({ length: 10 }, (_, rowIndex) => ({
+        rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
+        count: Math.floor(Math.random() * 100),
+    })),
+}));
 
 function TestingPage() {
     return (
-        <div style={{ width: 800, height: 500 }}>
-            <Histogram
+        <div style={{ width: 850, height: 500 }}>
+            <Heatmap
                 data={data}
-                xLabel="Value"
-                yLabel="Count"
-                title="Multi-Series Histogram"
-                distributionLine
-                thresholds={25}
+                colors={['#20619e', '#fff36e', '#c92b16']}
+                xLabel="X-Axis Label"
+                yLabel="Y-Axis Label"
+                animationType="fade"
+                tooltipBody={(bin) => (
+                    <Box maxWidth={300}>
+                        <div><strong>Row:</strong> {bin.bin.rowName}</div>
+                        <div><strong>Column:</strong> {bin.datum.columnName}</div>
+                        <div><strong>Value:</strong> {bin?.count}</div>
+                    </Box>
+                )}
+                onClick={(bin) => console.log(bin)}
             />
         </div>
     );
