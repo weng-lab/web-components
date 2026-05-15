@@ -40,9 +40,18 @@ const Heatmap = ({
   const maxColNameLength = allColNames.reduce((m, name) => Math.max(m, name.length), 0);
   const maxRowNameLength = allRowNames.reduce((m, name) => Math.max(m, name.length), 0);
 
-  // the constants for the left and bottom margins really only work for font size of 12 to fit the axis labels in the svg....so maybe need to think of a more dynamic solution
   const defaultRight = showLegend ? LEGEND_WIDTH : 10;
-  const marg = margin ?? { top: 20, left: maxRowNameLength * 8 + 40, right: defaultRight, bottom: maxColNameLength * 8 + 70 };
+  const defaultTop = 20;
+  // Solve for bottom margin so that (bottom - binHeight) always equals the space needed for
+  // rotated column labels. binHeight = (parentHeight - top - bottom) / numRows, so:
+  // bottom = (labelSpace * numRows + parentHeight - top) / (numRows + 1)
+  const labelBottomSpace = maxColNameLength * 8 + 70;
+  const marg = margin ?? {
+    top: defaultTop,
+    left: maxRowNameLength * 8 + 40,
+    right: defaultRight,
+    bottom: (labelBottomSpace * numRows + Math.max(0, parentHeight - defaultTop)) / (numRows + 1),
+  };
 
   const xMax = parentWidth > marg.left + marg.right ? parentWidth - marg.left - marg.right : parentWidth;
   const yMax = parentHeight - marg.bottom - marg.top;

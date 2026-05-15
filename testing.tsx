@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 
 const data = Array.from({ length: 10 }, (_, colIndex) => ({
     columnName: `Group ${colIndex + 1}`,
-    rows: Array.from({ length: 12 }, (_, rowIndex) => ({
+    rows: Array.from({ length: 10 }, (_, rowIndex) => ({
         rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
         count: Math.floor(Math.random() * 100),
     })),
