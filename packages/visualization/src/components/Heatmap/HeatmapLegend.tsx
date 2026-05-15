@@ -20,11 +20,6 @@ const formatTick = (value: number) =>
 const HeatmapLegend = ({ colors, minValue, maxValue, height }: HeatmapLegendProps) => {
     const gradientId = "heatmap-legend-gradient";
 
-    const colorScale = scaleLinear<string>({
-        range: colors,
-        domain: colors.map((_, i) => minValue + (i * (maxValue - minValue)) / (colors.length - 1)),
-    });
-
     const tickValues = Array.from({ length: NUM_TICKS }, (_, i) =>
         minValue + (i * (maxValue - minValue)) / (NUM_TICKS - 1)
     );
