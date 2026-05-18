@@ -48,7 +48,43 @@ export const DetailsTabs = ({
           startScrollButtonIcon: { className: "start-scroll-icon" },
           endScrollButtonIcon: { className: "end-scroll-icon" },
         }}
-        
+        sx={{
+          "& .MuiTab-root.Mui-selected": {
+            backgroundColor: verticalTabs
+              ? (selectedBackgroundColor ?? "rgba(73, 77, 107, .15)")
+              : "initial",
+          },
+          "& .MuiTabs-scrollButtons.Mui-disabled": {
+            opacity: 0.3,
+          },
+          "&.MuiTabs-root:has(.MuiTabScrollButton-root:not(.Mui-disabled) .start-scroll-icon) .MuiTabs-scroller": {
+            "&::before": {
+              content: '""',
+              position: "fixed",
+              zIndex: 1,
+              pointerEvents: "none",
+              ...(orientation === "horizontal"
+                ? { top: 0, bottom: 0, left: 40, width: 15, background: "linear-gradient(to right, #fff 0%, rgba(255,255,255,0.8) 25%, transparent 100%)" }
+                : { left: 0, right: 0, top: 40, height: 15, background: "linear-gradient(to bottom, #F2F2F2 0%, rgba(255,255,255,0.8) 25%, transparent 100%)" }),
+            },
+          },
+          "&.MuiTabs-root:has(.MuiTabScrollButton-root:not(.Mui-disabled) .end-scroll-icon) .MuiTabs-scroller": {
+            "&::after": {
+              content: '""',
+              position: "fixed",
+              zIndex: 1,
+              pointerEvents: "none",
+              ...(orientation === "horizontal"
+                ? { top: 0, bottom: 0, right: 40, width: 15, background: "linear-gradient(to left, #fff 0%, rgba(255,255,255,0.8) 25%, transparent 100%)" }
+                : { left: 0, right: 0, bottom: 40, height: 15, background: "linear-gradient(to top, #F2F2F2 0%, rgba(255,255,255,0.8) 25%, transparent 100%)" }),
+            },
+          },
+          contain: "layout",
+          position: "sticky",
+          top,
+          width: verticalTabs ? 100 : "100%",
+          maxHeight: "100%",
+        }}
       >
         {iconTabs.map((tab) => (
           <CloneProps key={tab.value} value={tab.value}>
