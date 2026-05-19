@@ -36,6 +36,9 @@ export const DetailsTabs = ({
   const linkProps = (tab: TabItem) =>
     tab.href ? { component: LinkComponent ?? "a", href: tab.href } : {};
 
+  const resolveIcon = (icon: TabItem["icon"]) =>
+    typeof icon === "string" ? <img src={icon} alt="" style={{ width: 24, height: 24 }} /> : icon;
+
   return (
     <>
       <Tabs
@@ -94,7 +97,7 @@ export const DetailsTabs = ({
                   <Tab
                     {...(tabProps as object)}
                     label={tab.label}
-                    icon={tab.icon as React.ReactElement}
+                    icon={resolveIcon(tab.icon) as React.ReactElement}
                     disabled={tab.disabled}
                     {...linkProps(tab)}
                     sx={{ fontSize: "12px", width: verticalTabs ? "100%" : undefined }}

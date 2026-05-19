@@ -4,7 +4,7 @@ import React from "react";
 export type TabItem = {
   value: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | string;
   href?: string;
   disabled?: boolean;
   disabledMessage?: string;
