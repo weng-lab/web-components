@@ -1,12 +1,19 @@
-import { Tabs, Tab, Menu, MenuItem, Tooltip } from "@mui/material";
+import { Tabs, Tab, type TabProps, Menu, MenuItem, Tooltip } from "@mui/material";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import React, { useState, useMemo } from "react";
 import { DetailsTabsProps, TabItem } from "./types";
 
-function CloneProps(props: { children: (other: object) => React.ReactNode; [key: string]: unknown }) {
-  const { children, ...other } = props;
-  return children(other);
-}
+type TooltipTabProps = TabProps & {
+  tooltipTitle?: React.ReactNode;
+};
+
+const TooltipTab = ({ tooltipTitle, ...tabProps }: TooltipTabProps) => (
+  <Tooltip title={tooltipTitle ?? ""} arrow>
+    <span>
+      <Tab {...tabProps} />
+    </span>
+  </Tooltip>
+);
 
 export const DetailsTabs = ({
   tabs,
@@ -32,9 +39,6 @@ export const DetailsTabs = ({
     if (newValue === "more") return;
     onChange?.(newValue);
   };
-
-  const linkProps = (tab: TabItem) =>
-    tab.href ? { component: LinkComponent ?? "a", href: tab.href } : {};
 
   const resolveIcon = (icon: TabItem["icon"]) =>
     typeof icon === "string" ? <img src={icon} alt="" style={{ width: 24, height: 24 }} /> : icon;
@@ -89,22 +93,16 @@ export const DetailsTabs = ({
         }}
       >
         {iconTabs.map((tab) => (
-          <CloneProps key={tab.value} value={tab.value}>
-            {(tabProps) => (
-              <Tooltip title={tab.disabled ? (tab.disabledMessage ?? "Not Available") : ""} arrow>
-                <span>
-                  <Tab
-                    {...(tabProps as object)}
-                    label={tab.label}
-                    icon={resolveIcon(tab.icon) as React.ReactElement}
-                    disabled={tab.disabled}
-                    {...linkProps(tab)}
-                    sx={{ fontSize: "12px", width: verticalTabs ? "100%" : undefined }}
-                  />
-                </span>
-              </Tooltip>
-            )}
-          </CloneProps>
+          <TooltipTab
+            key={tab.value}
+            value={tab.value}
+            label={tab.label}
+            icon={resolveIcon(tab.icon) as React.ReactElement}
+            disabled={tab.disabled}
+            tooltipTitle={tab.disabled ? (tab.disabledMessage ?? "Not Available") : ""}
+            {...(tab.href ? { component: LinkComponent ?? "a", href: tab.href } : {})}
+            sx={{ fontSize: "12px", width: verticalTabs ? "100%" : undefined }}
+          />
         ))}
         {moreTabs.length > 0 && (
           <Tab
@@ -131,7 +129,7 @@ export const DetailsTabs = ({
               onChange?.(tab.value);
               setAnchorEl(null);
             }}
-            {...linkProps(tab)}
+            {...(tab.href ? { component: LinkComponent ?? "a", href: tab.href } : {})}
           >
             {tab.label}
           </MenuItem>
