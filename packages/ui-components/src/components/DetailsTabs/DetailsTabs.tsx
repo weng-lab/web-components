@@ -57,9 +57,7 @@ export const DetailsTabs = ({
         }}
         sx={{
           "& .MuiTab-root.Mui-selected": {
-            backgroundColor: verticalTabs
-              ? (selectedBackgroundColor ?? "rgba(73, 77, 107, .15)")
-              : "initial",
+            backgroundColor: (selectedBackgroundColor ?? "initial")
           },
           "& .MuiTabs-scrollButtons.Mui-disabled": {
             opacity: 0.3,
