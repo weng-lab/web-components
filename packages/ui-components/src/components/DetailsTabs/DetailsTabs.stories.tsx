@@ -51,7 +51,11 @@ export const Vertical: Story = {
           value={value}
           onChange={setValue}
           orientation="vertical"
-          selectedBackgroundColor="rgba(25, 118, 210, 0.15)"
+          selectedBackgroundColor="rgba(25, 210, 127, 0.15)"
+          sx={{
+            width: 100,
+            "& .MuiTabs-indicator": { backgroundColor: "rgb(3, 58, 33)" },
+          }}
         />
       </div>
     );

@@ -1,4 +1,4 @@
-import { TabsOwnProps } from "@mui/material";
+import type { SxProps, TabsOwnProps, Theme } from "@mui/material";
 import React from "react";
 
 export type TabItem = {
@@ -16,8 +16,7 @@ export type DetailsTabsProps = {
   onChange?: (value: string) => void;
   orientation?: TabsOwnProps["orientation"];
   LinkComponent?: React.ElementType;
-  /** Sticky top offset. Defaults to 0. */
-  top?: string | number;
   /** Background color of the selected tab highlight (vertical orientation only). */
   selectedBackgroundColor?: string;
+  sx?: SxProps<Theme>;
 };

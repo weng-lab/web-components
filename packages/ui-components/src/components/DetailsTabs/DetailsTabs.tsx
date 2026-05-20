@@ -14,8 +14,8 @@ export const DetailsTabs = ({
   onChange,
   orientation = "horizontal",
   LinkComponent,
-  top = 0,
   selectedBackgroundColor,
+  sx,
 }: DetailsTabsProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const verticalTabs = orientation === "vertical";
@@ -83,10 +83,9 @@ export const DetailsTabs = ({
             },
           },
           contain: "layout",
-          position: "sticky",
-          top,
-          width: verticalTabs ? 100 : "100%",
-          maxHeight: "100%",
+          width: "100%",
+          height: "100%",
+          ...sx,
         }}
       >
         {iconTabs.map((tab) => (
