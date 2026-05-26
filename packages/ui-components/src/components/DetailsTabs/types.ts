@@ -5,6 +5,8 @@ export type TabItem = {
   value: string;
   label: string;
   icon?: React.ReactNode | string;
+  iconWidth?: number;
+  iconHeight?: number;
   href?: string;
   disabled?: boolean;
   disabledMessage?: string;
@@ -18,5 +20,7 @@ export type DetailsTabsProps = {
   LinkComponent?: React.ElementType;
   /** Background color of the selected tab highlight (vertical orientation only). */
   selectedBackgroundColor?: string;
+  iconWidth?: number;
+  iconHeight?: number;
   sx?: SxProps<Theme>;
 };
