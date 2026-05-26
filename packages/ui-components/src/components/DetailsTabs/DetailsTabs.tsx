@@ -22,6 +22,8 @@ export const DetailsTabs = ({
   orientation = "horizontal",
   LinkComponent,
   selectedBackgroundColor,
+  iconWidth,
+  iconHeight,
   sx,
 }: DetailsTabsProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -40,8 +42,13 @@ export const DetailsTabs = ({
     onChange?.(newValue);
   };
 
-  const resolveIcon = (icon: TabItem["icon"]) =>
-    typeof icon === "string" ? <img src={icon} alt="" style={{ width: 24, height: 24 }} /> : icon;
+  const resolveIcon = (tab: TabItem) => {
+    const { icon } = tab;
+    if (typeof icon !== "string") return icon;
+    const w = tab.iconWidth ?? iconWidth ?? 24;
+    const h = tab.iconHeight ?? iconHeight ?? 24;
+    return <img src={icon} alt="" style={{ width: w, height: h }} />;
+  };
 
   return (
     <>
@@ -95,7 +102,7 @@ export const DetailsTabs = ({
             key={tab.value}
             value={tab.value}
             label={tab.label}
-            icon={resolveIcon(tab.icon) as React.ReactElement}
+            icon={resolveIcon(tab) as React.ReactElement}
             disabled={tab.disabled}
             tooltipTitle={tab.disabled ? (tab.disabledMessage ?? "Not Available") : ""}
             {...(tab.href ? { component: LinkComponent ?? "a", href: tab.href } : {})}
