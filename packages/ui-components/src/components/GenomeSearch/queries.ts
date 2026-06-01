@@ -33,6 +33,7 @@ export const GENE_AUTOCOMPLETE_QUERY = `
       ) {
           id
           name
+          description
           coordinates {
               chromosome
               start
@@ -233,10 +234,10 @@ export const getGenes = async (
   // Convert map to array and fetch descriptions
   const out = await Promise.all(
     Array.from(geneMap.values()).map(async ({ gene, versions }) => {
-      const description = await getDescription(gene.name);
+      const description =  await getDescription(gene.name);
       return {
         ...gene,
-        description: `${toTitleCase(description || gene.name)} ${gene.alias ? `(${gene.alias})` : ''}`,
+        description: `${toTitleCase(gene.description || gene.name || description)} ${gene.alias ? `(${gene.alias})` : ''}`,
         versions,
       };
     })

@@ -187,7 +187,7 @@ function renderGroup(params: AutocompleteRenderGroupParams) {
   return (
     <div key={params.key}>
       <Typography variant="subtitle2" sx={{ color: "gray", paddingInline: 1.5, paddingBlock: 1 }}>
-        {params.group}
+        {`Showing top 3 matches for ${params.group}`}
       </Typography>
       {params.children}
     </div>
