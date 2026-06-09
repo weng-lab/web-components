@@ -1,8 +1,9 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
-import { SequenceAlignmentPlot, Nucleotide, TooltipData } from "./index";
+import { SequenceAlignmentPlot, TooltipData } from "./index";
 import { EH38E3465364, EH38E4276533, EH38E4276534 } from "./example-data/mockData";
-import { getColor, getLabel, getOrder, sortByOrder, speciesOrderInApiData } from "../PhyloTree/example-data/utils";
+import { getColor, getColorLabel, getLabel, getOrder, getPrimateGroup, makeAlignmentPlotData, SPECIES_ORDER_IN_API_RETURN } from "../PhyloTree/example-data/utils";
 import { useState } from "react";
+
 
 const meta = {
   title: "visualization/SequenceAlignmentPlot",
@@ -15,45 +16,28 @@ const meta = {
   decorators: [(Story) => <Story />],
 } satisfies Meta<typeof SequenceAlignmentPlot>;
 
-const numberToNucleotide = new Map<number, Nucleotide>([
-  [0, "-"],
-  [1, "A"],
-  [2, "C"],
-  [3, "G"],
-  [4, "T"],
-]);
-
-const makePlotData = (sequences: number[][], speciesOrder: string[]): {[species: string]: Nucleotide[]} => {
-    const data: {[species: string]: Nucleotide[]} = {}
-    sequences.forEach((sequence, i) => {
-      const species = speciesOrder[i]
-      data[species] = sequence.map(num => numberToNucleotide.get(num) ?? "-")
-    })
-
-    return data
-}
-
-const sortPlotDataByOrder = (data: {[species: string]: Nucleotide[]}) => {
-  return Object.fromEntries(Object.entries(data).sort(([speciesA, seqA], [speciesB, seqB]) =>  sortByOrder(speciesA, speciesB)))
-}
-
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const dataEH38E4276533 = sortPlotDataByOrder(makePlotData(EH38E4276533.data.ccreSequenceAlignmentQuery[0].sequence_alignment, speciesOrderInApiData))
-const dataEH38E4276534 = sortPlotDataByOrder(makePlotData(EH38E4276534.data.ccreSequenceAlignmentQuery[0].sequence_alignment, speciesOrderInApiData))
-const dataEH38E3465364 = sortPlotDataByOrder(makePlotData(EH38E3465364.data.ccreSequenceAlignmentQuery[0].sequence_alignment, speciesOrderInApiData))
 
-const tooltipContents = (tooltipData: TooltipData) => (
+const PlotTooltip = (props: TooltipData) => (
   <div
     style={{
       fontSize: 12,
     }}
   >
-    {tooltipData.label} • {tooltipData.order}
-    {tooltipData.basePair && tooltipData.position !== undefined ? ` • pos ${tooltipData.position} • ${tooltipData.basePair}` : ""}
+    <div style={{ fontWeight: 600 }}>{getLabel(props.id)}</div>
+    <div>{props.id.replaceAll("_", " ")}</div>
+    <div>{getOrder(props.id).toLowerCase()}</div>
+    {getPrimateGroup(props.id) && <div>{getColorLabel(props.id)}</div>}
+    {props.charLabel && <div>{props.charLabel}</div>}
+    {props.position && <div>{props.position}</div>}
   </div>
 );
+
+const dataEH38E4276533 = makeAlignmentPlotData(EH38E4276533.ccreSequenceAlignmentQuery[0].sequence_alignment, SPECIES_ORDER_IN_API_RETURN)
+const dataEH38E4276534 = makeAlignmentPlotData(EH38E4276534.ccreSequenceAlignmentQuery[0].sequence_alignment, SPECIES_ORDER_IN_API_RETURN)
+const dataEH38E3465364 = makeAlignmentPlotData(EH38E3465364.ccreSequenceAlignmentQuery[0].sequence_alignment, SPECIES_ORDER_IN_API_RETURN)
 
 export const EH38E4276533_: Story = {
   args: {
@@ -64,7 +48,7 @@ export const EH38E4276533_: Story = {
     getOrder: (id) => getOrder(id) ?? "",
     getOrderColor: getColor,
     hovered: ["Homo_sapiens"],
-    tooltipContents
+    tooltipContents: (tooltipData) => <PlotTooltip {...tooltipData} />
   },
 };
 
@@ -76,7 +60,7 @@ export const EH38E3465364_: Story = {
     getLabel: getLabel,
     getOrder: (id) => getOrder(id) ?? "",
     getOrderColor: getColor,
-    tooltipContents
+    tooltipContents: (tooltipData) => <PlotTooltip {...tooltipData} />
   },
 };
 
@@ -88,7 +72,7 @@ export const hoverChange: Story = {
     getLabel: getLabel,
     getOrder: (id) => getOrder(id) ?? "",
     getOrderColor: getColor,
-    tooltipContents
+    tooltipContents: (tooltipData) => <PlotTooltip {...tooltipData} />
   },
   render: (args) => {
     const [hovered, setHovered] = useState<string | null>(null);
@@ -110,6 +94,6 @@ export const highlighted: Story = {
     getLabel: getLabel,
     getOrder: (id) => getOrder(id) ?? "",
     getOrderColor: getColor,
-    tooltipContents
+    tooltipContents: (tooltipData) => <PlotTooltip {...tooltipData} />
   },
 };

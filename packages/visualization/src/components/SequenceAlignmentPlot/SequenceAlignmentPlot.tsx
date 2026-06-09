@@ -1,21 +1,45 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback, ReactNode } from "react";
 import { AxisBottom } from "@visx/axis";
-import { scaleLinear } from "@visx/scale";
+import { scaleLinear, scaleOrdinal } from "@visx/scale";
+import { LegendOrdinal } from "@visx/legend";
 import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
 import { Text } from "@visx/text";
 
-export type Nucleotide = "A" | "C" | "G" | "T" | "-";
+export type AlignmentChar = "A" | "C" | "G" | "T" | "N" | "M" | "-" | "*";
 
-const NUCLEOTIDE_COLORS: Record<Nucleotide, string> = {
-  A: "#05ac05",
-  C: "#1668cb",
-  G: "#ffb700",
-  T: "#fd1414",
-  "-": "white",
+const COLORS: Record<AlignmentChar, string> = {
+  "*": "#ffffff", // absent from block
+  A: "#4daf4a",
+  C: "#377eb8",
+  G: "#ff7f00",
+  T: "#e41a1c",
+  N: "#ffbf00", // assembly ambiguous
+  M: "#984ea3", // multi-scaffold conflict
+  "-": "#d4d4d4", // within-block gap
 };
 
+const LEGEND_LABELS: Record<AlignmentChar, string> = {
+  A: "A",
+  C: "C",
+  G: "G",
+  T: "T",
+  N: "N ambiguous",
+  M: "M conflict",
+  "-": "- gap",
+  "*": "* absent",
+};
+
+// Explicit order so A,C,G,T lead the legend like the old emoji key did.
+const LEGEND_ORDER: AlignmentChar[] = ["A", "C", "G", "T", "N", "M", "*", "-"];
+
+// Colors are static, so the ordinal scale can live at module scope.
+const legendScale = scaleOrdinal<AlignmentChar, string>({
+  domain: LEGEND_ORDER,
+  range: LEGEND_ORDER.map((char) => COLORS[char]),
+});
+
 export interface SequenceAlignmentPlotProps {
-  data: { [id: string]: Nucleotide[] };
+  data: { [id: string]: AlignmentChar[] };
   getLabel: (id: string) => string;
   getOrderColor: (id: string) => string;
   /**
@@ -42,7 +66,12 @@ export interface SequenceAlignmentPlotProps {
   tooltipContents?: (tooltipData: TooltipData) => ReactNode;
 }
 
-const AXIS_HEIGHT = 50;
+// Bottom band below the canvas: axis ticks on top, then the axis title + wrapping legend.
+const AXIS_TICKS_HEIGHT = 24; // AxisBottom ticks + numbers
+const LEGEND_TITLE_HEIGHT = 16; // "Position in cCRE" line
+const LEGEND_ROW_HEIGHT = 16; // one wrapped row of swatches + labels
+const LEGEND_MAX_ROWS = 3; // worst-case wrap at the narrowest live width
+const AXIS_HEIGHT = AXIS_TICKS_HEIGHT + LEGEND_TITLE_HEIGHT + LEGEND_MAX_ROWS * LEGEND_ROW_HEIGHT;
 const SPECIES_BAR_WIDTH = 12;
 const HIGHLIGHTED_BAR_WIDTH = 12;
 const PADDING = 10;
@@ -55,7 +84,8 @@ const AXIS_LEFT_PADDING = 5
 export type SpeciesInfo = { id: string; label: string; order: string; color: string };
 
 export type TooltipData = SpeciesInfo & {
-  basePair?: Nucleotide;
+  char?: AlignmentChar;
+  charLabel?: string;
   position?: number;
 };
 
@@ -211,8 +241,8 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     ctx.setTransform(bitmapScaleX, 0, 0, bitmapScaleY, bitmapTranslateX, 0);
 
     Object.entries(data).forEach(([species, sequence], y) => {
-      sequence.forEach((nucleotide, x) => {
-        ctx.fillStyle = NUCLEOTIDE_COLORS[nucleotide];
+      sequence.forEach((nucleobase, x) => {
+        ctx.fillStyle = COLORS[nucleobase];
         ctx.globalAlpha = hovered.length && !hovered.includes(species) ? 0.3 : 1;
         ctx.fillRect(x, y, 1, 1);
         ctx.globalAlpha = 1;
@@ -260,14 +290,19 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     const position = cssXToPosition(cssX);
     const speciesIndex = Math.floor((cssY / rect.height) * numSpecies);
     const speciesId = Object.keys(data)[speciesIndex];
-    const basePair = data[speciesId]?.[position];
+    const char = data[speciesId]?.[position];
 
     if (position >= 0 && position < numPositions && speciesIndex >= 0 && speciesIndex < numSpecies) {
       handleSetInternalHover(speciesId);
       showTooltip({
         tooltipTop: e.clientY,
         tooltipLeft: e.clientX,
-        tooltipData: { position, basePair, ...(speciesInfo.get(speciesId) as SpeciesInfo) },
+        tooltipData: {
+          position,
+          char,
+          charLabel: char != null ? LEGEND_LABELS[char] : undefined,
+          ...(speciesInfo.get(speciesId) as SpeciesInfo),
+        },
       });
     } else {
       handleSetInternalHover(null);
@@ -408,15 +443,53 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
           numTicks={Math.min(numPositions, Math.round(10 * zoomTransform.scaleX))}
           left={AXIS_LEFT_PADDING}
         />
-        <Text fontSize={12} textAnchor="middle" verticalAnchor="end" x={axisWidth / 2} y={AXIS_HEIGHT - 4}>
-          {
-            "Position in cCRE\u00A0\u00A0•\u00A0\u00A0🟢\u00A0A\u00A0\u00A0🔵\u00A0C\u00A0\u00A0🟠\u00A0G\u00A0\u00A0\🔴\u00A0T"
-          }
-        </Text>
-        <Text fontSize={12} textAnchor="end" verticalAnchor="end" x={axisWidth} y={AXIS_HEIGHT - 4}>
-          {`${zoomTransform.scaleX.toFixed(1)}\u00d7`}
-        </Text>
       </svg>
+      {/* Axis title, zoom indicator, and color legend live in HTML below the axis ticks.
+          The legend wraps at narrow widths; AXIS_HEIGHT reserves room for up to LEGEND_MAX_ROWS. */}
+      <div
+        style={{
+          position: "absolute",
+          top: canvasHeight + AXIS_TICKS_HEIGHT,
+          left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH,
+          width: canvasWidth,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          fontSize: 12,
+          pointerEvents: "none",
+        }}
+      >
+        {/* Axis title centered, zoom factor pinned to the right of the same line */}
+        <div style={{ position: "relative", width: "100%", textAlign: "center" }}>
+          Position in cCRE
+          <span style={{ position: "absolute", right: 0, top: 0 }}>
+            {`${zoomTransform.scaleX.toFixed(1)}×`}
+          </span>
+        </div>
+        <LegendOrdinal
+          scale={legendScale}
+          direction="row"
+          shape="rect"
+          shapeWidth={11}
+          shapeHeight={11}
+          itemMargin="0 10px 0 0"
+          labelMargin="0 0 0 0px"
+          labelFormat={(char) => LEGEND_LABELS[char]}
+          shapeStyle={() => ({ border: "1px solid rgba(0,0,0,0.25)" })}
+          // Legend root only sets flexDirection, so enable wrapping/centering here.
+          // minHeight reserves the full legend band; alignContent centers the row(s)
+          // vertically so a single, non-wrapping row sits centered instead of top-aligned.
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            alignContent: "center",
+            rowGap: 2,
+            minHeight: LEGEND_MAX_ROWS * LEGEND_ROW_HEIGHT,
+          }}
+        />
+      </div>
       {tooltipData && tooltipContents && (
         <TooltipInPortal left={tooltipLeft} top={tooltipTop} style={defaultStyles}>
           {tooltipContents(tooltipData)}
