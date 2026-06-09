@@ -96,6 +96,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8 }); }
                     const handleZoomReset = () => { zoom.reset(); }
 
+                    const controlsPosition = props.controlsPosition ?? "left";
+
                     return (
                         <>
                             {!props.disableZoom && (
@@ -103,7 +105,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                                     direction="column"
                                     sx={{
                                         position: 'absolute',
-                                        left: `max(10px, calc(45% - ${size / 2}px))`,
+                                        ...(controlsPosition === "right"
+                                            ? { right: `max(10px, calc(45% - ${size / 2}px))` }
+                                            : { left: `max(10px, calc(45% - ${size / 2}px))` }),
                                         top: `calc(50% - ${size / 2}px + ${margin.top}px)`,
                                         zIndex: 10
                                     }}
