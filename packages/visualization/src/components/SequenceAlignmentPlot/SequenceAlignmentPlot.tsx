@@ -9,12 +9,12 @@ export type AlignmentChar = "A" | "C" | "G" | "T" | "N" | "M" | "-" | "*";
 
 const COLORS: Record<AlignmentChar, string> = {
   "*": "#ffffff", // absent from block
-  A: "#4daf4a",
-  C: "#377eb8",
-  G: "#ff7f00",
-  T: "#e41a1c",
-  N: "#ffbf00", // assembly ambiguous
-  M: "#984ea3", // multi-scaffold conflict
+  A: "#05ac05",
+  C: "#1668cb",
+  G: "#ffb700",
+  T: "#fd1414",
+  N: "#cf5ce3", // assembly ambiguous
+  M: "#672c71", // multi-scaffold conflict
   "-": "#d4d4d4", // within-block gap
 };
 
