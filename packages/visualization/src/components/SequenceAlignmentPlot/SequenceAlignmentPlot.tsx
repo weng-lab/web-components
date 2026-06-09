@@ -13,8 +13,8 @@ const COLORS: Record<AlignmentChar, string> = {
   C: "#1668cb",
   G: "#ffb700",
   T: "#fd1414",
-  N: "#cf5ce3", // assembly ambiguous
-  M: "#672c71", // multi-scaffold conflict
+  N: "#555555", // assembly ambiguous
+  M: "#984ea3", // multi-scaffold conflict
   "-": "#d4d4d4", // within-block gap
 };
 
