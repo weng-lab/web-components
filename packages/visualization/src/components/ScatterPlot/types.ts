@@ -226,6 +226,12 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      * centered at the data origin (0, 0), plus an optional colorbar legend.
      */
     backgroundGradient?: BackgroundGradient;
+    /**
+     * Position of the zoom/selection controls relative to the chart.
+     * @default
+     * "left"
+     */
+    controlsPosition?: "left" | "right";
 };
 
 export type BackgroundGradient = {
