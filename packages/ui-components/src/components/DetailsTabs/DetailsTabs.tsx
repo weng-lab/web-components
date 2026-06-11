@@ -47,7 +47,7 @@ export const DetailsTabs = ({
     if (typeof icon !== "string") return icon;
     const w = tab.iconWidth ?? iconWidth ?? 24;
     const h = tab.iconHeight ?? iconHeight ?? 24;
-    return <img src={icon} alt="" style={{ width: w, height: h }} />;
+    return <img src={icon} alt="" style={{ width: w, height: h, opacity: tab.disabled ? 0.30 : 1 }} />;
   };
 
   return (
