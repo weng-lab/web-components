@@ -7,24 +7,14 @@ import { CircularProgress } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
-import { downloadAsSVG, downloadSVGAsPNG } from '../../utility';
+import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from '../../utility';
 import SingleBar from './singleBar';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
 //helper function to get the approx length of the longest category in px
 export const getTextHeight = (text: string, fontSize: number, fontFamily: string): number => {
-    const el = document.createElement("g");
-    el.style.position = "absolute";
-    el.style.visibility = "hidden";
-    el.style.fontSize = `${fontSize}px`;
-    el.style.fontFamily = fontFamily;
-    el.style.whiteSpace = "nowrap";
-    el.textContent = text;
-    document.body.appendChild(el);
-    const width = el.getBoundingClientRect().width;
-    document.body.removeChild(el);
-    return width + 10;
+    return measureTextWidth(text, fontSize, fontFamily) + 10;
 };
 
 const BarPlot = <T,>({
@@ -49,9 +39,7 @@ const BarPlot = <T,>({
     // State to control whether animation is enabled so that if scrollling too fast through a long list of bars, 
     // you dont have to wait for the animation to catch up
     const [animationEnabled, setAnimationEnabled] = useState(true);
-    // Unique ID needed to not mix up getElementByID calls if multiple charts are in DOM
-    const [uniqueID] = useState(topAxisLabel + String(Math.random()))
-    
+
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     const outerSvgRef = useRef<SVGSVGElement>(null)
@@ -100,22 +88,23 @@ const BarPlot = <T,>({
     const legendHeight = lollipopValues.length > 0 ? 30 : 0
 
     // X padding
-    const maxCategoryLength = Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial")))
-    const spaceForCategory = maxCategoryLength
+    const spaceForCategory = useMemo(() =>
+        Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial"))),
+        [data])
     const gapBetweenTextAndBar = 10
 
     const maxValue = useMemo(() => Math.max(...data.map((d) => d.value)), [data])
     const minValue = useMemo(() => Math.min(...data.map((d) => d.value)), [data])
     const negativeCutoff = -0.5
 
-    const bars = data.flatMap((item, index) => [
+    const bars = useMemo(() => data.flatMap((item, index) => [
         item,
         {
             id: `spacer-${index}`,
             value: 0,
             color: "transparent",
         }
-    ]).slice(0, -1);
+    ]).slice(0, -1), [data]);
 
     const dataHeight = ((data.length) * (barSize)) + ((data.length - 1) * (barSpacing))
     const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom - legendHeight : dataHeight
@@ -139,53 +128,42 @@ const BarPlot = <T,>({
             range: [0, Math.max(ParentWidth - spaceForCategory - spaceForLabel, 0)],
         }), [cutoffNegativeValues, minValue, negativeCutoff, maxValue, ParentWidth, spaceForLabel])
 
-    //This feels really dumb but I couldn't figure out a better way to have the labels not overflow sometimes - JF 11/8/24
-    //Whenever xScale is adjusted, it checks to see if any of the labels overflow the container, and if so
-    //it sets the spaceForLabel to be the amount overflowed.
+    //Figures out how much horizontal space the value labels need so they don't overflow (or leave too much empty space).
+    //Solved directly from the scale's domain (which doesn't depend on spaceForLabel), so it converges in a single pass
+    //instead of repeatedly nudging spaceForLabel by +/-25px and re-rendering every bar each time.
     useEffect(() => {
         if (!ParentWidth) { return }
 
-        let maxOverflow = 0
-        let minUnderflow: number | null = null
+        const availableWidth = ParentWidth - spaceForCategory
+        const [domainMin, domainMax] = xScale.domain()
+        const domainSpan = domainMax - domainMin
 
-        bars.forEach((d, i) => {
-            const textElement = document.getElementById(`label-${i}-${uniqueID}`) as unknown as SVGSVGElement;
+        let requiredSpace = 0
 
-            if (textElement) {
-                const textWidth = textElement.getBBox().width;
+        if (domainSpan > 0) {
+            bars.forEach((d) => {
+                const textWidth = measureTextWidth((d as BarData<T>).label ?? "", 12, fontFamily);
 
-                const barStart = xScale(0);
-                const barEnd = xScale(d.value);
+                // Position of the bar's far edge as a fraction of availableWidth, independent of spaceForLabel
+                const fraction = Math.max(0 - domainMin, d.value - domainMin) / domainSpan
 
-                const totalWidth = spaceForCategory + Math.max(barStart, barEnd) + gapBetweenTextAndBar + textWidth;
-                const overflow = totalWidth - ParentWidth
-
-                maxOverflow = Math.max(overflow, maxOverflow)
-                if (overflow < 0) {
-                    if (minUnderflow === null) {
-                        minUnderflow = Math.abs(overflow)
-                    } else {
-                        minUnderflow = Math.min(Math.abs(overflow), minUnderflow)
-                    }
+                if (fraction > 0) {
+                    const needed = (availableWidth * (fraction - 1) + gapBetweenTextAndBar + textWidth) / fraction
+                    requiredSpace = Math.max(requiredSpace, needed)
                 }
-            }
-        });
+            });
+        }
 
-        if (maxOverflow > 0) { //ensure nothing is cut off
+        const newSpaceForLabel = Math.max(0, Math.ceil(requiredSpace))
+
+        if (Math.abs(newSpaceForLabel - spaceForLabel) > 1) {
             setLabelSpaceDecided(false)
-            setSpaceForLabel((prev) => {
-                return prev + 25
-            })
-        } else if (minUnderflow && minUnderflow > 30) { //ensure not too much space is left empty
-            setLabelSpaceDecided(false)
-            setSpaceForLabel((prev) => {
-                return prev - 25
-            })
-        } else { //If there is no overflow or underflow to handle
+            setSpaceForLabel(newSpaceForLabel)
+        } else {
             setLabelSpaceDecided(true)
         }
 
-    }, [data, xScale, spaceForLabel, labelSpaceDecided, svgRef, ParentWidth, topAxisLabel, uniqueID]);
+    }, [bars, xScale, spaceForCategory, spaceForLabel, ParentWidth]);
 
     const axisCenter = (xScale.range()[0] + xScale.range()[1]) / 2;
 
@@ -230,7 +208,7 @@ const BarPlot = <T,>({
                     height={fill ? ParentHeight ? ParentHeight - legendHeight : ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
                     opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
                 >
-                    <Group left={spaceForCategory} top={spaceForTopAxis} key={animationEnabled ? "animating" : "static"}>
+                    <Group left={spaceForCategory} top={spaceForTopAxis}>
                         {/* Top Axis with Label */}
                         <AxisTop
                             scale={xScale}
@@ -269,7 +247,6 @@ const BarPlot = <T,>({
                                     animation={animation}
                                     animationEnabled={animationEnabled}
                                     animationBuffer={animationBuffer}
-                                    uniqueID={uniqueID}
                                 />
                             );
                         })}

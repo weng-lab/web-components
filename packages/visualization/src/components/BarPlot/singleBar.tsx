@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
 import { BarData, SingleBarProps } from "./types";
@@ -25,7 +25,6 @@ const SingleBar = <T,>({
     animation,
     animationEnabled,
     animationBuffer,
-    uniqueID
 }: SingleBarProps<T>) => {
     const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } = useTooltip<BarData<T>>({});
 
@@ -35,7 +34,15 @@ const SingleBar = <T,>({
             tooltipLeft: event.pageX,
             tooltipTop: event.pageY,
         });
-    }, [ showTooltip]);
+    }, [showTooltip]);
+
+    const handleClick = useCallback(() => {
+        onBarClicked?.(bar);
+    }, [onBarClicked, bar]);
+
+    const handleMouseLeave = useCallback(() => {
+        hideTooltip();
+    }, [hideTooltip]);
 
     const hovered = bar.id === tooltipData?.id;
 
@@ -69,10 +76,10 @@ const SingleBar = <T,>({
     return (
         <>
             <Group
-                onClick={() => onBarClicked?.(bar)}
+                onClick={handleClick}
                 style={onBarClicked && { cursor: 'pointer' }}
                 onMouseMove={(event) => handleMouseMove(event, bar)}
-                onMouseLeave={() => hideTooltip()}
+                onMouseLeave={handleMouseLeave}
                 fontFamily={fontFamily}
             >
                 {/* Category label */}
@@ -117,7 +124,6 @@ const SingleBar = <T,>({
                         )}
                         {/* Value label */}
                         <Text
-                            id={`label-${index}-${uniqueID}`}
                             x={valueLabelX}
                             y={valueLabelY}
                             dy={".35em"}
@@ -148,4 +154,5 @@ const SingleBar = <T,>({
     )
 }
 
-export default SingleBar;
+// memo() doesn't preserve generic type parameters, so cast back to the generic signature
+export default memo(SingleBar) as typeof SingleBar;

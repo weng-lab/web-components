@@ -78,5 +78,4 @@ export interface SingleBarProps<T> {
     animation?: AnimationType;
     animationEnabled: boolean;
     animationBuffer?: number;
-    uniqueID: string;
 }
