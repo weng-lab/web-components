@@ -9,6 +9,7 @@ export interface BarData<T> {
    */
   id: string;
   color?: string;
+  stroke?: string;
   lollipopValue?: number
   metadata?: T;
 }
@@ -77,5 +78,4 @@ export interface SingleBarProps<T> {
     animation?: AnimationType;
     animationEnabled: boolean;
     animationBuffer?: number;
-    uniqueID: string;
 }
