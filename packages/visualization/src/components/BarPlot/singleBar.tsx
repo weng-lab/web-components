@@ -96,7 +96,7 @@ const SingleBar = <T,>({
                             fill={bar.color || "black"}
                             opacity={cutoffNegativeValues && pointValue === negativeCutoff ? 0.4 : 1}
                             rx={3}
-                            stroke={hovered ? "black" : "none"}
+                            stroke={hovered ? "black" : (bar.stroke || "none")}
                         />
                         {bar.lollipopValue && (
                             <>

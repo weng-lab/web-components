@@ -41,6 +41,7 @@ const AnimatedPoints = <T extends object>({
                         <polygon
                             points={getTrianglePoints(cx, cy, radius)}
                             fill={point.color ?? "black"}
+                            stroke={point.stroke}
                             opacity={point.opacity ?? 1}
                         />
                     ) : (
@@ -49,6 +50,7 @@ const AnimatedPoints = <T extends object>({
                             cy={cy}
                             r={radius}
                             fill={point.color ?? "black"}
+                            stroke={point.stroke}
                             opacity={point.opacity ?? 1}
                         />
                     )}

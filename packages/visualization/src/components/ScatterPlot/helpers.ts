@@ -142,9 +142,9 @@ export const drawCanvasPoint = <T extends object>(
     context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
     context.fill();
 
-    if (isHovered) {
+    if (isHovered || point.stroke) {
         context.lineWidth = 1;
-        context.strokeStyle = "black";
+        context.strokeStyle = isHovered ? "black" : point.stroke!;
         context.stroke();
     }
 };

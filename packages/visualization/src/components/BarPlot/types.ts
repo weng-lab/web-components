@@ -9,6 +9,7 @@ export interface BarData<T> {
    */
   id: string;
   color?: string;
+  stroke?: string;
   lollipopValue?: number
   metadata?: T;
 }
