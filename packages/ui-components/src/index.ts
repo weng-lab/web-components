@@ -15,3 +15,6 @@ export type { GenomeSearchProps, Result, Domain, ResultType } from "./components
 
 export { TwoPaneLayout, useSyncedTable, useTablePlotSync } from "./components/TwoPaneLayout";
 export type { TwoPanePlotConfig, TwoPaneLayoutProps, ResponsiveDirection } from "./components/TwoPaneLayout";
+
+export { DetailsTabs } from "./components/DetailsTabs";
+export type { DetailsTabsProps, TabItem } from "./components/DetailsTabs";

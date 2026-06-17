@@ -124,10 +124,29 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
     img.src = url;
 }
 
+let measureTextCanvas: HTMLCanvasElement | null = null;
+
+/**
+ * Measures the rendered width of a string without touching the DOM (no layout/reflow).
+ */
+export function measureTextWidth(text: string, fontSize: number, fontFamily: string): number {
+    if (!measureTextCanvas) {
+        measureTextCanvas = document.createElement("canvas");
+    }
+    const ctx = measureTextCanvas.getContext("2d");
+    if (!ctx) return 0;
+
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    return ctx.measureText(text).width;
+}
+
+// Maximum stagger delay (in seconds) regardless of how many bars are being animated
+const MAX_ANIMATION_DELAY = 1;
+
 export const getAnimationProps = (type: AnimationType | undefined, index: number, buffer = .03) => {
     if (!type) return {};
 
-    const delay = index * buffer;
+    const delay = Math.min(index * buffer, MAX_ANIMATION_DELAY);
 
     // Reusable transition object, typed properly
     const common: { transition: Transition } = {
