@@ -8,14 +8,14 @@ import { Text } from "@visx/text";
 export type AlignmentChar = "A" | "C" | "G" | "T" | "N" | "M" | "-" | "*";
 
 const COLORS: Record<AlignmentChar, string> = {
-  "*": "#ffffff", // absent from block
   A: "#05ac05",
   C: "#1668cb",
   G: "#ffb700",
   T: "#fd1414",
-  N: "#555555", // assembly ambiguous
-  M: "#984ea3", // multi-scaffold conflict
-  "-": "#d4d4d4", // within-block gap
+  N: "#555555",
+  M: "#984ea3",
+  "-": "#d4d4d4",
+  "*": "#ffffff",
 };
 
 const LEGEND_LABELS: Record<AlignmentChar, string> = {
@@ -23,10 +23,10 @@ const LEGEND_LABELS: Record<AlignmentChar, string> = {
   C: "C",
   G: "G",
   T: "T",
-  N: "N ambiguous",
-  M: "M conflict",
-  "-": "- gap",
-  "*": "* absent",
+  N: "N Unresolved",
+  M: "Ambiguous Alignment",
+  "-": "Gap",
+  "*": "Absent",
 };
 
 // Explicit order so A,C,G,T lead the legend like the old emoji key did.
@@ -61,7 +61,7 @@ export interface SequenceAlignmentPlotProps {
    */
   highlighted?: string[];
   /**
-   * Optionally define tooltip for hover over leaf nodes
+   * Optionally define tooltip for hover. `char`, `charLabel`, and `position` only present if hovering over a position
    */
   tooltipContents?: (tooltipData: TooltipData) => ReactNode;
 }
