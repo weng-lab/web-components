@@ -20,6 +20,7 @@ export const GENE_AUTOCOMPLETE_QUERY = `
       $limit: Int
       $assembly: String!
       $version: Int
+      $includealiassearch: Boolean
   ) {
       gene(
           name_prefix: $name_prefix
@@ -28,14 +29,17 @@ export const GENE_AUTOCOMPLETE_QUERY = `
           assembly: $assembly
           orderby: "name"
           version: $version
+          includealiassearch: $includealiassearch
       ) {
           id
           name
+          description
           coordinates {
               chromosome
               start
               end
           }
+          alias    
       }
   }
 `;
@@ -202,6 +206,7 @@ export const getGenes = async (
           ),
           version: version,
           limit: limit,
+          includealiassearch: true
         },
       }),
       headers: { "Content-Type": "application/json" },
@@ -229,10 +234,10 @@ export const getGenes = async (
   // Convert map to array and fetch descriptions
   const out = await Promise.all(
     Array.from(geneMap.values()).map(async ({ gene, versions }) => {
-      const description = await getDescription(gene.name);
+      const description =  await getDescription(gene.name);
       return {
         ...gene,
-        description: `${toTitleCase(description || gene.name)}`,
+        description: `${toTitleCase(gene.description || gene.name || description)} ${gene.alias ? `(${gene.alias})` : ''}`,
         versions,
       };
     })

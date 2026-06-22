@@ -13,6 +13,7 @@ export type ViolinPoint<T> = {
     value: number;
     outlier?: boolean;
     color?: string;
+    stroke?: string;
     radius?: number;
     opacity?: number;
     metadata?: T;

@@ -1,32 +1,25 @@
 import ReactDOM from 'react-dom/client';
-import { Heatmap } from './packages/visualization/src/components/Heatmap';
-import { Box } from '@mui/material';
+import { BarPlot } from './packages/visualization/src/components/BarPlot';
+import { BarData } from './packages/visualization/src/components/BarPlot/types';
 
-const data = Array.from({ length: 10 }, (_, colIndex) => ({
-    columnName: `Group ${colIndex + 1}`,
-    rows: Array.from({ length: 10 }, (_, rowIndex) => ({
-        rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
-        count: Math.floor(Math.random() * 100),
-    })),
+const BAR_COUNT = 1000;
+
+const data: BarData<unknown>[] = Array.from({ length: BAR_COUNT }, (_, index) => ({
+    category: `Category ${index + 1}`,
+    label: `Item ${index + 1}`,
+    value: Math.round((Math.random() * 200) * 10) / 10,
+    id: `bar-${index}`,
+    color: '#4BC0C0',
 }));
 
 function TestingPage() {
     return (
-        <div style={{ width: 850, height: 500 }}>
-            <Heatmap
+        <div style={{ width: "60vw", height: 800, border: '1px solid gray' }}>
+            <BarPlot
                 data={data}
-                colors={['#20619e', '#fff36e', '#c92b16']}
-                xLabel="X-Axis Label"
-                yLabel="Y-Axis Label"
-                animationType="fade"
-                tooltipBody={(bin) => (
-                    <Box maxWidth={300}>
-                        <div><strong>Row:</strong> {bin.bin.rowName}</div>
-                        <div><strong>Column:</strong> {bin.datum.columnName}</div>
-                        <div><strong>Value:</strong> {bin?.count}</div>
-                    </Box>
-                )}
-                onClick={(bin) => console.log(bin)}
+                topAxisLabel="Value"
+                animation="slideRight"
+                animationBuffer={0.01}
             />
         </div>
     );
