@@ -4,6 +4,8 @@ import { scaleLinear, scaleOrdinal } from "@visx/scale";
 import { LegendOrdinal } from "@visx/legend";
 import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
 import { Text } from "@visx/text";
+import Tooltip from "@mui/material/Tooltip";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 export type AlignmentChar = "A" | "C" | "G" | "T" | "N" | "M" | "-" | "*";
 
@@ -31,6 +33,20 @@ const LEGEND_LABELS: Record<AlignmentChar, string> = {
 
 // Explicit order so A,C,G,T lead the legend like the old emoji key did.
 const LEGEND_ORDER: AlignmentChar[] = ["A", "C", "G", "T", "N", "M", "*", "-"];
+
+const INFO_TOOLTIP_TEXT = `
+  Each column is a position in the human cCRE, and each row shows the
+  corresponding aligned state in another mammalian genome. A, C, G, and
+  T indicate the nucleotide aligned to that human position. N indicates that
+  the target genome has an unresolved base at that position. Ambiguous
+  alignment indicates that this human cCRE position aligns to more than
+  one location in the target genome, and those aligned locations contain
+  different nucleotides. Because the alignment does not support a single
+  target base, the position is not assigned A, C, G, or T. Absent indicates
+  that the human position could not be aligned to that species. Gap
+  indicates that the alignment covers this region, but this species has a gap
+  relative to the human cCRE.
+`;
 
 // Colors are static, so the ordinal scale can live at module scope.
 const legendScale = scaleOrdinal<AlignmentChar, string>({
@@ -495,6 +511,18 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
           {tooltipContents(tooltipData)}
         </TooltipInPortal>
       )}
+      <Tooltip title={INFO_TOOLTIP_TEXT} placement="top-end" arrow>
+        <InfoOutlinedIcon
+          fontSize="small"
+          sx={{
+            position: "absolute",
+            bottom: 4,
+            right: 4,
+            color: "text.secondary",
+            cursor: "help",
+          }}
+        />
+      </Tooltip>
     </div>
   );
 };
