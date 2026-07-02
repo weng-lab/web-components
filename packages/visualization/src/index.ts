@@ -20,6 +20,8 @@ export type {ProportionsBarProps} from './components/ProportionsBar'
 
 export * from './components/PhyloTree'
 
+export * from './components/DotPlot'
+
 export * from './components/SequenceAlignmentPlot'
 
 export * from './components/Heatmap'
