@@ -17,6 +17,12 @@ export type DotPlotProps = {
   deg?: boolean;
   /** Font style applied to x-axis tick labels — use "italic" when labels are gene names */
   xTickFontStyle?: "normal" | "italic";
+  /**
+   * When true, y-axis tick labels (datasets) are shown on the right and yAxisLabel is
+   * rendered as a rotated title on the left — matching the layout in the screenshot.
+   */
+  yLabelsRight?: boolean;
+  yAxisLabel?: string;
   /** Legend title for the radius scale */
   radiusTitle?: string;
   /** Legend title for the color scale */

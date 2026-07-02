@@ -11,7 +11,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 900, height: 300 }}>
+      <div style={{ width: 900, height: 400 }}>
         <Story />
       </div>
     ),
@@ -22,7 +22,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const genes = ["ACTB", "CD4", "CD8A", "FOXP3", "GATA3", "IL2RA", "MKI67", "PDCD1", "TNF", "TRAC"];
-const datasets = ["Disease A", "Disease B"];
+const datasets = ["Disease A", "Disease B", "control", "Dataset X", "Dataset Y"];
 
 const sampleData: DotPlotData[] = genes.flatMap((gene) =>
   datasets.map((dataset) => ({
@@ -68,7 +68,7 @@ export const SingleDataset: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 900, height: 150 }}>
+      <div style={{ width: 900, height: 250 }}>
         <Story />
       </div>
     ),
@@ -105,4 +105,20 @@ export const CellTypeAxis: Story = {
     ),
     xTickFontStyle: "normal",
   },
+};
+
+export const LabelsRight: Story = {
+  args: {
+    data: sampleData,
+    xTickFontStyle: "italic",
+    yLabelsRight: true,
+    yAxisLabel: "APOE",
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 900, height: 400 }}>
+        <Story />
+      </div>
+    ),
+  ],
 };

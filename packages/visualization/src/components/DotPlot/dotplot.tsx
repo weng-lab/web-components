@@ -1,6 +1,6 @@
 import { useMemo, useRef, useImperativeHandle, useState } from "react";
 import { scaleBand, scaleLinear } from "@visx/scale";
-import { AxisBottom, AxisLeft } from "@visx/axis";
+import { AxisBottom, AxisLeft, AxisRight } from "@visx/axis";
 import { Group } from "@visx/group";
 import { Text } from "@visx/text";
 import { useParentSize } from "@visx/responsive";
@@ -37,6 +37,8 @@ const DotPlot = ({
   showTooltipData,
   deg,
   xTickFontStyle = "normal",
+  yLabelsRight = false,
+  yAxisLabel,
   radiusTitle = "Percent Expressed",
   colorTitle = "Mean Expression",
   ref,
@@ -70,19 +72,22 @@ const DotPlot = ({
   const legendItemSpacing = 22;
   const legendTitleHeight = 18;
   const legendAreaHeight = legendTitleHeight + 4 * legendItemSpacing + 12;
+  const legendGap = 40;
 
   const margin = {
     top: 20,
-    right: 20,
-    bottom: xAxisLabelSpace + legendAreaHeight + 16,
-    left: maxYLabelLen * 7 + 20,
+    right: yLabelsRight ? maxYLabelLen * 7 + 20 : 20,
+    bottom: xAxisLabelSpace + legendAreaHeight + legendGap,
+    left: yLabelsRight ? 30 : maxYLabelLen * 7 + 20,
   };
 
   const innerWidth = Math.max(0, parentWidth - margin.left - margin.right);
 
   const dotCellHeight = 48;
   const computedHeight = yCategories.length * dotCellHeight + margin.top + margin.bottom;
-  const svgHeight = parentHeight > 0 ? parentHeight : computedHeight;
+  // Always reserve the full bottom margin (labels + legend) — the plot area gets whatever is left.
+  // If the parent is shorter than the reserved space, let the SVG overflow rather than clip the legend.
+  const svgHeight = Math.max(parentHeight > 0 ? parentHeight : computedHeight, margin.top + margin.bottom);
   const innerHeight = Math.max(0, svgHeight - margin.top - margin.bottom);
 
   const xScale = useMemo(
@@ -186,21 +191,48 @@ const DotPlot = ({
             hideAxisLine
           />
 
-          <AxisLeft
-            scale={yScale}
-            tickLabelProps={() => ({
-              fontSize: 11,
-              textAnchor: "end",
-              dx: "-0.25em",
-              dy: "0.25em",
-            })}
-            hideTicks
-            hideAxisLine
-          />
+          {yLabelsRight ? (
+            <>
+              <Text
+                angle={-90}
+                textAnchor="middle"
+                x={-margin.left / 2}
+                y={innerHeight / 2}
+                fontSize={12}
+              >
+                {yAxisLabel}
+              </Text>
+              <AxisRight
+                left={innerWidth}
+                scale={yScale}
+                tickLabelProps={() => ({
+                  fontSize: 11,
+                  textAnchor: "start",
+                  dx: "0.5em",
+                  dy: "0.25em",
+                })}
+                hideTicks
+                hideAxisLine
+              />
+            </>
+          ) : (
+            <AxisLeft
+              scale={yScale}
+              label={yAxisLabel}
+              tickLabelProps={() => ({
+                fontSize: 11,
+                textAnchor: "end",
+                dx: "-0.25em",
+                dy: "0.25em",
+              })}
+              hideTicks
+              hideAxisLine
+            />
+          )}
 
           {/* Legends below the plot, spaced evenly */}
           {(() => {
-            const legendsTop = innerHeight + xAxisLabelSpace + 36;
+            const legendsTop = innerHeight + xAxisLabelSpace + legendGap;
             // space-evenly: gap = (innerWidth - totalLegendsWidth) / 3
             const radiusLegendWidth = 110;
             const colorLegendWidth = 100;
