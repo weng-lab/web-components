@@ -22,11 +22,11 @@ function useResolvedDirection(direction: ResponsiveDirection): Direction {
   const theme = useTheme();
 
   const matches = {
-    xs: useMediaQuery(theme.breakpoints.up("xs")),
-    sm: useMediaQuery(theme.breakpoints.up("sm")),
-    md: useMediaQuery(theme.breakpoints.up("md")),
-    lg: useMediaQuery(theme.breakpoints.up("lg")),
-    xl: useMediaQuery(theme.breakpoints.up("xl")),
+    xs: useMediaQuery(theme.breakpoints.up("xs"), { noSsr: true }),
+    sm: useMediaQuery(theme.breakpoints.up("sm"), { noSsr: true }),
+    md: useMediaQuery(theme.breakpoints.up("md"), { noSsr: true }),
+    lg: useMediaQuery(theme.breakpoints.up("lg"), { noSsr: true }),
+    xl: useMediaQuery(theme.breakpoints.up("xl"), { noSsr: true }),
   };
 
   if (typeof direction === "string") return direction;
