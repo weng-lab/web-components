@@ -1,57 +1,41 @@
-import { CloseFullscreenRounded, DragHandle, TableChartRounded } from "@mui/icons-material";
-import {
-  Stack,
-  Box,
-  Typography,
-  Tabs,
-  Tab,
-  IconButton,
-  Tooltip,
-  Button,
-  useMediaQuery,
-  useTheme,
-  Divider,
-} from "@mui/material";
+import { CloseFullscreenRounded, TableChartRounded } from "@mui/icons-material";
+import { Stack, Box, Typography, Tabs, Tab, IconButton, Tooltip, Button } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
-import React, { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import DownloadModal from "./DownloadModal";
 import FigurePanel from "./FigurePanel";
-import type { Direction, ResponsiveDirection, TwoPaneLayoutProps } from "./types";
+import { ResizablePanes } from "../ResizablePanes";
+import { perBreakpoint } from "../ResizablePanes/responsiveDirection";
+import type { TwoPaneLayoutProps } from "./types";
 
-function useResolvedDirection(direction: ResponsiveDirection): Direction {
-  const theme = useTheme();
+// Fixed pane-header height so the table header (40px icon buttons) and the tabs
+// bar (MUI default 48px) line up, keeping the content below both panes aligned.
+const HEADER_HEIGHT = "48px";
 
-  const matches = {
-    xs: useMediaQuery(theme.breakpoints.up("xs")),
-    sm: useMediaQuery(theme.breakpoints.up("sm")),
-    md: useMediaQuery(theme.breakpoints.up("md")),
-    lg: useMediaQuery(theme.breakpoints.up("lg")),
-    xl: useMediaQuery(theme.breakpoints.up("xl")),
-  };
-
-  if (typeof direction === "string") return direction;
-
-  for (const bp of ["xl", "lg", "md", "sm", "xs"] as const) {
-    if (matches[bp] && direction[bp]) return direction[bp];
-  }
-
-  return "row";
-}
-
-const TwoPaneLayout = ({ TableComponent, plots, direction = "row", columnHeight = "500px", rowHeight = "max(60vh, 600px)" }: TwoPaneLayoutProps) => {
+const TwoPaneLayout = ({
+  TableComponent,
+  plots,
+  direction = "row",
+  columnHeight = "500px",
+  rowHeight = "max(60vh, 600px)",
+  initialPct = 50,
+  min = 20,
+  max = 80,
+}: TwoPaneLayoutProps) => {
   const [tab, setTab] = useState<number>(0);
   const [tableOpen, setTableOpen] = useState(true);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [leftPct, setLeftPct] = useState(40);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const resolvedDirection = useResolvedDirection(direction);
-  const isColumn = resolvedDirection === "column";
+  // Column-vs-row affordances (compact icon-only download, hidden tab labels) are
+  // driven by CSS `@media` rules rather than a JS media query, so they paint
+  // correctly on the first frame with no orientation flash. `column` → compact.
+  const columnOnlyDisplay = perBreakpoint(direction, (d) => (d === "column" ? "inline-flex" : "none"));
+  const rowOnlyDisplay = perBreakpoint(direction, (d) => (d === "column" ? "none" : "inline-flex"));
+  const tabLabelDisplay = perBreakpoint(direction, (d) => (d === "column" ? "none" : "inline"));
 
   const tabValue = Math.min(tab, plots.length - 1);
   const activePlot = plots[tabValue];
   const hasDownload = !!(activePlot?.onDownloadSVG || activePlot?.onDownloadPNG);
-  const paneHeight = isColumn ? columnHeight : rowHeight;
 
   const handleSetTab = (newTab: number) => {
     setTab(newTab);
@@ -94,99 +78,48 @@ const TwoPaneLayout = ({ TableComponent, plots, direction = "row", columnHeight 
     </Tooltip>
   );
 
-  const downloadButton = isColumn ? (
-    <IconButton color="primary" aria-label="download" size="small" onClick={handleOpenDownload}>
-      <DownloadIcon />
-    </IconButton>
-  ) : (
-    <Button variant="text" startIcon={<DownloadIcon />} onClick={handleOpenDownload} sx={{ flexShrink: 0 }}>
-      Download
-    </Button>
+  // Both controls are always rendered; CSS shows the icon-only button at column
+  // breakpoints and the text button at row breakpoints (no first-paint flash).
+  const downloadButton = (
+    <>
+      <IconButton
+        color="primary"
+        aria-label="download"
+        size="small"
+        onClick={handleOpenDownload}
+        sx={{ display: columnOnlyDisplay }}
+      >
+        <DownloadIcon />
+      </IconButton>
+      <Button
+        variant="text"
+        startIcon={<DownloadIcon />}
+        onClick={handleOpenDownload}
+        sx={{ flexShrink: 0, display: rowOnlyDisplay }}
+      >
+        Download
+      </Button>
+    </>
   );
 
-  const handleDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const handleDividerPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const newPct = ((e.clientX - rect.left) / rect.width) * 100;
-    setLeftPct(Math.min(70, Math.max(15, newPct)));
-  };
-
-  const handleDividerPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  };
-
-  return (
-    <Box
-      ref={containerRef}
-      display="grid"
-      gridTemplateColumns={
-        !isColumn && tableOpen
-          ? (theme) => `${leftPct}% ${theme.spacing(2)} minmax(0, 1fr)`
-          : "minmax(0, 1fr)"
-      }
-      gridTemplateRows={isColumn && tableOpen ? "auto auto auto auto" : "auto 1fr"}
-      rowGap={1}
-      columnGap={!isColumn && tableOpen ? 0 : 2}
-    >
-      {/* Table header — row 1 at all breakpoints */}
-      <Stack
-        display={tableOpen ? "flex" : "none"}
-        direction="row"
-        alignItems="center"
-        gap={1}
-        gridRow={1}
-        gridColumn={1}
-      >
+  // Table pane — header (title + hide toggle) stacked over the table content.
+  const tablePane = (
+    <Stack height="100%" spacing={1}>
+      <Stack direction="row" alignItems="center" gap={1} minHeight={HEADER_HEIGHT}>
         {tableIconButton}
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
           Table View
         </Typography>
         {hideTableButton}
       </Stack>
+      <Box sx={{ flex: 1, minHeight: 0 }}>{TableComponent}</Box>
+    </Stack>
+  );
 
-      {/* Divider — only visible in row direction when table is open */}
-      {tableOpen && !isColumn && (
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          gridRow="1 / 3"
-          gridColumn={2}
-          sx={{ cursor: "col-resize" }}
-          onPointerDown={handleDividerPointerDown}
-          onPointerMove={handleDividerPointerMove}
-          onPointerUp={handleDividerPointerUp}
-        >
-          <Divider
-            orientation="vertical"
-            flexItem
-            sx={{
-              "& .MuiDivider-wrapperVertical": {
-                padding: 0,
-                display: "flex",
-              },
-              mx: "auto",
-            }}
-          >
-            <DragHandle sx={{ transform: "rotate(90deg)", color: "divider" }} />
-          </Divider>
-        </Box>
-      )}
-
-      {/* Tabs header */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gridRow={isColumn && tableOpen ? 3 : 1}
-        gridColumn={!isColumn && tableOpen ? 3 : 1}
-      >
+  // Plot pane — tabs bar (+ download) stacked over the figure content.
+  const plotPane = (
+    <Stack height="100%" spacing={1}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" minHeight={HEADER_HEIGHT}>
         {!tableOpen && tableIconButton}
         <Tabs
           value={tabValue}
@@ -196,7 +129,11 @@ const TwoPaneLayout = ({ TableComponent, plots, direction = "row", columnHeight 
         >
           {plotTabs.map((tab, i) => (
             <Tab
-              label={isColumn ? "" : tab.tabTitle}
+              label={
+                <Box component="span" sx={{ display: tabLabelDisplay }}>
+                  {tab.tabTitle}
+                </Box>
+              }
               key={i}
               icon={tab.icon}
               iconPosition="start"
@@ -206,19 +143,7 @@ const TwoPaneLayout = ({ TableComponent, plots, direction = "row", columnHeight 
         </Tabs>
         {hasDownload && downloadButton}
       </Stack>
-
-      {/* Table content — row 2 */}
-      <Box display={tableOpen ? "block" : "none"} gridRow={2} gridColumn={1} height={paneHeight}>
-        {TableComponent}
-      </Box>
-
-      {/* Plot content */}
-      <Box
-        gridRow={isColumn && tableOpen ? 4 : 2}
-        gridColumn={!isColumn && tableOpen ? 3 : 1}
-        height={paneHeight}
-        minWidth={0}
-      >
+      <Box sx={{ flex: 1, minHeight: 0, minWidth: 0 }}>
         <FigurePanel value={tabValue} figures={figures} />
         {modalOpen && (
           <DownloadModal
@@ -230,7 +155,21 @@ const TwoPaneLayout = ({ TableComponent, plots, direction = "row", columnHeight 
           />
         )}
       </Box>
-    </Box>
+    </Stack>
+  );
+
+  return (
+    <ResizablePanes
+      direction={direction}
+      collapsed={tableOpen ? undefined : "first"}
+      initialPct={initialPct}
+      min={min}
+      max={max}
+      rowHeight={rowHeight}
+      columnHeight={columnHeight}
+      first={tablePane}
+      second={plotPane}
+    />
   );
 };
 
