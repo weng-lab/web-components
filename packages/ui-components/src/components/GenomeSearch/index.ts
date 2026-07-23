@@ -1,7 +1,8 @@
-import { GenomeSearchProps, Result, Domain, ResultType } from './types';
+import { GenomeSearchProps, Result, Domain, ResultType, StaticListOption } from './types';
 import GenomeSearch from './GenomeSearch';
+import { OmesList } from './utils';
 
-export { GenomeSearch };
-export type { GenomeSearchProps, Result, Domain, ResultType };
+export { GenomeSearch, OmesList };
+export type { GenomeSearchProps, Result, Domain, ResultType, StaticListOption };
 
 export * from './useEntityAutocomplete'

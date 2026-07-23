@@ -10,11 +10,23 @@ import {
   isDomain,
   legacyCcreResultList,
   OmesList,
-  omeResultsList,
+  staticListResultList,
 } from "./utils";
 import { GenomeSearchProps, Result, ResultType } from "./types";
 
 export const DEFAULT_LIMIT = 3;
+
+// Result types backed by a network query. Any other type is treated as a static,
+// locally-searched list (see `staticLists`) and never double-fetched alongside these.
+const NETWORK_RESULT_TYPES = new Set<ResultType>([
+  "Gene",
+  "SNP",
+  "Coordinate",
+  "cCRE",
+  "Legacy cCRE",
+  "iCRE",
+  "Study",
+]);
 
 type HookOptions = {
   queries: ResultType[];
@@ -22,6 +34,7 @@ type HookOptions = {
   graphqlUrl: string;
   geneVersion?: GenomeSearchProps["geneVersion"];
   limit?: GenomeSearchProps["limit"];
+  staticLists?: GenomeSearchProps["staticLists"];
   showiCREFlag?: boolean;
   debounceMs?: number;
 };
@@ -38,7 +51,7 @@ export function useEntityAutocomplete(
   options: HookOptions
 ): HookResult {
   const inputs = Array.isArray(inputsArg) ? inputsArg : [inputsArg];
-  const { queries, assembly, geneVersion, limit, showiCREFlag, debounceMs = 200, graphqlUrl } = options;
+  const { queries, assembly, geneVersion, limit, staticLists, showiCREFlag, debounceMs = 200, graphqlUrl } = options;
 
   const getLimit = (type: ResultType): number =>
     typeof limit === "number" ? limit : limit?.[type] ?? DEFAULT_LIMIT;
@@ -52,6 +65,7 @@ export function useEntityAutocomplete(
 
   const inputsKey = JSON.stringify(inputs);
   const limitKey = JSON.stringify(limit);
+  const staticListsKey = JSON.stringify(staticLists);
   const geneVersionKey = JSON.stringify(geneVersion);
   const queriesKey = queries.join("|");
 
@@ -87,8 +101,16 @@ export function useEntityAutocomplete(
         try {
           const aggregated: Result[] = [];
 
+          // Types registered in `staticLists` are active on their own — no need to also
+          // list them in `queries`. Everything else (network types, "Ome" with no
+          // override) still requires an explicit entry in `queries`.
+          const staticListTypes = new Set<ResultType>([
+            ...queries.filter((type) => !NETWORK_RESULT_TYPES.has(type)),
+            ...(staticLists ? (Object.keys(staticLists) as ResultType[]) : []),
+          ]);
+
           const shouldFetch = (type: ResultType, input: string): boolean => {
-            if (!queries.includes(type)) return false;
+            if (!staticListTypes.has(type) && !queries.includes(type)) return false;
 
             const isSnpRsId = /^rs\d+$/i.test(input) && input.toLowerCase() !== "rs1";
 
@@ -110,7 +132,8 @@ export function useEntityAutocomplete(
               case "Ome":
                 return !isDomain(input) && assembly === "GRCh38";
               default:
-                return false;
+                // Custom static list types (see `staticLists`) just need a non-coordinate input.
+                return !!staticLists?.[type] && !isDomain(input);
             }
           };
 
@@ -192,23 +215,24 @@ export function useEntityAutocomplete(
                 );
               }
 
-              // Ome
-              if (shouldFetch("Ome", input)) {
-                const omeLimit = getLimit("Ome");
+              // Static, locally-searched lists (built-in "Ome", plus any custom types
+              // registered via `staticLists`) — matched against label/keywords, no network call.
+              staticListTypes.forEach((type) => {
+                const list = staticLists?.[type] ?? (type === "Ome" ? OmesList : undefined);
+                if (!list || !shouldFetch(type, input)) return;
 
-                const filtered = OmesList.filter((ome) => {
-                  const search = input.toLowerCase();
+                const typeLimit = getLimit(type);
+                const search = input.toLowerCase();
+                const filtered = list
+                  .filter(
+                    (option) =>
+                      option.label.toLowerCase().includes(search) ||
+                      option.keywords?.some((k) => k.toLowerCase().includes(search))
+                  )
+                  .slice(0, typeLimit);
 
-                  return (
-                    ome.label.toLowerCase().includes(search) ||
-                    ome.keywords?.some((k) => k.toLowerCase().includes(search))
-                  );
-                }).slice(0, omeLimit);
-
-                fetchPromises.push(
-                  Promise.resolve(omeResultsList(filtered))
-                );
-              }
+                fetchPromises.push(Promise.resolve(staticListResultList(filtered, type)));
+              });
 
               // Execute all parallel fetches and aggregate results
               const allResults = await Promise.all(fetchPromises);
@@ -237,7 +261,7 @@ export function useEntityAutocomplete(
         timeoutRef.current = null;
       }
     };
-  }, [inputsKey, queriesKey, assembly, limitKey, geneVersionKey, showiCREFlag, debounceMs, graphqlUrl]);
+  }, [inputsKey, queriesKey, assembly, limitKey, staticListsKey, geneVersionKey, showiCREFlag, debounceMs, graphqlUrl]);
 
   return { data, loading, error };
 }

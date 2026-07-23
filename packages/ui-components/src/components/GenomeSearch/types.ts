@@ -48,6 +48,17 @@ export type GenomeSearchProps = Omit<Partial<AutocompleteBase>, GenomeSearchOmit
    *  handler (e.g. "/api/graphql") that attaches the key server-side. */
   graphqlUrl: string;
 
+  /**
+   * Static, locally-searched option lists for query types that don't need a network
+   * request — matched against `label` and `keywords`, capped by `limit`. A type
+   * registered here is active automatically; it does not also need to appear in
+   * `queries`. The built-in "Ome" type uses `OmesList` by default; pass `Ome` here to
+   * override it, or register any other `ResultType` (including a custom string not in
+   * the built-in list) to add your own curated, filterable list without touching the
+   * autocomplete hook.
+   */
+  staticLists?: Partial<Record<ResultType, StaticListOption[]>>;
+
   /** Extend internal MUI component props, plus MUI Autocomplete's own slotProps. */
   slotProps?: Partial<AutocompleteBase["slotProps"]> & {
     input?: Partial<TextFieldProps>;
@@ -70,8 +81,27 @@ export type Domain = {
   end: number;
 };
 
-// Result types used to distinguish between different types of results
-export type ResultType = "Gene" | "SNP" | "Coordinate" | "iCRE" | "cCRE" | "Study" | "Legacy cCRE" | "Ome";
+// Result types used to distinguish between different types of results. Also accepts
+// any custom string, so a `staticLists` entry isn't required to reuse a built-in type.
+export type ResultType =
+  | "Gene"
+  | "SNP"
+  | "Coordinate"
+  | "iCRE"
+  | "cCRE"
+  | "Study"
+  | "Legacy cCRE"
+  | "Ome"
+  | (string & {});
+
+// A single option in a `staticLists` entry — a locally-searched, non-network result
+// (e.g. one of the built-in `OmesList` entries) matched against `label` and `keywords`.
+export interface StaticListOption {
+  label: string;
+  value: string;
+  keywords?: string[];
+  description?: string;
+}
 
 // Result object used to display in the autocomplete dropdown
 export type Result = {

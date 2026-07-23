@@ -128,6 +128,23 @@ export const Loading: Story = {
   },
 };
 
+export const CustomStaticList: Story = {
+  args: {
+    ...baseArgs,
+    queries: ["Gene"],
+    sx: { width: 300 },
+    staticLists: {
+      // A curated, local list for a query type with no built-in query - filters on
+      // `label`/`keywords` client-side, same mechanism the built-in "Ome" type uses.
+      Category: [
+        { label: "Enhancer", value: "enhancer", keywords: ["regulatory", "cis-regulatory", "sox"] },
+        { label: "Promoter", value: "promoter", keywords: ["tss", "transcription start site", "sox"] },
+        { label: "Insulator", value: "insulator", keywords: ["ctcf", "boundary", "sox"] },
+      ],
+    },
+  },
+};
+
 export const GencodeVersions: Story = {
   args: {
     ...baseArgs,
