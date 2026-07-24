@@ -9,7 +9,6 @@ import {
   studyResultList,
   isDomain,
   legacyCcreResultList,
-  OmesList,
   staticListResultList,
 } from "./utils";
 import { GenomeSearchProps, Result, ResultType } from "./types";
@@ -102,8 +101,8 @@ export function useEntityAutocomplete(
           const aggregated: Result[] = [];
 
           // Types registered in `staticLists` are active on their own — no need to also
-          // list them in `queries`. Everything else (network types, "Ome" with no
-          // override) still requires an explicit entry in `queries`.
+          // list them in `queries`. Everything else (the network-backed types) still
+          // requires an explicit entry in `queries`.
           const staticListTypes = new Set<ResultType>([
             ...queries.filter((type) => !NETWORK_RESULT_TYPES.has(type)),
             ...(staticLists ? (Object.keys(staticLists) as ResultType[]) : []),
@@ -129,10 +128,8 @@ export function useEntityAutocomplete(
                 return !isDomain(input) && assembly === "GRCh38" && (["r", "rs"].includes(input) || isSnpRsId);
               case "Study":
                 return !isDomain(input) && assembly === "GRCh38";
-              case "Ome":
-                return !isDomain(input) && assembly === "GRCh38";
               default:
-                // Custom static list types (see `staticLists`) just need a non-coordinate input.
+                // Static list types (see `staticLists`) just need a non-coordinate input.
                 return !!staticLists?.[type] && !isDomain(input);
             }
           };
@@ -215,10 +212,10 @@ export function useEntityAutocomplete(
                 );
               }
 
-              // Static, locally-searched lists (built-in "Ome", plus any custom types
-              // registered via `staticLists`) — matched against label/keywords, no network call.
+              // Static, locally-searched lists registered via `staticLists` — matched
+              // against label/keywords, no network call.
               staticListTypes.forEach((type) => {
-                const list = staticLists?.[type] ?? (type === "Ome" ? OmesList : undefined);
+                const list = staticLists?.[type];
                 if (!list || !shouldFetch(type, input)) return;
 
                 const typeLimit = getLimit(type);

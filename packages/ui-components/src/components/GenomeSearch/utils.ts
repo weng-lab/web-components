@@ -107,8 +107,8 @@ export function studyResultList(results: StudyResponse[], limit: number): Result
   }));
 }
 
-// Formats a filtered `staticLists` (or `OmesList`) slice into results, tagged with
-// whichever `ResultType` the list was registered under.
+// Formats a filtered `staticLists` slice into results, tagged with whichever
+// `ResultType` the list was registered under.
 export function staticListResultList(results: StaticListOption[], type: ResultType): Result[] {
   return results.map((option) => ({
     title: option.label,
@@ -160,56 +160,6 @@ export function legacyCcreResultList(results: LegacyCcreResponse[], limit: numbe
       };
     });
 }
-
-// Default `staticLists.Ome` data — allows the user to search more freely and get the
-// result they are looking for; matches against both label and keywords.
-export const OmesList: StaticListOption[] = [
-  {
-    label: "Proteomics",
-    value: "proteomics",
-    keywords: ["protein", "mass spec"],
-  },
-  {
-    label: "WGS",
-    value: "WGS",
-    keywords: ["whole genome sequencing", "genome sequencing", "genomics"],
-    description: "Whole Genome Sequencing"
-  },
-  {
-    label: "WGBS",
-    value: "WGBS",
-    keywords: ["whole genome bisulfite sequencing", "epigenomics", "methylation"],
-    description: "Whole Genome Bisulfite Sequencing"
-  },
-  {
-    label: "ATAC",
-    value: "ATAC",
-    keywords: ["chromatin accessibility", "atac-seq"],
-    description: "ATAC-seq"
-  },
-  {
-    label: "RNA",
-    value: "RNA",
-    keywords: ["rna-seq", "transcriptomics", "gene expression"],
-    description: "RNA-seq"
-  },
-  {
-    label: "Metabolomics",
-    value: "metabolomics",
-  },
-  {
-    label: "Lipidomics",
-    value: "lipidomics",
-  },
-  {
-    label: "Metallomics",
-    value: "metallomics",
-  },
-  {
-    label: "Exposomics",
-    value: "exposomics",
-  },
-];
 
 // Object to store chromosome lengths for GRCh38 and mm10
 const chromosomeLengths: { [key: string]: { [key: string]: number } } = {

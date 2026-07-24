@@ -44,7 +44,7 @@ const standardSecondaryInput: NonNullable<GenomeSearchProps["slotProps"]>["input
 export const Default: Story = {
   args: {
     ...baseArgs,
-    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study", "Legacy cCRE", "Ome"],
+    queries: ["Gene", "SNP", "iCRE", "cCRE", "Coordinate", "Study", "Legacy cCRE"],
     geneVersion: [29, 40],
     sx: { width: 300 },
   },
@@ -135,7 +135,8 @@ export const CustomStaticList: Story = {
     sx: { width: 300 },
     staticLists: {
       // A curated, local list for a query type with no built-in query - filters on
-      // `label`/`keywords` client-side, same mechanism the built-in "Ome" type uses.
+      // `label`/`keywords` client-side. Consuming apps can use this same mechanism to
+      // register their own e.g. "Ome" list.
       Category: [
         { label: "Enhancer", value: "enhancer", keywords: ["regulatory", "cis-regulatory", "sox"] },
         { label: "Promoter", value: "promoter", keywords: ["tss", "transcription start site", "sox"] },

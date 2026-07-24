@@ -52,10 +52,8 @@ export type GenomeSearchProps = Omit<Partial<AutocompleteBase>, GenomeSearchOmit
    * Static, locally-searched option lists for query types that don't need a network
    * request — matched against `label` and `keywords`, capped by `limit`. A type
    * registered here is active automatically; it does not also need to appear in
-   * `queries`. The built-in "Ome" type uses `OmesList` by default; pass `Ome` here to
-   * override it, or register any other `ResultType` (including a custom string not in
-   * the built-in list) to add your own curated, filterable list without touching the
-   * autocomplete hook.
+   * `queries`. Register any `ResultType` (including a custom string, e.g. "Ome") to
+   * add your own curated, filterable list without touching the autocomplete hook.
    */
   staticLists?: Partial<Record<ResultType, StaticListOption[]>>;
 
@@ -82,7 +80,8 @@ export type Domain = {
 };
 
 // Result types used to distinguish between different types of results. Also accepts
-// any custom string, so a `staticLists` entry isn't required to reuse a built-in type.
+// any custom string (e.g. "Ome"), so a `staticLists` entry can use its own type name
+// without a matching literal here.
 export type ResultType =
   | "Gene"
   | "SNP"
@@ -91,11 +90,10 @@ export type ResultType =
   | "cCRE"
   | "Study"
   | "Legacy cCRE"
-  | "Ome"
   | (string & {});
 
 // A single option in a `staticLists` entry — a locally-searched, non-network result
-// (e.g. one of the built-in `OmesList` entries) matched against `label` and `keywords`.
+// matched against `label` and `keywords`.
 export interface StaticListOption {
   label: string;
   value: string;

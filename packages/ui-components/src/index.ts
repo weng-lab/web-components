@@ -10,7 +10,7 @@ export type { TableColDef, TableProps } from "./components/Table";
 export * from "./components/BiosampleTable";
 export type * from "./components/BiosampleTable";
 
-export { GenomeSearch, useEntityAutocomplete, OmesList } from "./components/GenomeSearch";
+export { GenomeSearch, useEntityAutocomplete } from "./components/GenomeSearch";
 export type { GenomeSearchProps, Result, Domain, ResultType, StaticListOption } from "./components/GenomeSearch";
 
 export { TwoPaneLayout, useSyncedTable, useTablePlotSync } from "./components/TwoPaneLayout";
