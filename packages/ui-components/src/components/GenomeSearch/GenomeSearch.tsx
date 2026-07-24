@@ -25,6 +25,7 @@ function GenomeSearch({
   showiCREFlag,
   geneVersion,
   limit,
+  staticLists,
   graphqlUrl,
   onSearchSubmit,
   defaultResults = [],
@@ -62,6 +63,7 @@ function GenomeSearch({
       assembly,
       geneVersion,
       limit,
+      staticLists,
       showiCREFlag,
       debounceMs: 100,
       graphqlUrl,
@@ -69,7 +71,13 @@ function GenomeSearch({
   );
 
   const orderedResults = useMemo(() => {
-    const queryOrder = new Map(queries.map((query, index) => [query, index]));
+    // `staticLists` types are active even when absent from `queries` (see useEntityAutocomplete),
+    // so append any not already present to keep their group contiguous instead of unordered.
+    const groupOrder = [...queries];
+    Object.keys(staticLists ?? {}).forEach((type) => {
+      if (!groupOrder.includes(type)) groupOrder.push(type);
+    });
+    const queryOrder = new Map(groupOrder.map((query, index) => [query, index]));
     const query = inputValue.toLowerCase();
     const skipRelevance = isDomain(inputValue);
 
@@ -108,7 +116,7 @@ function GenomeSearch({
       data: data ? sortByQueryOrder(data) : data,
       defaultResults: sortByQueryOrder(defaultResults),
     };
-  }, [data, defaultResults, queries, inputValue]);
+  }, [data, defaultResults, queries, staticLists, inputValue]);
 
   //Clear input on assembly change
   useEffect(() => {
