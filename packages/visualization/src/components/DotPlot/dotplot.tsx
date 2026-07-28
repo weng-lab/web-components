@@ -99,7 +99,10 @@ const DotPlot = ({
     [yCategories, innerHeight]
   );
 
-  const maxRadius = Math.max(2, Math.min(xScale.bandwidth(), yScale.bandwidth()) / 2);
+  // Capped so dots never grow large enough to overlap the fixed-size legend row spacing,
+  // and so the legend (which reuses this same scale) always represents what's on the plot.
+  const MAX_DOT_RADIUS = 12;
+  const maxRadius = Math.min(MAX_DOT_RADIUS, Math.max(2, Math.min(xScale.bandwidth(), yScale.bandwidth()) / 2));
 
   const radiusScale = useMemo(
     () => scaleLinear({ domain: radiusDomain, range: [maxRadius * 0.15, maxRadius] }),
