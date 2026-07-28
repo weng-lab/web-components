@@ -16,7 +16,7 @@ export type DotPlotProps = {
   /** When true, uses a diverging red–blue color scale instead of a single blue scale */
   deg?: boolean;
   /** Font style applied to x-axis tick labels — use "italic" when labels are gene names */
-  xTickFontStyle?: "normal" | "italic";
+  xTickFontStyle?: "normal" | "italic" | "other";
   /**
    * When true, y-axis tick labels (datasets) are shown on the right and yAxisLabel is
    * rendered as a rotated title on the left — matching the layout in the screenshot.
