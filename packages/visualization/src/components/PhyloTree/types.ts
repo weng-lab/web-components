@@ -1,4 +1,4 @@
-import { TransformMatrix } from "@visx/zoom/lib/types";
+import { TransformMatrix } from "@visx/zoom";
 import { HierarchyPointNode } from "d3-hierarchy";
 import { ReactNode } from "react";
 

@@ -43,18 +43,17 @@ const BarPlot = <T,>({
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     const outerSvgRef = useRef<SVGSVGElement>(null)
-    const { parentRef, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
+    const { parentRef, node, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
 
     useEffect(() => {
-        const el = parentRef.current;
-        if (!el) return;
+        if (!node) return;
 
         const handleScroll = () => setAnimationEnabled(false);
 
-        el.addEventListener("scroll", handleScroll, { once: true });
+        node.addEventListener("scroll", handleScroll, { once: true });
 
-        return () => el.removeEventListener("scroll", handleScroll);
-    }, []);
+        return () => node.removeEventListener("scroll", handleScroll);
+    }, [node]);
 
     const lollipopValues = data
         .map(d => d.lollipopValue)

@@ -1,7 +1,6 @@
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from "../../utility";
-import { RectCell } from "@visx/heatmap/lib/heatmaps/HeatmapRect";
-import { CircleCell } from "@visx/heatmap/lib/heatmaps/HeatmapCircle";
+import { RectCell, CircleCell } from "@visx/heatmap";
 
 /*
 Example data format:

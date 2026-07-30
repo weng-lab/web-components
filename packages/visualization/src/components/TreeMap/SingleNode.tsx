@@ -4,7 +4,7 @@ import { getLabelPlacement, truncateTextToWidth } from "./helpers";
 import { ReactNode, useCallback } from "react";
 import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";
 import React from "react";
-import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
+import { HierarchyRectangularNode } from "@visx/hierarchy";
 
 const SingleNode = <T,>(
     props: SingleNodeProps<T>
