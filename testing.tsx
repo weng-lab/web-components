@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import { useState, useEffect, useRef } from 'react';
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { TwoPaneLayout } from './packages/ui-components/src';
 import { Table } from './packages/ui-components/src';
 import type { TableColDef } from './packages/ui-components/src';
@@ -48,39 +48,30 @@ function TwoPaneTest() {
     }, []);
 
     return (
-        <Stack gap={2}>
-            <Stack direction="row" gap={1} alignItems="center">
-                <Chip
-                    label={loading ? `Querying… (${QUERY_DELAY_MS / 1000}s delay)` : `${rows.length} rows loaded`}
-                    color={loading ? 'warning' : 'success'}
-                    size="small"
-                />
-                <Typography variant="caption" color="text.secondary">
-                    renders: {renderCount.current}
-                </Typography>
-            </Stack>
-
+        <Box sx={{ mt: 6}}>
+            <Typography variant="h6" gutterBottom>
+                DEBUG: Dummy TwoPaneLayout (for height comparison)
+            </Typography>
             <TwoPaneLayout
+                direction={{ xs: "column", md: "row" }}
+                rowHeight="700px"
                 TableComponent={
-                    <Table
-                        columns={columns}
-                        rows={rows}
-                        loading={loading}
-                        label="Genomic Regions"
-                    />
+                    <Box sx={{ height: "100%", background: "#eee" }}>
+                        Dummy Table
+                    </Box>
                 }
                 plots={[
                     {
-                        tabTitle: 'Signal Plot',
-                        plotComponent: <PlaceholderPlot label="Signal Plot" />,
-                    },
-                    {
-                        tabTitle: 'Coverage',
-                        plotComponent: <PlaceholderPlot label="Coverage Plot" />,
+                        tabTitle: "Dummy Plot",
+                        plotComponent: (
+                            <Box sx={{ height: "100%", background: "#ccc" }}>
+                                Dummy Plot
+                            </Box>
+                        ),
                     },
                 ]}
             />
-        </Stack>
+        </Box>
     );
 }
 
