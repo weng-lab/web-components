@@ -1,5 +1,5 @@
 import { ScaleLinear } from '@visx/vendor/d3-scale';
-import { ProvidedZoom } from "@visx/zoom/lib/types";
+import { ProvidedZoom } from "@visx/zoom";
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 

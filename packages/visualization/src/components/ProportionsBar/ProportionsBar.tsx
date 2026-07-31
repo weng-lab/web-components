@@ -1,10 +1,9 @@
 import React, { useMemo, useRef } from "react";
 import { BarStackHorizontal } from "@visx/shape";
 import { scaleBand, scaleLinear } from "@visx/scale";
-import { useTooltip, defaultStyles, useTooltipInPortal } from "@visx/tooltip";
+import { useTooltip, defaultStyles, useTooltipInPortal, TooltipInPortalProps } from "@visx/tooltip";
 import { localPoint } from "@visx/event";
 import { LinearProgress, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
-import { TooltipInPortalProps } from "@visx/tooltip/lib/hooks/useTooltipInPortal";
 import { ProportionsBarProps } from "./types";
 import { sortObjectByValueDesc } from "./helpers";
 

@@ -1,10 +1,7 @@
 import React, { useImperativeHandle, useMemo } from 'react';
-import { Zoom as VisxZoom } from '@visx/zoom'
-import { ZoomProps } from '@visx/zoom/lib/Zoom'
+import { Zoom as VisxZoom, ZoomProps } from '@visx/zoom'
 import { ChartProps } from './types';
-import { Tooltip as VisxTooltip } from '@visx/tooltip';
-import { TooltipProps } from '@visx/tooltip/lib/tooltips/Tooltip';
-import { Portal } from '@visx/tooltip';
+import { Tooltip as VisxTooltip, TooltipProps, Portal } from '@visx/tooltip';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
 import { IconButton, Stack, Tooltip } from '@mui/material';

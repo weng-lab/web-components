@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-import { useDrag } from "@visx/drag";
-import { HandlerArgs } from "@visx/drag/lib/useDrag";
+import { useDrag, HandlerArgs } from "@visx/drag";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { Line, Lines, Point, ZoomType } from "../types";
 import { isPointInLasso, rescaleX, rescaleY } from "../helpers";

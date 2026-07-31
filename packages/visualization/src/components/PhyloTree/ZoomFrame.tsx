@@ -1,4 +1,4 @@
-import { ProvidedZoom } from "@visx/zoom/lib/types";
+import { ProvidedZoom } from "@visx/zoom";
 import { memo, ReactNode, useState } from "react";
 import { ZoomState } from "./types";
 import { ControlPanel } from "./ControlPanel";

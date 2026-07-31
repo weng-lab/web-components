@@ -1,9 +1,7 @@
-import { HeatmapRect, HeatmapCircle } from "@visx/heatmap";
+import { HeatmapRect, HeatmapCircle, RectCell, CircleCell } from "@visx/heatmap";
 import { scaleLinear } from "@visx/scale";
 import { useState, useMemo, memo, ReactNode, ReactElement, MouseEvent } from "react";
 import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";
-import { RectCell } from "@visx/heatmap/lib/heatmaps/HeatmapRect";
-import { CircleCell } from "@visx/heatmap/lib/heatmaps/HeatmapCircle";
 import { motion } from "framer-motion";
 import { getAnimationProps } from "../../utility";
 import type { AnimationType } from "../../utility";

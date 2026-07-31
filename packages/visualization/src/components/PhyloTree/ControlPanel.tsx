@@ -1,6 +1,6 @@
 import { Add, Remove, SettingsBackupRestore, Timeline } from "@mui/icons-material";
 import { Tooltip, IconButton } from "@mui/material";
-import { ProvidedZoom,  } from "@visx/zoom/lib/types";
+import { ProvidedZoom } from "@visx/zoom";
 
 export type ControlPanelProps = {
   scaleZoom: ProvidedZoom<SVGSVGElement>["scale"]

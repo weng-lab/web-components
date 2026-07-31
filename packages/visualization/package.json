@@ -1,6 +1,6 @@
 {
   "name": "@weng-lab/visualization",
-  "version": "1.6.2",
+  "version": "2.0.0",
   "description": "Visualization components for the Weng/Moore Labs suite of genomics web resources",
   "scripts": {
     "clean": "rimraf dist",
@@ -42,7 +42,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
-    "@visx/visx": "^3.12.0",
+    "@visx/visx": "^4.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -51,7 +51,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
-    "@visx/visx": "^3.12.0",
+    "@visx/visx": "^4.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "rimraf": "^6.0.1"

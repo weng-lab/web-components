@@ -1,4 +1,4 @@
-import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
+import { HierarchyRectangularNode } from "@visx/hierarchy";
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from "../../utility";
 

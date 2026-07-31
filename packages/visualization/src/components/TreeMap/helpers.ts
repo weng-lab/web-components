@@ -1,4 +1,4 @@
-import { HierarchyRectangularNode } from "@visx/hierarchy/lib/types";
+import { HierarchyRectangularNode } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
 
 //get coords for label placement based on user input
@@ -22,7 +22,7 @@ export function getLabelPlacement(
                 textAnchor: "start",
                 valueAnchor: hasChildren ? "end" : "start",
                 baseline: "hanging",
-            };
+            } as const;
         case "topRight":
             return {
                 textX: node.x1 - padding,
@@ -32,7 +32,7 @@ export function getLabelPlacement(
                 textAnchor: "end",
                 valueAnchor: "end",
                 baseline: "hanging",
-            };
+            } as const;
         case "bottomLeft":
             return {
                 textX: node.x0 + padding,
@@ -41,8 +41,8 @@ export function getLabelPlacement(
                 valueX: node.x0 + padding,
                 textAnchor: "start",
                 valueAnchor: "start",
-                baseline: "baseline",
-            };
+                baseline: "alphabetic",
+            } as const;
         case "bottomRight":
             return {
                 textX: node.x1 - padding,
@@ -51,8 +51,8 @@ export function getLabelPlacement(
                 valueX: node.x1 - padding,
                 textAnchor: "end",
                 valueAnchor: "end",
-                baseline: "baseline",
-            };
+                baseline: "alphabetic",
+            } as const;
         case "middle":
         default:
             return {
@@ -63,7 +63,7 @@ export function getLabelPlacement(
                 textAnchor: "middle",
                 valueAnchor: "middle",
                 baseline: "middle",
-            };
+            } as const;
     }
 }
 
