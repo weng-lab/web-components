@@ -3,10 +3,10 @@ import { Preview, ReactRenderer } from "@storybook/react-vite";
 import { withThemeFromJSXProvider } from '@storybook/addon-themes';
 import { darkTheme, lightTheme } from "./theme";
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import { initialize, mswLoader } from "msw-storybook-addon";
+import { setupWorker } from "msw/browser";
+import { mswLoader } from "msw-storybook-addon/csf3";
 import { genomeSearchHandlers } from "./mocks/genomeSearchHandlers";
-
-initialize({ onUnhandledRequest: "bypass" });
+import type { LoaderFunction } from "storybook/internal/types";
 
 export const decorators = [
   withThemeFromJSXProvider({
@@ -23,8 +23,7 @@ export const decorators = [
 const preview: Preview = {
   parameters: {
     backgrounds: {
-      default: "light",
-      values: {
+      options: {
         dark: { name: "Dark", value: darkTheme.palette.background.default },
         light: { name: "Light", value: lightTheme.palette.background.default },
       },
@@ -43,7 +42,15 @@ const preview: Preview = {
     },
     msw: { handlers: genomeSearchHandlers },
   },
-  loaders: [mswLoader],
+
+  loaders: [
+    mswLoader(async () => {
+      const worker = setupWorker();
+      await worker.start({ onUnhandledRequest: "bypass" });
+      return worker;
+    }) as LoaderFunction<ReactRenderer>,
+  ],
+
   decorators: [
     withThemeFromJSXProvider({
       themes: {
@@ -55,6 +62,12 @@ const preview: Preview = {
       GlobalStyles: CssBaseline,
     }),
   ],
+
+  initialGlobals: {
+    backgrounds: {
+      value: "light"
+    }
+  }
 };
 
 export default preview;
