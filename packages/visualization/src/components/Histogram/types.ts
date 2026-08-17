@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimationType, DownloadPlotHandle } from '../../utility';
+import { ManualSizeProps } from '../../hooks/useResponsiveParentSize';
 
 export interface HistogramSeries {
     values: number[];
@@ -21,7 +22,7 @@ export interface HistogramBin {
     series: HistogramBinSeries[];
 }
 
-export interface HistogramProps {
+export interface HistogramProps extends ManualSizeProps {
     data: number[] | HistogramSeries[];
     /**
      * thresholds: number ->

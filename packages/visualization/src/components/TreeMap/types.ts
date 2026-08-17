@@ -1,6 +1,7 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy";
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from "../../utility";
+import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 
@@ -22,7 +23,7 @@ export type TreemapNode<T> = {
   metaData?: T;
 }
 
-export type TreemapProps<T> = {
+export type TreemapProps<T> = ManualSizeProps & {
     data: TreemapNode<T>[];
     //styling types applied to all nodes in the treemap
     treemapStyle?: {

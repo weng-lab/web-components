@@ -3,7 +3,6 @@ import { scaleBand, scaleLinear } from "@visx/scale";
 import { AxisBottom, AxisLeft, AxisRight } from "@visx/axis";
 import { Group } from "@visx/group";
 import { Text } from "@visx/text";
-import { useParentSize } from "@visx/responsive";
 import {
   useTooltip,
   TooltipWithBounds,
@@ -11,6 +10,7 @@ import {
   defaultStyles as defaultTooltipStyles,
 } from "@visx/tooltip";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
+import { useResponsiveParentSize } from "../../hooks/useResponsiveParentSize";
 import { DotPlotData, DotPlotProps } from "./types";
 
 function split(left: number, right: number, parts: number): number[] {
@@ -43,8 +43,10 @@ const DotPlot = ({
   colorTitle = "Mean Expression",
   ref,
   downloadFileName,
+  width,
+  height,
 }: DotPlotProps) => {
-  const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+  const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   useImperativeHandle(ref, () => ({

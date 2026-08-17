@@ -1,15 +1,15 @@
 import { useImperativeHandle, useRef, useState } from "react";
 import { Treemap as VisxTreemap, hierarchy, treemapBinary, treemapDice, treemapResquarify, treemapSlice, treemapSliceDice, treemapSquarify, TileMethod } from "@visx/hierarchy";
 import { TreemapNode, TreemapProps } from "./types";
-import { useParentSize } from "@visx/responsive";
 import SingleNode from "./SingleNode";
 import { motion } from "framer-motion";
 import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
+import { useResponsiveParentSize } from "../../hooks/useResponsiveParentSize";
 
 const Treemap = <T extends object>(
     props: TreemapProps<T>,
 ) => {
-    const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+    const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const [hovered, setHovered] = useState<string | null>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
 

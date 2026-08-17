@@ -2,6 +2,7 @@ import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom";
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
+import { ManualSizeProps } from '../../hooks/useResponsiveParentSize';
 
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
@@ -97,7 +98,7 @@ export type InitialState<S, Z> = {
 /**
     Basic chart properties
 */
-export type ChartProps<T, S extends boolean | undefined, Z extends boolean | undefined> = {
+export type ChartProps<T, S extends boolean | undefined, Z extends boolean | undefined> = ManualSizeProps & {
     /**
      * Array of points being displayed on the plot
      * if empty, nothing will be displayed

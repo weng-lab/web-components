@@ -1,8 +1,8 @@
 import { scaleLinear } from "@visx/scale";
 import type { HeatmapProps, ColumnDatum } from "./types";
-import { useParentSize } from "@visx/responsive";
 import { useImperativeHandle, useRef, useMemo } from "react";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
+import { useResponsiveParentSize } from "../../hooks/useResponsiveParentSize";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import HeatmapCells from "./HeatmapCells";
 import HeatmapLegend from "./HeatmapLegend";
@@ -28,8 +28,10 @@ const Heatmap = ({
   isRect = true,
   animationType,
   showLegend = true,
+  width,
+  height,
 }: HeatmapProps) => {
-  const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+  const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);

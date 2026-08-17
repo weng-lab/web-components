@@ -127,3 +127,23 @@ export const FewBins: Story = {
         color: '#9467bd',
     },
 };
+
+// Manually sized plot. Container is 1000x700 with a dashed border - the plot
+// should render at the fixed 400x300 size below, ignoring the container size.
+export const ManualSize: Story = {
+    args: {
+        data: normalData,
+        xLabel: 'Value',
+        yLabel: 'Count',
+        title: 'Manually Sized',
+        width: 400,
+        height: 300,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 1000, height: 700, border: '2px dashed #999' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};

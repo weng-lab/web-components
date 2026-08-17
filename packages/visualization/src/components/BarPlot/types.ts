@@ -1,4 +1,5 @@
 import { AnimationType, DownloadPlotHandle } from "../../utility";
+import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
 
 export interface BarData<T> {
   category?: string;
@@ -14,7 +15,7 @@ export interface BarData<T> {
   metadata?: T;
 }
 
-export interface BarPlotProps<T> {
+export interface BarPlotProps<T> extends ManualSizeProps {
   data: BarData<T>[];
   ref?: React.Ref<DownloadPlotHandle>
   topAxisLabel?: string;

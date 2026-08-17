@@ -1,6 +1,7 @@
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from "../../utility";
 import { RectCell, CircleCell } from "@visx/heatmap";
+import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
 
 /*
 Example data format:
@@ -32,7 +33,7 @@ export type ColumnDatum<C extends object = Record<string, unknown>, R extends ob
     metadata?: C
 }
 
-export type HeatmapProps<C extends object = Record<string, unknown>, R extends object = Record<string, unknown>> = {
+export type HeatmapProps<C extends object = Record<string, unknown>, R extends object = Record<string, unknown>> = ManualSizeProps & {
   data: ColumnDatum<C, R>[];
   //May need to pass in the optional type parameters here if the types are not properly inferred
   onClick?: (bin:  RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>) => void;

@@ -6,8 +6,8 @@ import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
 import { IconButton, Stack, Tooltip } from '@mui/material';
 import { HighlightAlt } from '@mui/icons-material';
-import { useParentSize } from '@visx/responsive';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
+import { useResponsiveParentSize } from '../../hooks/useResponsiveParentSize';
 import { getPointExtents } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
@@ -38,7 +38,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
 
-    const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+    const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const size = Math.min(parentHeight, parentWidth)
 
     const divRef = React.useRef<HTMLDivElement>(null);

@@ -1,5 +1,4 @@
 import { Distribution, ViolinPlotProps } from "./types";
-import { useParentSize } from '@visx/responsive';
 import { Group } from "@visx/group";
 import { scaleBand, scaleLinear } from "@visx/scale";
 import { AxisLeft, AxisBottom } from '@visx/axis';
@@ -8,12 +7,13 @@ import { Text } from '@visx/text';
 import { getTextHeight } from "./helpers";
 import SingleViolin from "./singleViolin";
 import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
+import { useResponsiveParentSize } from "../../hooks/useResponsiveParentSize";
 import { motion } from "framer-motion";
 
 const ViolinPlot = <T extends object>(
     props: ViolinPlotProps<T>,
 ) => {
-    const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+    const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     //Array of labels fo xDomain
