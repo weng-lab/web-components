@@ -1,6 +1,7 @@
 import { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale';
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from '../../utility';
+import { ManualSizeProps } from '../../responsive';
 
 type Outliers = "all" | "top" | "bottom" | "none"
 
@@ -42,7 +43,7 @@ export type CrossProps = {
     medianWidth?: number;
 }
 
-export type ViolinPlotProps<T> = {
+export type ViolinPlotProps<T> = ManualSizeProps & {
     distributions: Distribution<T>[];
     loading: boolean;
     ref?: React.Ref<DownloadPlotHandle>;

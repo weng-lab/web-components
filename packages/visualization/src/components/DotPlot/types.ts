@@ -1,4 +1,5 @@
 import { DownloadPlotHandle } from "../../utility";
+import { ManualSizeProps } from "../../responsive";
 
 export type DotPlotData = {
   /** X-axis category (e.g. gene name or cell type) */
@@ -10,7 +11,7 @@ export type DotPlotData = {
   highlighted?: boolean;
 };
 
-export type DotPlotProps = {
+export type DotPlotProps = ManualSizeProps & {
   data: DotPlotData[];
   showTooltipData?: boolean;
   /** When true, uses a diverging red–blue color scale instead of a single blue scale */

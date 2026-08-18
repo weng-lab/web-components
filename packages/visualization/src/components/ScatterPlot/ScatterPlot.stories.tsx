@@ -409,3 +409,33 @@ export const Animation: Story = {
         )
     }
 };
+
+// Manually sized plot. Container is 900x700 with a dashed border - the plot
+// should render at the fixed 350x350 size below, ignoring the container size.
+export const ManualSize: Story = {
+    args: {
+        pointData: scatterData,
+        loading: false,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        width: 350,
+        height: 350,
+        initialState: {
+            minimap: {
+                open: true,
+            },
+            controls: {
+                selectionType: "pan"
+            }
+        }
+    },
+    decorators: [
+        (Story) => (
+          <div style={{ width: 900, height: 700, border: '2px dashed #999' }}>
+            <Story />
+          </div>
+        ),
+      ],
+};

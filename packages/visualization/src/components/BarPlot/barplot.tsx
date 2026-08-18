@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, us
 import { scaleBand, scaleLinear, scaleLog } from '@visx/scale';
 import { AxisTop } from '@visx/axis';
 import { Group } from '@visx/group';
-import { useParentSize } from '@visx/responsive';
 import { CircularProgress } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
 import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from '../../utility';
+import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import SingleBar from './singleBar';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
@@ -32,18 +32,20 @@ const BarPlot = <T,>({
     legendValues = [1, 0.05, 0.01, 0.001],
     downloadFileName,
     animation,
-    animationBuffer
+    animationBuffer,
+    width,
+    height
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
-    // State to control whether animation is enabled so that if scrollling too fast through a long list of bars, 
+    // State to control whether animation is enabled so that if scrollling too fast through a long list of bars,
     // you dont have to wait for the animation to catch up
     const [animationEnabled, setAnimationEnabled] = useState(true);
 
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     const outerSvgRef = useRef<SVGSVGElement>(null)
-    const { parentRef, node, width: ParentWidth, height: ParentHeight } = useParentSize({ debounceTime: 150 });
+    const { parentRef, node, containerStyle, width: ParentWidth, height: ParentHeight } = useResponsiveParentSize({ width, height }, { debounceTime: 150 });
 
     useEffect(() => {
         if (!node) return;
@@ -178,7 +180,7 @@ const BarPlot = <T,>({
 
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
-        <div ref={parentRef} style={{ minWidth: '500px', height: '100%', overflow: 'auto'}}>
+        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle} style={{ minWidth: 500, overflow: 'auto' }}>
             {lollipopValues.length > 0 && (
                 <Legend
                     values={lollipopValues}
@@ -277,7 +279,7 @@ const BarPlot = <T,>({
                     <CircularProgress sx={{ mt: 10 }} />
                 </div>
             }
-        </div>
+        </ResponsiveContainer>
     );
 };
 

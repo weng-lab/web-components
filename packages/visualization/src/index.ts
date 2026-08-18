@@ -28,3 +28,6 @@ export * from './components/Heatmap'
 
 export { Histogram } from './components/Histogram';
 export type { HistogramProps, HistogramBin } from './components/Histogram';
+
+export { useResponsiveParentSize, ResponsiveContainer } from './responsive';
+export type { ManualSizeProps, UseResponsiveParentSizeResult, ResponsiveContainerProps } from './responsive';

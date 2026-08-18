@@ -122,3 +122,21 @@ export const LabelsRight: Story = {
     ),
   ],
 };
+
+// Manually sized plot. Container is 1100x700 with a dashed border - the plot
+// should render at the fixed 500x350 size below, ignoring the container size.
+export const ManualSize: Story = {
+  args: {
+    data: sampleData,
+    xTickFontStyle: "italic",
+    width: 500,
+    height: 350,
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 1100, height: 700, border: "2px dashed #999" }}>
+        <Story />
+      </div>
+    ),
+  ],
+};

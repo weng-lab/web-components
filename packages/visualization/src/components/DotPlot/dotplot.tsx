@@ -3,7 +3,6 @@ import { scaleBand, scaleLinear } from "@visx/scale";
 import { AxisBottom, AxisLeft, AxisRight } from "@visx/axis";
 import { Group } from "@visx/group";
 import { Text } from "@visx/text";
-import { useParentSize } from "@visx/responsive";
 import {
   useTooltip,
   TooltipWithBounds,
@@ -11,6 +10,7 @@ import {
   defaultStyles as defaultTooltipStyles,
 } from "@visx/tooltip";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
+import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { DotPlotData, DotPlotProps } from "./types";
 
 function split(left: number, right: number, parts: number): number[] {
@@ -43,8 +43,10 @@ const DotPlot = ({
   colorTitle = "Mean Expression",
   ref,
   downloadFileName,
+  width,
+  height,
 }: DotPlotProps) => {
-  const { parentRef, width: parentWidth, height: parentHeight } = useParentSize();
+  const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   useImperativeHandle(ref, () => ({
@@ -146,11 +148,11 @@ const DotPlot = ({
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   if (!parentWidth) {
-    return <div ref={parentRef} style={{ width: "100%", height: "100%" }} />;
+    return <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle} />;
   }
 
   return (
-    <div ref={parentRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+    <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
       <svg ref={svgRef} width={parentWidth} height={svgHeight}>
         <Group top={margin.top} left={margin.left}>
           {data.map((d, idx) => {
@@ -306,7 +308,7 @@ const DotPlot = ({
           </TooltipWithBounds>
         </Portal>
       )}
-    </div>
+    </ResponsiveContainer>
   );
 };
 

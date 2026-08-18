@@ -89,3 +89,23 @@ export const NoLegend: Story = {
         showLegend: false,
     },
 };
+
+// Manually sized plot. Container is 1000x700 with a dashed border - the plot
+// should render at the fixed 400x300 size below, ignoring the container size.
+export const ManualSize: Story = {
+    args: {
+        data: heatmapData,
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+        width: 400,
+        height: 300,
+    },
+    decorators: [
+        (Story) => (
+          <div style={{ width: 1000, height: 700, border: '2px dashed #999' }}>
+            <Story />
+          </div>
+        ),
+      ],
+};

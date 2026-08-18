@@ -135,3 +135,20 @@ export const lollipop: Story = {
         barSpacing: 30
     },
 };
+
+// Manually sized plot. Container is 900x600 with a dashed border - the plot
+// should render at the fixed 400x300 size below, ignoring the container size.
+export const ManualSize: Story = {
+    args: {
+        data: sampleData,
+        width: 400,
+        height: 300,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 900, height: 600, border: '2px dashed #999' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};

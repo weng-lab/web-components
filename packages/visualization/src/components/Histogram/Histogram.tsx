@@ -6,9 +6,9 @@ import { line } from '@visx/shape';
 import { curveBasis } from '@visx/curve';
 import { motion } from 'framer-motion';
 import { Text } from '@visx/text';
-import { useParentSize } from '@visx/responsive';
 import { bin as d3bin, range } from '@visx/vendor/d3-array';
 import { downloadAsSVG, downloadSVGAsPNG } from '../../utility';
+import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { kernelDensityEstimator, gaussian, scottRule } from '../ViolinPlot/helpers';
 import { HistogramBin, HistogramProps, HistogramSeries } from './types';
 import HistogramLegend from './HistogramLegend';
@@ -37,10 +37,12 @@ const Histogram = ({
     densityLineColor = '#1c1917',
     animationType,
     downloadFileName,
+    width: manualWidth,
+    height: manualHeight,
 }: HistogramProps) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
     const tooltipRef = useRef<HistogramTooltipHandle | null>(null);
-    const { parentRef, width, height } = useParentSize({ debounceTime: 150 });
+    const { parentRef, containerStyle, width, height } = useResponsiveParentSize({ width: manualWidth, height: manualHeight }, { debounceTime: 150 });
 
     const multiSeries = isSeriesData(data);
 
@@ -137,7 +139,7 @@ const Histogram = ({
     }));
 
     return (
-        <div ref={parentRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
             <svg ref={svgRef} width={width} height={height}>
                 {title && (
                     <Text
@@ -226,7 +228,7 @@ const Histogram = ({
                 multiSeries={multiSeries}
                 tooltipBody={tooltipBody}
             />
-        </div>
+        </ResponsiveContainer>
     );
 };
 
