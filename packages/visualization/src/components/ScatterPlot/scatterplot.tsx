@@ -7,7 +7,7 @@ import ControlButtons from './controls';
 import { IconButton, Stack, Tooltip } from '@mui/material';
 import { HighlightAlt } from '@mui/icons-material';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
-import { useResponsiveParentSize } from '../../hooks/useResponsiveParentSize';
+import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { getPointExtents } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
@@ -38,7 +38,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
 
-    const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
+    const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const size = Math.min(parentHeight, parentWidth)
 
     const divRef = React.useRef<HTMLDivElement>(null);
@@ -86,7 +86,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     };
 
     return (
-        <div ref={parentRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
             <Zoom width={boundedWidth} height={boundedHeight} scaleXMin={1 / 2} scaleXMax={10} scaleYMin={1 / 2} scaleYMax={10} initialTransformMatrix={initialTransformMatrix}>
                 {(zoom) => {
                     const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2 }); }
@@ -194,7 +194,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     )
                 }}
             </Zoom >
-        </div>
+        </ResponsiveContainer>
     );
 }
 

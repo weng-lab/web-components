@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimationType, DownloadPlotHandle } from '../../utility';
-import { ManualSizeProps } from '../../hooks/useResponsiveParentSize';
+import { ManualSizeProps } from '../../responsive';
 
 export interface HistogramSeries {
     values: number[];

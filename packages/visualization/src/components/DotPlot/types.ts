@@ -1,5 +1,5 @@
 import { DownloadPlotHandle } from "../../utility";
-import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
+import { ManualSizeProps } from "../../responsive";
 
 export type DotPlotData = {
   /** X-axis category (e.g. gene name or cell type) */

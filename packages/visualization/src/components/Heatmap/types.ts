@@ -1,7 +1,7 @@
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from "../../utility";
 import { RectCell, CircleCell } from "@visx/heatmap";
-import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
+import { ManualSizeProps } from "../../responsive";
 
 /*
 Example data format:

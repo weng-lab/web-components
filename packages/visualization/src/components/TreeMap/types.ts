@@ -1,7 +1,7 @@
 import { HierarchyRectangularNode } from "@visx/hierarchy";
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from "../../utility";
-import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
+import { ManualSizeProps } from "../../responsive";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 

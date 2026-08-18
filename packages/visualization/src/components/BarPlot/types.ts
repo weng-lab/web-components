@@ -1,5 +1,5 @@
 import { AnimationType, DownloadPlotHandle } from "../../utility";
-import { ManualSizeProps } from "../../hooks/useResponsiveParentSize";
+import { ManualSizeProps } from "../../responsive";
 
 export interface BarData<T> {
   category?: string;

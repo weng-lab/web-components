@@ -1,7 +1,7 @@
 import { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale';
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from '../../utility';
-import { ManualSizeProps } from '../../hooks/useResponsiveParentSize';
+import { ManualSizeProps } from '../../responsive';
 
 type Outliers = "all" | "top" | "bottom" | "none"
 

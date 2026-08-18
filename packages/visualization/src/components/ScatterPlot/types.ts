@@ -2,7 +2,7 @@ import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom";
 import { ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
-import { ManualSizeProps } from '../../hooks/useResponsiveParentSize';
+import { ManualSizeProps } from '../../responsive';
 
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information

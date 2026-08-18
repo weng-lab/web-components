@@ -2,7 +2,7 @@ import { scaleLinear } from "@visx/scale";
 import type { HeatmapProps, ColumnDatum } from "./types";
 import { useImperativeHandle, useRef, useMemo } from "react";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
-import { useResponsiveParentSize } from "../../hooks/useResponsiveParentSize";
+import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import HeatmapCells from "./HeatmapCells";
 import HeatmapLegend from "./HeatmapLegend";
@@ -31,7 +31,7 @@ const Heatmap = ({
   width,
   height,
 }: HeatmapProps) => {
-  const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
+  const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
@@ -83,7 +83,7 @@ const Heatmap = ({
   }));
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
+    <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
       {/* Prevent undefined parent size from causing creation of elements with negative dimensions */}
       {!parentWidth || !parentHeight ? null : (
         <svg width={parentWidth} height={parentHeight} ref={svgRef}>
@@ -158,7 +158,7 @@ const Heatmap = ({
           </g>
         </svg>
       )}
-    </div>
+    </ResponsiveContainer>
   );
 };
 

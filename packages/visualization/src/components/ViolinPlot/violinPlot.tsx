@@ -7,13 +7,13 @@ import { Text } from '@visx/text';
 import { getTextHeight } from "./helpers";
 import SingleViolin from "./singleViolin";
 import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
-import { useResponsiveParentSize } from "../../hooks/useResponsiveParentSize";
+import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { motion } from "framer-motion";
 
 const ViolinPlot = <T extends object>(
     props: ViolinPlotProps<T>,
 ) => {
-    const { parentRef, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
+    const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     //Array of labels fo xDomain
@@ -136,7 +136,7 @@ const ViolinPlot = <T extends object>(
     }));
 
     return (
-        <div style={{ position: "relative", width: "100%", height: "100%" }} ref={parentRef}>
+        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
             <svg width={parentWidth ?? 0} height={parentHeight?? 0} ref={svgRef}>
                 <Group top={baseOffset} left={offset}>
                     {props.distributions.map((x: Distribution<T>, i) => {
@@ -387,7 +387,7 @@ const ViolinPlot = <T extends object>(
                     )}
                 </Group>
             </svg>
-        </div>
+        </ResponsiveContainer>
     );
 }
 

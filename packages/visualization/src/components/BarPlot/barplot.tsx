@@ -7,7 +7,7 @@ import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
 import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from '../../utility';
-import { useResponsiveParentSize } from '../../hooks/useResponsiveParentSize';
+import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import SingleBar from './singleBar';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
@@ -45,7 +45,7 @@ const BarPlot = <T,>({
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     const outerSvgRef = useRef<SVGSVGElement>(null)
-    const { parentRef, node, width: ParentWidth, height: ParentHeight } = useResponsiveParentSize({ width, height }, { debounceTime: 150 });
+    const { parentRef, node, containerStyle, width: ParentWidth, height: ParentHeight } = useResponsiveParentSize({ width, height }, { debounceTime: 150 });
 
     useEffect(() => {
         if (!node) return;
@@ -180,7 +180,7 @@ const BarPlot = <T,>({
 
     return (
         // Min width of 500 to ensure that on mobile the calculated bar width is not negative
-        <div ref={parentRef} style={{ minWidth: '500px', height: '100%', overflow: 'auto'}}>
+        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle} style={{ minWidth: 500, overflow: 'auto' }}>
             {lollipopValues.length > 0 && (
                 <Legend
                     values={lollipopValues}
@@ -279,7 +279,7 @@ const BarPlot = <T,>({
                     <CircularProgress sx={{ mt: 10 }} />
                 </div>
             }
-        </div>
+        </ResponsiveContainer>
     );
 };
 
