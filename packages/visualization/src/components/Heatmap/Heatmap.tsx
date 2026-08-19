@@ -30,6 +30,7 @@ const Heatmap = ({
   showLegend = true,
   width,
   height,
+  xLabelOrientation = "vertical",
 }: HeatmapProps) => {
   const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -42,12 +43,19 @@ const Heatmap = ({
   const maxColNameLength = allColNames.reduce((m, name) => Math.max(m, name.length), 0);
   const maxRowNameLength = allRowNames.reduce((m, name) => Math.max(m, name.length), 0);
 
+  const xTickAngle = xLabelOrientation === "horizontal" ? 0 : xLabelOrientation === "vertical" ? -90 : xLabelOrientation === "leftDiagonal" ? -45 : 45;
+  const xTickTextAnchor = xLabelOrientation === "horizontal" ? "middle" : xLabelOrientation === "rightDiagonal" ? "start" : "end";
+  // Full-length rotated (vertical) labels need the most vertical space, diagonal labels need
+  // proportionally less (sin of a 45deg rotation), and horizontal labels only need a single line.
+  const rotatedColNameSpace = maxColNameLength * 8;
+  const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? rotatedColNameSpace : rotatedColNameSpace * Math.SQRT1_2;
+
   const defaultRight = showLegend ? LEGEND_WIDTH : 10;
   const defaultTop = 20;
   // Solve for bottom margin so that (bottom - binHeight) always equals the space needed for
   // rotated column labels. binHeight = (parentHeight - top - bottom) / numRows, so:
   // bottom = (labelSpace * numRows + parentHeight - top) / (numRows + 1)
-  const labelBottomSpace = maxColNameLength * 8 + 70;
+  const labelBottomSpace = colLabelHeight + 70;
   const marg = margin ?? {
     top: defaultTop,
     left: maxRowNameLength * 8 + 40,
@@ -111,12 +119,12 @@ const Heatmap = ({
               tickLabelProps={() => ({
                 fontSize: 12,
                 fontFamily: "sans-serif",
-                textAnchor: "end",
-                angle: -90,
-                dy: "0.25em",
+                textAnchor: xTickTextAnchor,
+                angle: xTickAngle,
+                dy: xLabelOrientation === "horizontal" ? "0.71em" : "0.25em",
               })}
               label={xLabel ?? ""}
-              labelOffset={maxColNameLength * 8}
+              labelOffset={colLabelHeight}
               labelProps={{
                 fontSize: 14,
                 fontFamily: "sans-serif",

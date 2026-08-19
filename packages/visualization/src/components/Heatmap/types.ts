@@ -51,4 +51,8 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   margin?: { top: number; right: number; bottom: number; left: number };
   animationType?: AnimationType;
   showLegend?: boolean;
+  /**
+   * Orientation of the x-axis (column) labels. Defaults to "vertical".
+   */
+  xLabelOrientation?: "horizontal" | "vertical" | "leftDiagonal" | "rightDiagonal";
 };

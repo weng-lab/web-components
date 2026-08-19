@@ -15,6 +15,10 @@ const meta = {
         showLegend: {
             control: { type: 'boolean' },
         },
+        xLabelOrientation: {
+            control: { type: 'select' },
+            options: ['horizontal', 'vertical', 'leftDiagonal', 'rightDiagonal'],
+        },
     },
     parameters: {
         controls: { expanded: true },
@@ -47,7 +51,7 @@ const heatmapData: ColumnDatum[] = Array.from(
         (_, rowIndex) =>
           ({
             rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
-            count: Math.floor(Math.random() * 100),
+            count: Math.floor(Math.random() * 10000000),
             metadata: { description: "row description", source: "row source" },
           } satisfies RowDatum)
       ),
@@ -87,6 +91,16 @@ export const NoLegend: Story = {
         yLabel: 'Y-Axis Label',
         colors: ['#20619e', '#fff36e', '#c92b16'],
         showLegend: false,
+    },
+};
+
+export const LeftDiagonalXLabels: Story = {
+    args: {
+        data: heatmapData,
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+        xLabelOrientation: 'leftDiagonal',
     },
 };
 
