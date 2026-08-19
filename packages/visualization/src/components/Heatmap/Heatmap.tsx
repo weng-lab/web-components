@@ -5,9 +5,9 @@ import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import HeatmapCells from "./HeatmapCells";
-import HeatmapLegend from "./HeatmapLegend";
+import HeatmapLegend, { getHeatmapLegendWidth } from "./HeatmapLegend";
 
-const LEGEND_WIDTH = 70;
+const LEGEND_GAP = 16;
 const getBins = (d: ColumnDatum) => d.rows;
 
 function maxOf<Datum>(data: Datum[], value: (d: Datum) => number): number {
@@ -50,7 +50,8 @@ const Heatmap = ({
   const rotatedColNameSpace = maxColNameLength * 8;
   const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? rotatedColNameSpace : rotatedColNameSpace * Math.SQRT1_2;
 
-  const defaultRight = showLegend ? LEGEND_WIDTH : 10;
+  const legendWidth = useMemo(() => getHeatmapLegendWidth(0, maxValue), [maxValue]);
+  const defaultRight = showLegend ? legendWidth + LEGEND_GAP : 10;
   const defaultTop = 20;
   // Solve for bottom margin so that (bottom - binHeight) always equals the space needed for
   // rotated column labels. binHeight = (parentHeight - top - bottom) / numRows, so:
@@ -154,7 +155,7 @@ const Heatmap = ({
               }}
             />
             {showLegend && (
-              <g transform={`translate(${xMax + 16}, ${binHeight})`}>
+              <g transform={`translate(${xMax + LEGEND_GAP}, ${binHeight})`}>
                 <HeatmapLegend
                   colors={colors}
                   minValue={0}

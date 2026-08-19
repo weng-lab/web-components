@@ -1,10 +1,12 @@
 import { Group } from "@visx/group";
 import { scaleLinear } from "@visx/scale";
+import { measureTextWidth } from "../../utility";
 
 const BAR_WIDTH = 14;
 const LABEL_GAP = 6;
 const TICK_WIDTH = 4;
 const FONT_SIZE = 11;
+const FONT_FAMILY = "sans-serif";
 const NUM_TICKS = 5;
 
 interface HeatmapLegendProps {
@@ -17,12 +19,32 @@ interface HeatmapLegendProps {
 const formatTick = (value: number) =>
     value % 1 === 0 ? String(value) : value.toFixed(1);
 
+const getTickValues = (minValue: number, maxValue: number) =>
+    Array.from({ length: NUM_TICKS }, (_, i) =>
+        minValue + (i * (maxValue - minValue)) / (NUM_TICKS - 1)
+    );
+
+// Canvas's measureText and the browser's actual SVG text layout don't agree to the sub-pixel,
+// and the gap widens with string length - pad generously so longer labels (more digits) don't
+// creep past the reserved width and get clipped by the svg's default overflow:hidden.
+const LABEL_WIDTH_SAFETY_FACTOR = 1.15;
+const RIGHT_PADDING = 6;
+
+// Full width needed to render the legend (color bar + ticks + tick labels) without
+// clipping, based on the widest formatted tick label for the given value range.
+export const getHeatmapLegendWidth = (minValue: number, maxValue: number): number => {
+    const maxLabelWidth = Math.max(
+        ...getTickValues(minValue, maxValue).map((value) =>
+            measureTextWidth(formatTick(value), FONT_SIZE, FONT_FAMILY)
+        )
+    );
+    return BAR_WIDTH + TICK_WIDTH + LABEL_GAP + maxLabelWidth * LABEL_WIDTH_SAFETY_FACTOR + RIGHT_PADDING;
+};
+
 const HeatmapLegend = ({ colors, minValue, maxValue, height }: HeatmapLegendProps) => {
     const gradientId = "heatmap-legend-gradient";
 
-    const tickValues = Array.from({ length: NUM_TICKS }, (_, i) =>
-        minValue + (i * (maxValue - minValue)) / (NUM_TICKS - 1)
-    );
+    const tickValues = getTickValues(minValue, maxValue);
 
     const yScale = scaleLinear<number>({
         domain: [maxValue, minValue],
@@ -67,7 +89,7 @@ const HeatmapLegend = ({ colors, minValue, maxValue, height }: HeatmapLegendProp
                             y={y}
                             dominantBaseline="middle"
                             fontSize={FONT_SIZE}
-                            fontFamily="sans-serif"
+                            fontFamily={FONT_FAMILY}
                             fill="#4d4f52"
                         >
                             {formatTick(value)}

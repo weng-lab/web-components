@@ -51,7 +51,7 @@ const heatmapData: ColumnDatum[] = Array.from(
         (_, rowIndex) =>
           ({
             rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
-            count: Math.floor(Math.random() * 10000000),
+            count: Math.floor(Math.random() * 100),
             metadata: { description: "row description", source: "row source" },
           } satisfies RowDatum)
       ),
