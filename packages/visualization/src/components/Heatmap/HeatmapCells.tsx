@@ -13,6 +13,7 @@ const getBins = (d: ColumnDatum) => d.rows;
 
 const DEFAULT_DESELECTED_COLOR = "#d1d5db";
 const DESELECTED_OPACITY = 0.5;
+const NULL_VALUE_COLOR = "none";
 
 const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
 
@@ -78,15 +79,22 @@ const HeatmapCells = memo(function HeatmapCells({
         {(heatmap) =>
           heatmap.map((heatmapBins, colIndex) =>
             heatmapBins.map((bin) => {
+              const isNullValue = bin.count == null;
               const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey(bin));
+              const fill = isNullValue
+                ? NULL_VALUE_COLOR
+                : isDeselected
+                  ? deselectedColor
+                  : bin.color ?? deselectedColor;
+              const fillOpacity = isNullValue ? 0 : isDeselected ? DESELECTED_OPACITY : bin.opacity ?? 1;
               return (
                 <HeatmapCell
                   key={`heatmap-cell-${bin.row}-${bin.column}`}
                   bin={bin}
                   isRect={isRect}
                   binWidth={binWidth}
-                  fill={isDeselected ? deselectedColor : bin.color ?? deselectedColor}
-                  fillOpacity={isDeselected ? DESELECTED_OPACITY : bin.opacity ?? 1}
+                  fill={fill}
+                  fillOpacity={fillOpacity}
                   colIndex={colIndex}
                   animationType={animationType}
                   tooltipRef={tooltipRef}

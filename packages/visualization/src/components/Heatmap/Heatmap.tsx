@@ -14,10 +14,14 @@ const LEGEND_GAP = 16;
 const AXIS_LABEL_GAP = 12;
 const getBins = (d: ColumnDatum) => d.rows;
 
-function maxOf<Datum>(data: Datum[], value: (d: Datum) => number): number {
-  // reduce rather than Math.max(...spread): returns 0 (not -Infinity) for an empty array,
-  // and has no argument-count ceiling.
-  return data.reduce((max, datum) => Math.max(max, value(datum)), 0);
+function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
+  // Null counts are gaps in the data and don't participate in the max. reduce rather than
+  // Math.max(...spread): returns 0 (not -Infinity) for empty/all-null input, with no
+  // argument-count ceiling.
+  return data.reduce((max, datum) => {
+    const datumValue = value(datum);
+    return datumValue == null ? max : Math.max(max, datumValue);
+  }, 0);
 }
 
 const Heatmap = ({

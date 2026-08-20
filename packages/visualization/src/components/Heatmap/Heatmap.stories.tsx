@@ -3,6 +3,7 @@ import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
 import { Box } from '@mui/material';
 import { RowDatum, ColumnDatum, HeatmapCellId } from './types';
+import type { AnyBin } from './HeatmapCells';
 
 const meta = {
     title: 'visualization/Heatmap',
@@ -126,6 +127,31 @@ export const SelectableCells: Story = {
                 }}
             />
         );
+    },
+};
+
+// A random subset of cells have a null count - they still occupy their grid position but
+// render with no fill, distinguishing "no data" from an actual 0 (colored at the gradient's low end).
+const heatmapDataWithNulls: ColumnDatum[] = heatmapData.map((col) => ({
+    ...col,
+    rows: col.rows.map((row) => ({
+        ...row,
+        count: Math.random() < 0.2 ? null : row.count,
+    })),
+}));
+
+export const WithNullValues: Story = {
+    args: {
+        data: heatmapDataWithNulls,
+        tooltipBody: (bin: AnyBin) => (
+        <Box maxWidth={300}>
+          <div><strong>Row:</strong> {bin.bin.rowName}</div>
+          <div><strong>Column:</strong> {bin.datum.columnName}</div>
+          <div><strong>Value:</strong> {bin?.count ?? 'No data'}</div>
+        </Box>),
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
     },
 };
 
