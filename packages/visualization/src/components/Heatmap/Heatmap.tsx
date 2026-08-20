@@ -8,6 +8,9 @@ import HeatmapCells from "./HeatmapCells";
 import HeatmapLegend, { getHeatmapLegendWidth } from "./HeatmapLegend";
 
 const LEGEND_GAP = 16;
+// Extra breathing room between the tick labels and the axis title, beyond the space
+// reserved for the tick labels themselves.
+const AXIS_LABEL_GAP = 12;
 const getBins = (d: ColumnDatum) => d.rows;
 
 function maxOf<Datum>(data: Datum[], value: (d: Datum) => number): number {
@@ -56,10 +59,10 @@ const Heatmap = ({
   // Solve for bottom margin so that (bottom - binHeight) always equals the space needed for
   // rotated column labels. binHeight = (parentHeight - top - bottom) / numRows, so:
   // bottom = (labelSpace * numRows + parentHeight - top) / (numRows + 1)
-  const labelBottomSpace = colLabelHeight + 70;
+  const labelBottomSpace = colLabelHeight + AXIS_LABEL_GAP + 70;
   const marg = margin ?? {
     top: defaultTop,
-    left: maxRowNameLength * 8 + 40,
+    left: maxRowNameLength * 8 + AXIS_LABEL_GAP + 40,
     right: defaultRight,
     bottom: (labelBottomSpace * numRows + Math.max(0, parentHeight - defaultTop)) / (numRows + 1),
   };
@@ -125,7 +128,7 @@ const Heatmap = ({
                 dy: xLabelOrientation === "horizontal" ? "0.71em" : "0.25em",
               })}
               label={xLabel ?? ""}
-              labelOffset={colLabelHeight}
+              labelOffset={colLabelHeight + AXIS_LABEL_GAP}
               labelProps={{
                 fontSize: 14,
                 fontFamily: "sans-serif",
@@ -147,7 +150,7 @@ const Heatmap = ({
                 dy: "0.25em",
               })}
               label={yLabel ?? ""}
-              labelOffset={maxRowNameLength * 8}
+              labelOffset={maxRowNameLength * 8 + AXIS_LABEL_GAP}
               labelProps={{
                 fontSize: 14,
                 fontFamily: "sans-serif",
