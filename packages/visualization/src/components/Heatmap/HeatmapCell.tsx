@@ -18,10 +18,14 @@ export const CELL_SHAPE_CLASS = "visx-heatmap-cell-shape";
  * The stroke is always painted in the cell's own fill color, so hovering only has to give it a
  * width. `strokeWidth={0}` below is a presentation attribute, which loses to any CSS rule - so
  * the hover rule wins without needing !important.
+ *
+ * `pointer-events: all` because cells with a null count render with fill="none", and SVG's
+ * default (visiblePainted) only treats painted area as a hit target - without this the pointer
+ * falls through such a cell to the <svg> and it can never show its "no data" tooltip.
  */
 export const heatmapCellStyles = `
 .${CELL_CLASS} { cursor: pointer; }
-.${CELL_SHAPE_CLASS} { transition: stroke-width 0.2s; }
+.${CELL_SHAPE_CLASS} { transition: stroke-width 0.2s; pointer-events: all; }
 .${CELL_CLASS}:hover .${CELL_SHAPE_CLASS} { stroke-width: 2; }
 `;
 
