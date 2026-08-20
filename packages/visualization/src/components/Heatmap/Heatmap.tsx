@@ -5,6 +5,7 @@ import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import HeatmapCells from "./HeatmapCells";
+import { heatmapCellStyles } from "./HeatmapCell";
 import HeatmapLegend, { getHeatmapLegendWidth } from "./HeatmapLegend";
 
 const LEGEND_GAP = 16;
@@ -14,7 +15,9 @@ const AXIS_LABEL_GAP = 12;
 const getBins = (d: ColumnDatum) => d.rows;
 
 function maxOf<Datum>(data: Datum[], value: (d: Datum) => number): number {
-  return Math.max(...data.map(value));
+  // reduce rather than Math.max(...spread): returns 0 (not -Infinity) for an empty array,
+  // and has no argument-count ceiling.
+  return data.reduce((max, datum) => Math.max(max, value(datum)), 0);
 }
 
 const Heatmap = ({
@@ -41,7 +44,7 @@ const Heatmap = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
-  const allRowNames = useMemo(() => data[0].rows.map((r) => r.rowName), [data]);
+  const allRowNames = useMemo(() => data[0]?.rows.map((r) => r.rowName) ?? [], [data]);
   const maxValue = useMemo(() => maxOf(data, (d) => maxOf(getBins(d), (r) => r.count)), [data]);
   const numRows = useMemo(() => maxOf(data, (d) => getBins(d).length), [data]);
 
@@ -54,6 +57,16 @@ const Heatmap = ({
   // proportionally less (sin of a 45deg rotation), and horizontal labels only need a single line.
   const rotatedColNameSpace = maxColNameLength * 8;
   const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? rotatedColNameSpace : rotatedColNameSpace * Math.SQRT1_2;
+
+  // Consumers nearly always pass `colors` as an inline array literal, so its identity changes on
+  // every render of theirs. That alone rebuilds the color scale and, through it, every cell in the
+  // grid. Keying on the contents means the array is only replaced when the colors really change.
+  // (A NUL separator cannot appear in a CSS color, so the join is unambiguous.)
+  const colorsKey = colors.join("\u0000");
+  const stableColors = useMemo(
+    () => colorsKey.split("\u0000") as [string, string, ...string[]],
+    [colorsKey]
+  );
 
   const legendWidth = useMemo(() => getHeatmapLegendWidth(0, maxValue), [maxValue]);
   const defaultRight = showLegend ? legendWidth + LEGEND_GAP : 10;
@@ -85,7 +98,7 @@ const Heatmap = ({
   );
 
   const xTickValues = useMemo(() => data.map((_, i) => i + 0.5), [data]);
-  const yTickValues = useMemo(() => data[0].rows.map((_, i) => i + 0.5), [data]);
+  const yTickValues = useMemo(() => data[0]?.rows.map((_, i) => i + 0.5) ?? [], [data]);
 
   useImperativeHandle(ref, () => ({
     downloadSVG: () => {
@@ -94,19 +107,22 @@ const Heatmap = ({
     downloadPNG: () => {
       if (svgRef.current) downloadSVGAsPNG(svgRef.current, downloadFileName ?? "heatmap.png");
     },
-  }));
+  }), [downloadFileName]);
 
   return (
     <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
-      {/* Prevent undefined parent size from causing creation of elements with negative dimensions */}
-      {!parentWidth || !parentHeight ? null : (
+      {/* Prevent an undefined parent size, or empty data, from producing elements with negative
+          or non-finite dimensions */}
+      {!parentWidth || !parentHeight || data.length === 0 || numRows === 0 ? null : (
         <svg width={parentWidth} height={parentHeight} ref={svgRef}>
+          {/* Inside the <svg> so cell hover styling survives the SVG/PNG download serialization */}
+          <style>{heatmapCellStyles}</style>
           <g transform={`translate(${marg.left},${marg.top})`}>
             <HeatmapCells
               data={data}
               xScale={xScale}
               yScale={yScale}
-              colors={colors}
+              colors={stableColors}
               maxValue={maxValue}
               gap={gap}
               isRect={isRect}
@@ -164,7 +180,7 @@ const Heatmap = ({
             {showLegend && (
               <g transform={`translate(${xMax + LEGEND_GAP}, ${binHeight})`}>
                 <HeatmapLegend
-                  colors={colors}
+                  colors={stableColors}
                   minValue={0}
                   maxValue={maxValue}
                   height={yMax}
