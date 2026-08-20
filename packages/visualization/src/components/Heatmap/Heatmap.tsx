@@ -13,8 +13,9 @@ const LEGEND_GAP = 16;
 const AXIS_LABEL_GAP = 12;
 const getBins = (d: ColumnDatum) => d.rows;
 
-function maxOf<Datum>(data: Datum[], value: (d: Datum) => number): number {
-  return Math.max(...data.map(value));
+function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
+  const values = data.map(value).filter((v): v is number => v != null);
+  return values.length ? Math.max(...values) : 0;
 }
 
 const Heatmap = ({

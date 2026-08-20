@@ -23,7 +23,7 @@ Example data format:
 
 export type RowDatum<R extends object = Record<string, unknown>> = {
     rowName: string;
-    count: number;
+    count: number | null;
     metadata?: R;
 }
 
