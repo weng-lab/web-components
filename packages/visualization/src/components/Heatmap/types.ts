@@ -55,4 +55,15 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    * Orientation of the x-axis (column) labels. Defaults to "vertical".
    */
   xLabelOrientation?: "horizontal" | "vertical" | "leftDiagonal" | "rightDiagonal";
+  /**
+   * The currently selected cells, identified by the same row/column indices found on the bin
+   * passed to onClick (bin.row, bin.column). When non-empty, every cell not in this list renders
+   * as deselectedColor while selected cells keep their normal gradient color. Pass an empty array
+   * or undefined for no selection. Selection is controlled - use onClick to update it from the consumer.
+   */
+  selectedCells?: { row: number; column: number }[];
+  /**
+   * Fill color used for cells not in selectedCells. Defaults to a neutral gray.
+   */
+  deselectedColor?: string;
 };

@@ -11,6 +11,9 @@ export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, R
 
 const getBins = (d: ColumnDatum) => d.rows;
 
+const DEFAULT_DESELECTED_COLOR = "#d1d5db";
+const DESELECTED_OPACITY = 0.5;
+
 export interface HeatmapCellsProps {
   data: ColumnDatum[];
   xScale: (d: number) => number;
@@ -24,12 +27,14 @@ export interface HeatmapCellsProps {
   animationType?: AnimationType;
   tooltipBody?: (bin: AnyBin) => ReactElement;
   onClick?: (bin: AnyBin) => void;
+  selectedCells?: { row: number; column: number }[];
+  deselectedColor?: string;
 }
 
 const HeatmapCells = memo(function HeatmapCells({
   data, xScale, yScale, colors, maxValue, gap,
   isRect, binWidth, binHeight, animationType,
-  tooltipBody, onClick,
+  tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR,
 }: HeatmapCellsProps) {
   const [hoveredCell, setHoveredCell] = useState<{ row: number; column: number } | null>(null);
   const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<ReactNode>();
@@ -63,10 +68,14 @@ const HeatmapCells = memo(function HeatmapCells({
             heatmapBins.map((bin) => {
               const key = `heatmap-group-${bin.row}-${bin.column}`;
               const isHovered = hoveredCell?.row === bin.row && hoveredCell?.column === bin.column;
+              const isSelected = selectedCells?.some((cell) => cell.row === bin.row && cell.column === bin.column) ?? false;
+              const isDeselected = !!selectedCells?.length && !isSelected;
+              const fill = isDeselected ? deselectedColor : bin.color;
+              const fillOpacity = isDeselected ? DESELECTED_OPACITY : bin.opacity;
               const sharedProps = {
-                fill: bin.color,
-                fillOpacity: bin.opacity,
-                stroke: isHovered ? bin.color : "none",
+                fill,
+                fillOpacity,
+                stroke: isHovered ? fill : "none",
                 strokeWidth: isHovered ? 2 : 0,
                 style: { cursor: "pointer" },
               };

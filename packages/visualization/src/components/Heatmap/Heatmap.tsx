@@ -34,6 +34,8 @@ const Heatmap = ({
   width,
   height,
   xLabelOrientation = "vertical",
+  selectedCells,
+  deselectedColor,
 }: HeatmapProps) => {
   const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -113,6 +115,8 @@ const Heatmap = ({
               animationType={animationType}
               tooltipBody={tooltipBody}
               onClick={onClick}
+              selectedCells={selectedCells}
+              deselectedColor={deselectedColor}
             />
             <AxisBottom
               top={yMax + binHeight}

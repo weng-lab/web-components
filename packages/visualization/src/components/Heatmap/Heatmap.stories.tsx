@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
 import { Box } from '@mui/material';
@@ -101,6 +102,30 @@ export const LeftDiagonalXLabels: Story = {
         yLabel: 'Y-Axis Label',
         colors: ['#20619e', '#fff36e', '#c92b16'],
         xLabelOrientation: 'leftDiagonal',
+    },
+};
+
+// Click cells to select them - every unselected cell dims to gray while selected cells keep
+// their gradient color. Click a selected cell again to remove it from the selection.
+export const SelectableCells: Story = {
+    render: () => {
+        const [selectedCells, setSelectedCells] = useState<{ row: number; column: number }[]>([]);
+        return (
+            <Heatmap
+                data={heatmapData}
+                xLabel="X-Axis Label"
+                yLabel="Y-Axis Label"
+                colors={['#20619e', '#fff36e', '#c92b16']}
+                selectedCells={selectedCells}
+                onClick={(bin) => {
+                    setSelectedCells((current) =>
+                        current.some((cell) => cell.row === bin.row && cell.column === bin.column)
+                            ? current.filter((cell) => !(cell.row === bin.row && cell.column === bin.column))
+                            : [...current, { row: bin.row, column: bin.column }]
+                    );
+                }}
+            />
+        );
     },
 };
 

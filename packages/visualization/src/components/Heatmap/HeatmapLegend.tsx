@@ -54,12 +54,14 @@ const HeatmapLegend = ({ colors, minValue, maxValue, height }: HeatmapLegendProp
     return (
         <Group>
             <defs>
+                {/* The bar reads top (max) to bottom (min), so the gradient stops run in reverse
+                    color order to match how colors map to values in the heatmap cells. */}
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                    {colors.map((color, i) => (
+                    {colors.map((_, i) => (
                         <stop
                             key={i}
                             offset={`${(i / (colors.length - 1)) * 100}%`}
-                            stopColor={color}
+                            stopColor={colors[colors.length - 1 - i]}
                         />
                     ))}
                 </linearGradient>
