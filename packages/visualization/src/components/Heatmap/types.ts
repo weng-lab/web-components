@@ -33,6 +33,12 @@ export type ColumnDatum<C extends object = Record<string, unknown>, R extends ob
     metadata?: C
 }
 
+/**
+ * Identifies a single cell by the row/column indices found on the bin passed to onClick
+ * (bin.row, bin.column).
+ */
+export type HeatmapCellId = { row: number; column: number };
+
 export type HeatmapProps<C extends object = Record<string, unknown>, R extends object = Record<string, unknown>> = ManualSizeProps & {
   data: ColumnDatum<C, R>[];
   //May need to pass in the optional type parameters here if the types are not properly inferred
@@ -61,7 +67,7 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    * as deselectedColor while selected cells keep their normal gradient color. Pass an empty array
    * or undefined for no selection. Selection is controlled - use onClick to update it from the consumer.
    */
-  selectedCells?: { row: number; column: number }[];
+  selectedCells?: HeatmapCellId[];
   /**
    * Fill color used for cells not in selectedCells. Defaults to a neutral gray.
    */

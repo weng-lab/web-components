@@ -1,11 +1,9 @@
 import { HeatmapRect, HeatmapCircle, RectCell, CircleCell } from "@visx/heatmap";
 import { scaleLinear } from "@visx/scale";
-import { useState, useMemo, memo, ReactNode, ReactElement, MouseEvent } from "react";
-import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";
-import { motion } from "framer-motion";
-import { getAnimationProps } from "../../utility";
+import { useMemo, memo, ReactElement } from "react";
 import type { AnimationType } from "../../utility";
-import type { ColumnDatum, RowDatum } from "./types";
+import type { ColumnDatum, RowDatum, HeatmapCellId } from "./types";
+import HeatmapCell from "./HeatmapCell";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
 
@@ -13,6 +11,8 @@ const getBins = (d: ColumnDatum) => d.rows;
 
 const DEFAULT_DESELECTED_COLOR = "#d1d5db";
 const DESELECTED_OPACITY = 0.5;
+
+const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
 
 export interface HeatmapCellsProps {
   data: ColumnDatum[];
@@ -27,7 +27,7 @@ export interface HeatmapCellsProps {
   animationType?: AnimationType;
   tooltipBody?: (bin: AnyBin) => ReactElement;
   onClick?: (bin: AnyBin) => void;
-  selectedCells?: { row: number; column: number }[];
+  selectedCells?: HeatmapCellId[];
   deselectedColor?: string;
 }
 
@@ -36,9 +36,6 @@ const HeatmapCells = memo(function HeatmapCells({
   isRect, binWidth, binHeight, animationType,
   tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR,
 }: HeatmapCellsProps) {
-  const [hoveredCell, setHoveredCell] = useState<{ row: number; column: number } | null>(null);
-  const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<ReactNode>();
-
   const colorScale = useMemo(
     () => scaleLinear<string>({ range: colors, domain: colors.map((_, i) => (i * maxValue) / (colors.length - 1)) }),
     [colors, maxValue]
@@ -49,92 +46,46 @@ const HeatmapCells = memo(function HeatmapCells({
   );
   const radius = Math.min(binWidth, binHeight) / 2;
 
+  const selectedKeys = useMemo(
+    () => (selectedCells?.length ? new Set(selectedCells.map(cellKey)) : null),
+    [selectedCells]
+  );
+
   const HeatmapComponent = isRect ? HeatmapRect : HeatmapCircle;
 
   return (
-    <>
-      <HeatmapComponent
-        data={data}
-        xScale={(d: number) => xScale(d)}
-        yScale={(d: number) => yScale(d)}
-        colorScale={colorScale}
-        opacityScale={opacityScale}
-        bins={getBins}
-        gap={gap}
-        {...(isRect ? { binWidth, binHeight } : { radius })}
-      >
-        {(heatmap) =>
-          heatmap.map((heatmapBins, colIndex) =>
-            heatmapBins.map((bin) => {
-              const key = `heatmap-group-${bin.row}-${bin.column}`;
-              const isHovered = hoveredCell?.row === bin.row && hoveredCell?.column === bin.column;
-              const isSelected = selectedCells?.some((cell) => cell.row === bin.row && cell.column === bin.column) ?? false;
-              const isDeselected = !!selectedCells?.length && !isSelected;
-              const fill = isDeselected ? deselectedColor : bin.color;
-              const fillOpacity = isDeselected ? DESELECTED_OPACITY : bin.opacity;
-              const sharedProps = {
-                fill,
-                fillOpacity,
-                stroke: isHovered ? fill : "none",
-                strokeWidth: isHovered ? 2 : 0,
-                style: { cursor: "pointer" },
-              };
-              const isRectCell = isRect && "width" in bin && "height" in bin && "x" in bin && "y" in bin;
-              const isCircleCell = !isRect && "cy" in bin && "r" in bin;
-              const Wrapper = animationType ? motion.g : "g";
-              const animProps = getAnimationProps(animationType as AnimationType, colIndex);
-              return (
-                <Wrapper
-                  key={key}
-                  {...animProps}
-                  onMouseEnter={() => setHoveredCell({ row: bin.row, column: bin.column })}
-                  onMouseLeave={() => {
-                    setHoveredCell(null);
-                    hideTooltip();
-                  }}
-                  onMouseMove={(event: MouseEvent<SVGElement>) => {
-                    if (!tooltipBody) return;
-                    showTooltip({
-                      tooltipLeft: event.pageX + 10,
-                      tooltipTop: event.pageY + 10,
-                      tooltipData: tooltipBody(bin),
-                    });
-                  }}
-                  onClick={() => onClick?.(bin)}
-                  style={{ cursor: "pointer", transition: "stroke-width 0.2s" }}
-                >
-                  {isRectCell ? (
-                    <rect
-                      className="visx-heatmap-rect"
-                      width={bin.width}
-                      height={bin.height}
-                      x={bin.x}
-                      y={bin.y}
-                      {...sharedProps}
-                    />
-                  ) : isCircleCell ? (
-                    <circle
-                      className="visx-heatmap-circle"
-                      cx={bin.column * binWidth + binWidth / 2}
-                      cy={bin.cy}
-                      r={bin.r}
-                      {...sharedProps}
-                    />
-                  ) : null}
-                </Wrapper>
-              );
-            })
-          )
-        }
-      </HeatmapComponent>
-      {tooltipBody && tooltipOpen && tooltipData && (
-        <Portal>
-          <TooltipWithBounds left={tooltipLeft} top={tooltipTop}>
-            {tooltipData}
-          </TooltipWithBounds>
-        </Portal>
-      )}
-    </>
+    <HeatmapComponent
+      data={data}
+      xScale={xScale}
+      yScale={yScale}
+      colorScale={colorScale}
+      opacityScale={opacityScale}
+      bins={getBins}
+      gap={gap}
+      {...(isRect ? { binWidth, binHeight } : { radius })}
+    >
+      {(heatmap) =>
+        heatmap.map((heatmapBins, colIndex) =>
+          heatmapBins.map((bin) => {
+            const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey(bin));
+            return (
+              <HeatmapCell
+                key={`heatmap-cell-${bin.row}-${bin.column}`}
+                bin={bin}
+                isRect={isRect}
+                binWidth={binWidth}
+                fill={isDeselected ? deselectedColor : bin.color ?? deselectedColor}
+                fillOpacity={isDeselected ? DESELECTED_OPACITY : bin.opacity ?? 1}
+                colIndex={colIndex}
+                animationType={animationType}
+                tooltipBody={tooltipBody}
+                onClick={onClick}
+              />
+            );
+          })
+        )
+      }
+    </HeatmapComponent>
   );
 });
 

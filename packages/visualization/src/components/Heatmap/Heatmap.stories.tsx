@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
 import { Box } from '@mui/material';
-import { RowDatum, ColumnDatum } from './types';
+import { RowDatum, ColumnDatum, HeatmapCellId } from './types';
 
 const meta = {
     title: 'visualization/Heatmap',
@@ -109,7 +109,7 @@ export const LeftDiagonalXLabels: Story = {
 // their gradient color. Click a selected cell again to remove it from the selection.
 export const SelectableCells: Story = {
     render: () => {
-        const [selectedCells, setSelectedCells] = useState<{ row: number; column: number }[]>([]);
+        const [selectedCells, setSelectedCells] = useState<HeatmapCellId[]>([]);
         return (
             <Heatmap
                 data={heatmapData}

@@ -69,8 +69,8 @@ const Heatmap = ({
     bottom: (labelBottomSpace * numRows + Math.max(0, parentHeight - defaultTop)) / (numRows + 1),
   };
 
-  const xMax = parentWidth > marg.left + marg.right ? parentWidth - marg.left - marg.right : parentWidth;
-  const yMax = parentHeight - marg.bottom - marg.top;
+  const xMax = Math.max(0, parentWidth - marg.left - marg.right);
+  const yMax = Math.max(0, parentHeight - marg.bottom - marg.top);
 
   const binWidth = xMax / data.length;
   const binHeight = yMax / numRows;
