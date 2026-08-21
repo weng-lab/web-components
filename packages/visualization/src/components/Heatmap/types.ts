@@ -72,4 +72,13 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    * Fill color used for cells not in selectedCells. Defaults to a neutral gray.
    */
   deselectedColor?: string;
+  /**
+   * Fixed pixel width/height for each cell. Provide both to render cells at this exact size
+   * instead of stretching them to fill the container. Once the data no longer fits in the
+   * available space, the grid becomes scrollable in both directions with the row and column
+   * axis labels pinned in place (frozen panes), so large datasets stay legible instead of
+   * cells shrinking and overlapping.
+   */
+  cellWidth?: number;
+  cellHeight?: number;
 };
