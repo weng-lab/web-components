@@ -155,6 +155,38 @@ export const WithNullValues: Story = {
     },
 };
 
+// A much larger dataset (60 columns x 80 rows) with cellWidth/cellHeight set - cells render at
+// a fixed pixel size instead of shrinking to fit, and the grid scrolls in both directions inside
+// its container. Row and column labels stay pinned (frozen panes) while the cell grid scrolls.
+const largeHeatmapData: ColumnDatum[] = Array.from(
+  { length: 60 },
+  (_, colIndex) =>
+    ({
+      columnName: `Group ${colIndex + 1}`,
+      metadata: { description: "column description", source: "column source" },
+      rows: Array.from(
+        { length: 80 },
+        (_, rowIndex) =>
+          ({
+            rowName: `Row ${rowIndex + 1}`,
+            count: Math.floor(Math.random() * 100),
+            metadata: { description: "row description", source: "row source" },
+          } satisfies RowDatum)
+      ),
+    } satisfies ColumnDatum<MyMetadata>)
+);
+
+export const ScrollableLargeDataset: Story = {
+    args: {
+        data: largeHeatmapData,
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+        cellWidth: 24,
+        cellHeight: 18,
+    },
+};
+
 // Manually sized plot. Container is 1000x700 with a dashed border - the plot
 // should render at the fixed 400x300 size below, ignoring the container size.
 export const ManualSize: Story = {

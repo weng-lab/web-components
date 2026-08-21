@@ -1,103 +1,129 @@
 import ReactDOM from 'react-dom/client';
-import { useState, useEffect, useRef } from 'react';
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
-import { TwoPaneLayout } from './packages/ui-components/src';
-import { Table } from './packages/ui-components/src';
-import type { TableColDef } from './packages/ui-components/src';
+import { useRef } from 'react';
+import { Box, Button, Stack, Typography } from '@mui/material';
+import { Heatmap } from './packages/visualization/src';
+import type { ColumnDatum, RowDatum, DownloadPlotHandle } from './packages/visualization/src';
 
-const columns: TableColDef[] = [
-    { field: 'gene', headerName: 'Gene', width: 120 },
-    { field: 'chromosome', headerName: 'Chromosome', width: 120 },
-    { field: 'start', headerName: 'Start', width: 120, type: 'number' },
-    { field: 'end', headerName: 'End', width: 120, type: 'number' },
-    { field: 'score', headerName: 'Score', width: 100, type: 'number' },
-];
+type ScrollableHeatmapMetadata = { description: string; source: string };
 
-type Row = { id: number; gene: string; chromosome: string; start: number; end: number; score: number };
-
-const mockRows: Row[] = Array.from({ length: 25 }, (_, i) => ({
-    id: i + 1,
-    gene: `GENE${String(i + 1).padStart(3, '0')}`,
-    chromosome: `chr${(i % 22) + 1}`,
-    start: 1_000_000 + i * 50_000,
-    end: 1_050_000 + i * 50_000,
-    score: Math.round(Math.random() * 1000) / 10,
-}));
-
-const QUERY_DELAY_MS = 3000;
-
-const PlaceholderPlot = ({ label }: { label: string }) => (
-    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', border: '1px dashed #ccc', borderRadius: 4 }}>
-        <Typography color="text.secondary">{label}</Typography>
-    </div>
+// 60 columns x 80 rows - large enough that fixed-size cells no longer fit the container, so the
+// grid scrolls and the frozen row/column label panes + axis titles kick in.
+const scrollableHeatmapData: ColumnDatum[] = Array.from(
+    { length: 60 },
+    (_, colIndex) =>
+        ({
+            columnName: `Group ${colIndex + 1}`,
+            metadata: { description: 'column description', source: 'column source' },
+            rows: Array.from(
+                { length: 80 },
+                (_, rowIndex) =>
+                    ({
+                        rowName: `Row ${rowIndex + 1}`,
+                        count: Math.floor(Math.random() * 100),
+                        metadata: { description: 'row description', source: 'row source' },
+                    } satisfies RowDatum)
+            ),
+        } satisfies ColumnDatum<ScrollableHeatmapMetadata>)
 );
 
-/** Inner component — fully remounts on each `mountKey` change, simulating a hard reload */
-function TwoPaneTest() {
-    const [rows, setRows] = useState<Row[]>([]);
-    const [loading, setLoading] = useState(true);
-    const renderCount = useRef(0);
-    renderCount.current += 1;
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setRows(mockRows);
-            setLoading(false);
-        }, QUERY_DELAY_MS);
-        return () => clearTimeout(timer);
-    }, []);
+function ScrollableHeatmapTest() {
+    const heatmapRef = useRef<DownloadPlotHandle>(null);
 
     return (
-        <Box sx={{ mt: 6}}>
-            <Typography variant="h6" gutterBottom>
-                DEBUG: Dummy TwoPaneLayout (for height comparison)
-            </Typography>
-            <TwoPaneLayout
-                direction={{ xs: "column", md: "row" }}
-                rowHeight="700px"
-                TableComponent={
-                    <Box sx={{ height: "100%", background: "#eee" }}>
-                        Dummy Table
-                    </Box>
-                }
-                plots={[
-                    {
-                        tabTitle: "Dummy Plot",
-                        plotComponent: (
-                            <Box sx={{ height: "100%", background: "#ccc" }}>
-                                Dummy Plot
-                            </Box>
-                        ),
-                    },
-                ]}
-            />
+        <Box sx={{ p: 2 }}>
+            <Stack direction="row" alignItems="center" gap={2} mb={2}>
+                <Typography variant="h6">Scrollable Heatmap (frozen panes)</Typography>
+                <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadSVG()}>
+                    Download SVG
+                </Button>
+                <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadPNG()}>
+                    Download PNG
+                </Button>
+            </Stack>
+            <Box sx={{ width: 850, height: 500, border: '1px solid #ccc' }}>
+                <Heatmap
+                    ref={heatmapRef}
+                    data={scrollableHeatmapData}
+                    xLabel="X-Axis Label"
+                    yLabel="Y-Axis Label"
+                    colors={['#20619e', '#fff36e', '#c92b16']}
+                    cellWidth={24}
+                    cellHeight={18}
+                    tooltipBody={(bin) => (
+                        <Box maxWidth={300}>
+                            <div><strong>Row:</strong> {bin.bin.rowName}</div>
+                            <div><strong>Column:</strong> {bin.datum.columnName}</div>
+                            <div><strong>Value:</strong> {bin?.count}</div>
+                        </Box>
+                    )}
+                />
+            </Box>
+        </Box>
+    );
+}
+
+type NonScrollingHeatmapMetadata = { description: string; source: string };
+
+// 10 columns x 16 rows - small enough to fit the container without scrolling, so cells stretch
+// to fill it (the normal, non-scrollable rendering path).
+const nonScrollingHeatmapData: ColumnDatum[] = Array.from(
+    { length: 10 },
+    (_, colIndex) =>
+        ({
+            columnName: `Group ${colIndex + 1}`,
+            metadata: { description: 'column description', source: 'column source' },
+            rows: Array.from(
+                { length: 16 },
+                (_, rowIndex) =>
+                    ({
+                        rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
+                        count: Math.floor(Math.random() * 100),
+                        metadata: { description: 'row description', source: 'row source' },
+                    } satisfies RowDatum)
+            ),
+        } satisfies ColumnDatum<NonScrollingHeatmapMetadata>)
+);
+
+function NonScrollingHeatmapTest() {
+    const heatmapRef = useRef<DownloadPlotHandle>(null);
+
+    return (
+        <Box sx={{ p: 2 }}>
+            <Stack direction="row" alignItems="center" gap={2} mb={2}>
+                <Typography variant="h6">Non-Scrolling Heatmap</Typography>
+                <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadSVG()}>
+                    Download SVG
+                </Button>
+                <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadPNG()}>
+                    Download PNG
+                </Button>
+            </Stack>
+            <Box sx={{ width: 850, height: 500, border: '1px solid #ccc' }}>
+                <Heatmap
+                    ref={heatmapRef}
+                    data={nonScrollingHeatmapData}
+                    xLabel="X-Axis Label"
+                    yLabel="Y-Axis Label"
+                    colors={['#20619e', '#fff36e', '#c92b16']}
+                    tooltipBody={(bin) => (
+                        <Box maxWidth={300}>
+                            <div><strong>Row:</strong> {bin.bin.rowName}</div>
+                            <div><strong>Column:</strong> {bin.datum.columnName}</div>
+                            <div><strong>Value:</strong> {bin?.count}</div>
+                        </Box>
+                    )}
+                />
+            </Box>
         </Box>
     );
 }
 
 function TestingPage() {
-    // Incrementing this key forces a full unmount → remount of TwoPaneTest,
-    // reproducing the exact render sequence that happens on a hard browser reload.
-    const [mountKey, setMountKey] = useState(0);
-
     return (
-        <div style={{ padding: 16 }}>
-            <Stack direction="row" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h6">TwoPaneLayout — direction bug reproduction</Typography>
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setMountKey(k => k + 1)}
-                >
-                    Simulate Hard Reload
-                </Button>
-                <Typography variant="caption" color="text.secondary">
-                    mount #{mountKey}
-                </Typography>
-            </Stack>
-
-            <TwoPaneTest key={mountKey} />
-        </div>
+        <>
+            <ScrollableHeatmapTest />
+            <NonScrollingHeatmapTest />
+        </>
     );
 }
 
