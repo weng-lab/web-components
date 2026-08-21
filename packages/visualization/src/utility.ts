@@ -84,9 +84,11 @@ export function downloadAsSVG(svgElement: SVGSVGElement, fileName = "chart.svg")
  * Converts an SVG element to PNG and downloads it. svgElement must be attached to the document
  * (clientWidth/clientHeight are read from its layout box) for the whole duration of the export -
  * if the caller only needs it attached for this call (e.g. an off-screen node built just for
- * export), pass onComplete to know when it's safe to detach/remove it.
+ * export), pass onComplete to know when it's safe to detach/remove it. onComplete receives
+ * whether the download actually succeeded, so callers can surface a failure if they care to -
+ * it's called the same way (once, eventually) on every path either way.
  */
-export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.png", scale = window.devicePixelRatio || 2, onComplete?: () => void) {
+export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.png", scale = window.devicePixelRatio || 2, onComplete?: (success: boolean) => void) {
     const serializer = new XMLSerializer();
     const svgString = serializer.serializeToString(svgElement);
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
@@ -102,7 +104,7 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
 
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-            onComplete?.();
+            onComplete?.(false);
             return;
         }
 
@@ -123,12 +125,12 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
                 link.click();
                 URL.revokeObjectURL(pngUrl);
             }
-            onComplete?.();
+            onComplete?.(!!blob);
         }, "image/png",
             1, // max quality
         );
     };
-    img.onerror = () => onComplete?.();
+    img.onerror = () => onComplete?.(false);
 
     img.src = url;
 }
