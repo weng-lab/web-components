@@ -31,3 +31,8 @@ export type { HistogramProps, HistogramBin } from './components/Histogram';
 
 export { useResponsiveParentSize, ResponsiveContainer } from './responsive';
 export type { ManualSizeProps, UseResponsiveParentSizeResult, ResponsiveContainerProps } from './responsive';
+
+export { useStableCallback } from './hooks';
+
+export { PlotTooltip } from './tooltip';
+export type { PlotTooltipHandle, PlotTooltipRef, PlotTooltipProps } from './tooltip';
