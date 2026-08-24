@@ -121,19 +121,12 @@ const Heatmap = ({
     top: defaultTop,
     left: maxRowNameWidth + AXIS_LABEL_GAP + Y_AXIS_TITLE_SPACE,
     right: defaultRight,
-    // The x-axis is drawn one cell below the last row (a full cell's height, i.e. one row's
-    // worth of breathing room) rather than immediately at yMax, and @visx/axis's Ticks renderer
-    // itself adds a further `fontSize` px downward shift for AxisBottom specifically (see
-    // Ticks.js: tickYCoord = to.y + fontSize) before rotating the label into place - so the
-    // bottom margin needs labelBottomSpace *plus* both of those, or the tick-label pane ends up
-    // sized with no real slack and clips as soon as a label is a little longer than estimated.
-    // In scrollable mode that cell height is just the fixed cellHeight, known up front - no need
-    // to solve for it like the non-scrollable case below has to (there binHeight = (parentHeight
-    // - top - bottom) / numRows, circular with bottom itself, so bottom is solved for so that
-    // (bottom - binHeight) equals labelBottomSpace).
-    bottom: isScrollable
-      ? labelBottomSpace + (cellHeight as number) + TICK_FONT_SIZE
-      : (labelBottomSpace * numRows + Math.max(0, parentHeight - defaultTop)) / (numRows + 1),
+    // The x-axis is drawn immediately at yMax, right below the last row of cells. @visx/axis's
+    // Ticks renderer adds a further `fontSize` px downward shift for AxisBottom specifically (see
+    // Ticks.js: tickYCoord = to.y + fontSize) before rotating the label into place, so the bottom
+    // margin needs labelBottomSpace plus that shift, or the tick-label pane ends up sized with no
+    // real slack and clips as soon as a label is a little longer than estimated.
+    bottom: labelBottomSpace + TICK_FONT_SIZE,
   };
 
   const availableWidth = Math.max(0, parentWidth - marg.left - marg.right);
@@ -166,6 +159,13 @@ const Heatmap = ({
     () => scaleLinear<number>({ domain: [0, numRows], range: [yMax, 0] }),
     [numRows, yMax]
   );
+  // @visx/heatmap's HeatmapRect/HeatmapCircle place row r at yScale(r) and grow *downward* from
+  // there by binHeight - with yScale's range reversed ([yMax, 0]), that puts row 0 below yMax
+  // (overflowing the bottom of the grid) and leaves row numRows-1 short of y=0 (a gap at the
+  // top), rather than filling [0, yMax] flush. Feeding it yScale(row + 1) instead cancels that
+  // one-row shift so the cells land exactly where yScale (and the row axis below, which uses it
+  // unshifted) says they should.
+  const cellYScale = useCallback((row: number) => yScale(row + 1), [yScale]);
 
   const xTickValues = useMemo(() => data.map((_, i) => i + 0.5), [data]);
   const yTickValues = useMemo(() => data[0]?.rows.map((_, i) => i + 0.5) ?? [], [data]);
@@ -296,7 +296,7 @@ const Heatmap = ({
       <HeatmapCells
         data={data}
         xScale={xScale}
-        yScale={yScale}
+        yScale={cellYScale}
         colors={stableColors}
         maxValue={maxValue}
         gap={gap}
@@ -351,7 +351,6 @@ const Heatmap = ({
             <svg width={yTickLabelWidth} height={yMax} ref={rowAxisSvgRef}>
               <g transform={`translate(${yTickLabelWidth},0)`}>
                 <AxisLeft
-                  top={binHeight}
                   scale={yScale}
                   numTicks={numRows}
                   tickValues={yTickValues}
@@ -376,7 +375,7 @@ const Heatmap = ({
           >
             <svg width={xMax} height={xTickLabelHeight} ref={colAxisSvgRef}>
               <AxisBottom
-                top={binHeight}
+                top={0}
                 scale={xScale}
                 numTicks={data.length}
                 tickFormat={xAxisTickFormat}
@@ -403,7 +402,11 @@ const Heatmap = ({
           </div>
           {showLegend && (
             <div style={{ gridColumn: 4, gridRow: 2, width: legendWidth, marginLeft: LEGEND_GAP, height: viewportHeight }}>
-              <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef}>
+              {/* overflow: visible - the bottom-most tick label's center sits exactly at
+                  viewportHeight (no slack below it, unlike the top-most tick which has binHeight
+                  of slack above), so its lower half would otherwise be clipped by the svg's
+                  default overflow: hidden. */}
+              <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
                 <g transform={`translate(0, ${binHeight})`}>
                   <HeatmapLegend
                     colors={stableColors}
@@ -424,7 +427,7 @@ const Heatmap = ({
             <HeatmapCells
               data={data}
               xScale={xScale}
-              yScale={yScale}
+              yScale={cellYScale}
               colors={stableColors}
               maxValue={maxValue}
               gap={gap}
@@ -438,7 +441,7 @@ const Heatmap = ({
               deselectedColor={deselectedColor}
             />
             <AxisBottom
-              top={yMax + binHeight}
+              top={yMax}
               scale={xScale}
               numTicks={data.length}
               tickFormat={xAxisTickFormat}
@@ -449,7 +452,6 @@ const Heatmap = ({
               labelProps={xAxisLabelProps}
             />
             <AxisLeft
-              top={binHeight}
               scale={yScale}
               numTicks={numRows}
               tickValues={yTickValues}
