@@ -1,12 +1,17 @@
 import { scaleLinear } from "@visx/scale";
-import type { HeatmapProps, ColumnDatum } from "./types";
-import { useImperativeHandle, useRef, useMemo, useCallback } from "react";
+import type { HeatmapProps, ColumnDatum, HeatmapCellId } from "./types";
+import { useImperativeHandle, useRef, useMemo, useCallback, useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { AxisLeft, AxisBottom } from "@visx/axis";
-import HeatmapCells from "./HeatmapCells";
+import HeatmapCells, { type AnyBin } from "./HeatmapCells";
 import { heatmapCellStyles } from "./HeatmapCell";
 import HeatmapLegend, { getHeatmapLegendWidth } from "./HeatmapLegend";
+import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScales } from "./heatmapCellAppearance";
+import { drawHeatmapCells, getVisibleRange, hitTestCell, buildBin, type CanvasCellParams } from "./HeatmapCanvasCells";
+import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const LEGEND_GAP = 16;
@@ -23,6 +28,9 @@ const TICK_FONT_FAMILY = "sans-serif";
 // Canvas's measureText and the browser's actual SVG text layout don't agree to the sub-pixel,
 // and the gap widens with string length - pad generously so long tick labels aren't clipped.
 const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
+// Extra rows/columns painted/rendered just beyond the visible viewport in scrollable mode, so a
+// cell or tick label is already there before it scrolls into view rather than popping in late.
+const GRID_OVERSCAN_CELLS = 4;
 const getBins = (d: ColumnDatum) => d.rows;
 
 function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
@@ -61,22 +69,21 @@ const Heatmap = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const isScrollable = cellWidth != null && cellHeight != null;
 
-  // Frozen-pane refs: only used when isScrollable. The cell grid, row-label axis, and
-  // column-label axis each live in their own <svg> in their own scroll container, kept in
-  // sync by mirroring scroll position (see handleGridScroll below).
+  // Frozen-pane refs: only used when isScrollable. mainPaneRef is the only pane with a real
+  // native scrollbar - the cell canvas and the row/column tick-label panes all track its scroll
+  // position by reading it directly in handleGridScroll (rAF-throttled), rather than being
+  // natively scrolled themselves: the canvas repaints imperatively (drawCanvas), and the tick
+  // label SVGs are viewport-sized and shift via a transform driven by axisScrollPos state (see
+  // below) - both cheaper than the pane actually scrolling 15,000px+ of real content.
   const mainPaneRef = useRef<HTMLDivElement | null>(null);
-  const rowLabelPaneRef = useRef<HTMLDivElement | null>(null);
-  const colLabelPaneRef = useRef<HTMLDivElement | null>(null);
-  const cellsSvgRef = useRef<SVGSVGElement | null>(null);
-  const rowAxisSvgRef = useRef<SVGSVGElement | null>(null);
-  const colAxisSvgRef = useRef<SVGSVGElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const legendSvgRef = useRef<SVGSVGElement | null>(null);
+  const hoveredCellRef = useRef<HeatmapCellId | null>(null);
+  const canvasTooltipRef = useRef<PlotTooltipHandle<AnyBin>>(null);
+  const drawRafRef = useRef<number | null>(null);
 
-  const handleGridScroll = useCallback(() => {
-    const main = mainPaneRef.current;
-    if (!main) return;
-    if (rowLabelPaneRef.current) rowLabelPaneRef.current.scrollTop = main.scrollTop;
-    if (colLabelPaneRef.current) colLabelPaneRef.current.scrollLeft = main.scrollLeft;
+  useEffect(() => () => {
+    if (drawRafRef.current != null) cancelAnimationFrame(drawRafRef.current);
   }, []);
 
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
@@ -97,16 +104,9 @@ const Heatmap = ({
 
   const xTickAngle = xLabelOrientation === "horizontal" ? 0 : xLabelOrientation === "vertical" ? -90 : xLabelOrientation === "leftDiagonal" ? -45 : 45;
   const xTickTextAnchor: "middle" | "start" | "end" = xLabelOrientation === "horizontal" ? "middle" : xLabelOrientation === "rightDiagonal" ? "start" : "end";
-  // Full-length rotated (vertical) labels need the most vertical space (their rendered width
-  // becomes vertical space once rotated), diagonal labels need proportionally less (sin of a
-  // 45deg rotation), and horizontal labels only need a single line.
   const rotatedColNameSpace = maxColNameWidth;
   const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? rotatedColNameSpace : rotatedColNameSpace * Math.SQRT1_2;
 
-  // Consumers nearly always pass `colors` as an inline array literal, so its identity changes on
-  // every render of theirs. That alone rebuilds the color scale and, through it, every cell in the
-  // grid. Keying on the contents means the array is only replaced when the colors really change.
-  // (A NUL separator cannot appear in a CSS color, so the join is unambiguous.)
   const colorsKey = colors.join("\u0000");
   const stableColors = useMemo(
     () => colorsKey.split("\u0000") as [string, string, ...string[]],
@@ -121,28 +121,17 @@ const Heatmap = ({
     top: defaultTop,
     left: maxRowNameWidth + AXIS_LABEL_GAP + Y_AXIS_TITLE_SPACE,
     right: defaultRight,
-    // The x-axis is drawn immediately at yMax, right below the last row of cells. @visx/axis's
-    // Ticks renderer adds a further `fontSize` px downward shift for AxisBottom specifically (see
-    // Ticks.js: tickYCoord = to.y + fontSize) before rotating the label into place, so the bottom
-    // margin needs labelBottomSpace plus that shift, or the tick-label pane ends up sized with no
-    // real slack and clips as soon as a label is a little longer than estimated.
     bottom: labelBottomSpace + TICK_FONT_SIZE,
   };
 
   const availableWidth = Math.max(0, parentWidth - marg.left - marg.right);
   const availableHeight = Math.max(0, parentHeight - marg.bottom - marg.top);
 
-  // xMax/yMax are the full content size the cell grid needs. In scrollable mode that's driven
-  // by the fixed cell size rather than clamped to the available space, so it can exceed it -
-  // the viewport (below) is what actually gets clamped, and scrolls to reveal the rest.
   const xMax = isScrollable ? data.length * (cellWidth as number) : availableWidth;
   const yMax = isScrollable ? numRows * (cellHeight as number) : availableHeight;
   const viewportWidth = isScrollable ? Math.min(xMax, availableWidth) : xMax;
   const viewportHeight = isScrollable ? Math.min(yMax, availableHeight) : yMax;
 
-  // In scrollable mode marg.left/marg.bottom are split into a tick-label pane (which scrolls in
-  // sync with the cell grid) and a title pane (which never scrolls, so the axis title can't be
-  // scrolled out of view - see the "always know what axis you're looking at" panes below).
   const yTitleWidth = Y_AXIS_TITLE_SPACE;
   const yTickLabelWidth = Math.max(0, marg.left - yTitleWidth);
   const xTitleHeight = X_AXIS_TITLE_SPACE;
@@ -159,27 +148,134 @@ const Heatmap = ({
     () => scaleLinear<number>({ domain: [0, numRows], range: [yMax, 0] }),
     [numRows, yMax]
   );
-  // @visx/heatmap's HeatmapRect/HeatmapCircle place row r at yScale(r) and grow *downward* from
-  // there by binHeight - with yScale's range reversed ([yMax, 0]), that puts row 0 below yMax
-  // (overflowing the bottom of the grid) and leaves row numRows-1 short of y=0 (a gap at the
-  // top), rather than filling [0, yMax] flush. Feeding it yScale(row + 1) instead cancels that
-  // one-row shift so the cells land exactly where yScale (and the row axis below, which uses it
-  // unshifted) says they should.
   const cellYScale = useCallback((row: number) => yScale(row + 1), [yScale]);
 
   const xTickValues = useMemo(() => data.map((_, i) => i + 0.5), [data]);
   const yTickValues = useMemo(() => data[0]?.rows.map((_, i) => i + 0.5) ?? [], [data]);
 
-  // Builds a standalone, off-DOM <svg> at full content size by cloning the three live panes
-  // (cells, row axis, column axis, legend) into one coordinate space - the same layout the
-  // non-scrollable branch renders directly. Used only for export, so the always-visible panes
-  // never have to render the full (potentially huge) grid twice.
-  const buildScrollableExportSVG = (): SVGSVGElement | null => {
-    const cells = cellsSvgRef.current;
-    const rowAxis = rowAxisSvgRef.current;
-    const colAxis = colAxisSvgRef.current;
-    if (!cells || !rowAxis || !colAxis) return null;
+  const resolvedDeselectedColor = deselectedColor ?? DEFAULT_DESELECTED_COLOR;
+  const { colorScale, opacityScale } = useMemo(
+    () => getHeatmapColorScales(stableColors, maxValue),
+    [stableColors, maxValue]
+  );
+  const selectedKeys = useMemo(
+    () => (selectedCells?.length ? new Set(selectedCells.map(cellKey)) : null),
+    [selectedCells]
+  );
 
+  // Everything the canvas draw loop and hit-testing need to place/color a cell. Only changes when
+  // a prop that actually affects appearance/geometry changes - never on scroll or hover, so
+  // drawCanvas (and, through it, handleGridScroll) keeps a stable identity across scroll events.
+  const canvasCellParams: CanvasCellParams = useMemo(
+    () => ({
+      data, numRows, xScale, cellYScale, colorScale, opacityScale, gap, isRect, binWidth, binHeight,
+      yMax, selectedKeys, deselectedColor: resolvedDeselectedColor,
+    }),
+    [data, numRows, xScale, cellYScale, colorScale, opacityScale, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor]
+  );
+
+  // Imperative canvas paint - deliberately never routed through React state. Driven both by prop
+  // changes (the effect below) and by native scroll events (handleGridScroll), and it's the
+  // scroll case that matters: an earlier attempt at this drove the redraw through a React state
+  // update on every scroll frame, which forced React to reconcile on every frame and made
+  // scrolling *slower* than the plain (if huge) static SVG it replaced. Reading scroll position
+  // directly off the DOM and painting immediately keeps scrolling itself entirely on the
+  // browser's native, free compositor path - React is never involved.
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const main = mainPaneRef.current;
+    if (!canvas || !main) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, viewportWidth, viewportHeight);
+    const range = getVisibleRange(canvasCellParams, main.scrollLeft, main.scrollTop, viewportWidth, viewportHeight, GRID_OVERSCAN_CELLS);
+    ctx.translate(-main.scrollLeft, -main.scrollTop);
+    drawHeatmapCells(ctx, canvasCellParams, range, hoveredCellRef.current);
+  }, [canvasCellParams, viewportWidth, viewportHeight]);
+
+  useEffect(() => {
+    if (isScrollable) drawCanvas();
+  }, [isScrollable, drawCanvas]);
+
+  const [axisScrollPos, setAxisScrollPos] = useState({ left: 0, top: 0 });
+  const axisVisibleRange = useMemo(
+    () => getVisibleRange(canvasCellParams, axisScrollPos.left, axisScrollPos.top, viewportWidth, viewportHeight, GRID_OVERSCAN_CELLS),
+    [canvasCellParams, axisScrollPos.left, axisScrollPos.top, viewportWidth, viewportHeight]
+  );
+  const visibleXTickValues = useMemo(
+    () => xTickValues.slice(axisVisibleRange.colStart, axisVisibleRange.colEnd + 1),
+    [xTickValues, axisVisibleRange.colStart, axisVisibleRange.colEnd]
+  );
+  const visibleYTickValues = useMemo(
+    () => yTickValues.slice(axisVisibleRange.rowStart, axisVisibleRange.rowEnd + 1),
+    [yTickValues, axisVisibleRange.rowStart, axisVisibleRange.rowEnd]
+  );
+
+  const handleGridScroll = useCallback(() => {
+    const main = mainPaneRef.current;
+    if (!main) return;
+    if (drawRafRef.current != null) return;
+    drawRafRef.current = requestAnimationFrame(() => {
+      drawRafRef.current = null;
+      drawCanvas();
+      setAxisScrollPos({ left: main.scrollLeft, top: main.scrollTop });
+    });
+  }, [drawCanvas]);
+
+  const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const main = mainPaneRef.current;
+    if (!main) return;
+    const contentX = event.nativeEvent.offsetX + main.scrollLeft;
+    const contentY = event.nativeEvent.offsetY + main.scrollTop;
+    const cell = hitTestCell(canvasCellParams, contentX, contentY);
+    // Matches the SVG path's heatmapCellStyles (`.visx-heatmap-cell { cursor: pointer }`):
+    // pointer over any real cell - including a null-count one, which still hit-tests true here,
+    // same as it still being a hit target there via `pointer-events: all` - not just where
+    // onClick is wired up, so hover-only tooltips still get the affordance.
+    event.currentTarget.style.cursor = cell ? "pointer" : "default";
+    const prev = hoveredCellRef.current;
+    if (prev?.row !== cell?.row || prev?.column !== cell?.column) {
+      hoveredCellRef.current = cell;
+      drawCanvas();
+    }
+    if (cell) {
+      const bin = buildBin(canvasCellParams, cell);
+      if (bin) canvasTooltipRef.current?.show(bin, event);
+    } else {
+      canvasTooltipRef.current?.hide();
+    }
+  }, [canvasCellParams, drawCanvas]);
+
+  const handleCanvasMouseLeave = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    event.currentTarget.style.cursor = "default";
+    if (hoveredCellRef.current) {
+      hoveredCellRef.current = null;
+      drawCanvas();
+    }
+    canvasTooltipRef.current?.hide();
+  }, [drawCanvas]);
+
+  const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const main = mainPaneRef.current;
+    if (!main || !onClick) return;
+    const contentX = event.nativeEvent.offsetX + main.scrollLeft;
+    const contentY = event.nativeEvent.offsetY + main.scrollTop;
+    const cell = hitTestCell(canvasCellParams, contentX, contentY);
+    if (!cell) return;
+    const bin = buildBin(canvasCellParams, cell);
+    if (bin) onClick(bin);
+  }, [canvasCellParams, onClick]);
+
+  // Builds a standalone, off-DOM <svg> at full content size for export. Both the on-screen cell
+  // layer (a canvas painting only the current scroll viewport) and the on-screen row/column axis
+  // panes (SVGs now windowed to the visible tick range, see axisVisibleRange above) only ever
+  // hold a slice of the full grid - neither can just be cloned for export without capturing an
+  // incomplete/mispositioned snapshot. So all three (cells, row axis, column axis) are instead
+  // rendered fresh here in one detached tree - synchronously, full grid, no windowing - purely to
+  // snapshot into the export SVG below.
+  const buildScrollableExportSVG = (): SVGSVGElement | null => {
     const exportSvg = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
     exportSvg.setAttribute("width", String(marg.left + xMax + marg.right));
     exportSvg.setAttribute("height", String(marg.top + yMax + marg.bottom));
@@ -191,9 +287,60 @@ const Heatmap = ({
       exportSvg.appendChild(group);
     };
 
-    appendClone(cells, marg.left, marg.top);
-    appendClone(rowAxis, yTitleWidth, marg.top);
-    appendClone(colAxis, marg.left, marg.top + yMax);
+    let fullCells: SVGSVGElement | null = null;
+    let fullRowAxis: SVGSVGElement | null = null;
+    let fullColAxis: SVGSVGElement | null = null;
+    const exportContainer = document.createElement("div");
+    const exportRoot = createRoot(exportContainer);
+    flushSync(() => {
+      exportRoot.render(
+        <>
+          <svg width={xMax} height={yMax} ref={(el) => { fullCells = el; }}>
+            <HeatmapCells
+              data={data}
+              xScale={xScale}
+              yScale={cellYScale}
+              colors={stableColors}
+              maxValue={maxValue}
+              gap={gap}
+              isRect={isRect}
+              binWidth={binWidth}
+              binHeight={binHeight}
+              animationType={animationType}
+              onClick={onClick}
+              selectedCells={selectedCells}
+              deselectedColor={deselectedColor}
+            />
+          </svg>
+          <svg width={yTickLabelWidth} height={yMax} ref={(el) => { fullRowAxis = el; }}>
+            <g transform={`translate(${yTickLabelWidth},0)`}>
+              <AxisLeft
+                scale={yScale}
+                numTicks={numRows}
+                tickValues={yTickValues}
+                tickFormat={yAxisTickFormat}
+                tickLabelProps={yAxisTickLabelProps}
+              />
+            </g>
+          </svg>
+          <svg width={xMax} height={xTickLabelHeight} ref={(el) => { fullColAxis = el; }}>
+            <AxisBottom
+              top={0}
+              scale={xScale}
+              numTicks={data.length}
+              tickFormat={xAxisTickFormat}
+              tickValues={xTickValues}
+              tickLabelProps={xAxisTickLabelProps}
+            />
+          </svg>
+        </>
+      );
+    });
+    if (fullCells) appendClone(fullCells, marg.left, marg.top);
+    if (fullRowAxis) appendClone(fullRowAxis, yTitleWidth, marg.top);
+    if (fullColAxis) appendClone(fullColAxis, marg.left, marg.top + yMax);
+    exportRoot.unmount();
+
     if (showLegend && legendSvgRef.current) {
       appendClone(legendSvgRef.current, marg.left + xMax + LEGEND_GAP, marg.top);
     }
@@ -259,7 +406,12 @@ const Heatmap = ({
         downloadSVGAsPNG(svgRef.current, downloadFileName ?? "heatmap.png");
       }
     },
-  }), [downloadFileName, isScrollable, marg.left, marg.top, marg.right, marg.bottom, xMax, yMax, showLegend, yLabel, xLabel, xTickLabelHeight, xTitleHeight, yTitleWidth]);
+  }));
+  // No deps array: buildScrollableExportSVG (and the plain closures above) now render the cells
+  // and both axes fresh on every export (see its comment), reading a long list of render-scoped
+  // values - hand-maintaining an exhaustive deps list for that is exactly the kind of duplicated
+  // upkeep this refactor was trying to reduce elsewhere, and risks a stale export if one is ever
+  // missed. Recomputing this handle (two small closures) on every render is negligible cost.
 
   const xAxisTickFormat = (d: number | { valueOf(): number }) => allColNames[Math.floor(+d)] ?? "";
   const xAxisTickLabelProps = () => ({
@@ -289,33 +441,8 @@ const Heatmap = ({
     textAnchor: "middle" as const,
   };
 
-  const cellsSvg = (ref: React.Ref<SVGSVGElement>) => (
-    <svg width={xMax} height={yMax} ref={ref}>
-      {/* Inside the <svg> so cell hover styling survives the SVG/PNG download serialization */}
-      <style>{heatmapCellStyles}</style>
-      <HeatmapCells
-        data={data}
-        xScale={xScale}
-        yScale={cellYScale}
-        colors={stableColors}
-        maxValue={maxValue}
-        gap={gap}
-        isRect={isRect}
-        binWidth={binWidth}
-        binHeight={binHeight}
-        animationType={animationType}
-        tooltipBody={tooltipBody}
-        onClick={onClick}
-        selectedCells={selectedCells}
-        deselectedColor={deselectedColor}
-      />
-    </svg>
-  );
-
   return (
     <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
-      {/* Prevent an undefined parent size, or empty data, from producing elements with negative
-          or non-finite dimensions */}
       {!parentWidth || !parentHeight || data.length === 0 || numRows === 0 ? null : isScrollable ? (
         <div
           style={{
@@ -326,8 +453,6 @@ const Heatmap = ({
             gridTemplateRows: `${marg.top}px ${viewportHeight}px ${xTickLabelHeight}px ${xTitleHeight}px`,
           }}
         >
-          {/* Y-axis title: fixed in place (not scroll-synced) so it's always visible, unlike the
-              tick labels it stays centered on the visible viewport rather than the full data range */}
           <div style={{ gridColumn: 1, gridRow: 2, width: yTitleWidth, height: viewportHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width={yTitleWidth} height={viewportHeight}>
               <text
@@ -343,45 +468,57 @@ const Heatmap = ({
               </text>
             </svg>
           </div>
-          {/* Row tick labels: pinned to the left, vertical scroll mirrored from the cell grid */}
-          <div
-            ref={rowLabelPaneRef}
-            style={{ gridColumn: 2, gridRow: 2, width: yTickLabelWidth, height: viewportHeight, overflow: "hidden" }}
-          >
-            <svg width={yTickLabelWidth} height={yMax} ref={rowAxisSvgRef}>
-              <g transform={`translate(${yTickLabelWidth},0)`}>
+          <div style={{ gridColumn: 2, gridRow: 2, width: yTickLabelWidth, height: viewportHeight, overflow: "hidden" }}>
+            <svg width={yTickLabelWidth} height={viewportHeight}>
+              <g transform={`translate(${yTickLabelWidth},${-axisScrollPos.top})`}>
                 <AxisLeft
                   scale={yScale}
                   numTicks={numRows}
-                  tickValues={yTickValues}
+                  tickValues={visibleYTickValues}
                   tickFormat={yAxisTickFormat}
                   tickLabelProps={yAxisTickLabelProps}
                 />
               </g>
             </svg>
           </div>
-          {/* Cell grid: the only pane with a visible, user-driven scrollbar (both axes) */}
           <div
             ref={mainPaneRef}
             onScroll={handleGridScroll}
-            style={{ gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, overflow: "auto", overscrollBehavior: "contain" }}
+            style={{ gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, overflow: "auto", overscrollBehavior: "contain", position: "relative" }}
           >
-            {cellsSvg(cellsSvgRef)}
-          </div>
-          {/* Column tick labels: pinned under the cell grid, horizontal scroll mirrored from it */}
-          <div
-            ref={colLabelPaneRef}
-            style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "hidden" }}
-          >
-            <svg width={xMax} height={xTickLabelHeight} ref={colAxisSvgRef}>
-              <AxisBottom
-                top={0}
-                scale={xScale}
-                numTicks={data.length}
-                tickFormat={xAxisTickFormat}
-                tickValues={xTickValues}
-                tickLabelProps={xAxisTickLabelProps}
+            <div style={{ width: xMax, height: yMax, position: "relative" }}>
+              <canvas
+                ref={canvasRef}
+                width={viewportWidth * (window.devicePixelRatio || 1)}
+                height={viewportHeight * (window.devicePixelRatio || 1)}
+                style={{
+                  width: viewportWidth,
+                  height: viewportHeight,
+                  position: "sticky",
+                  top: 0,
+                  left: 0,
+                  display: "block",
+                  cursor: "default",
+                }}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseLeave={handleCanvasMouseLeave}
+                onClick={handleCanvasClick}
               />
+            </div>
+          </div>
+          {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
+          <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "hidden" }}>
+            <svg width={viewportWidth} height={xTickLabelHeight}>
+              <g transform={`translate(${-axisScrollPos.left},0)`}>
+                <AxisBottom
+                  top={0}
+                  scale={xScale}
+                  numTicks={data.length}
+                  tickFormat={xAxisTickFormat}
+                  tickValues={visibleXTickValues}
+                  tickLabelProps={xAxisTickLabelProps}
+                />
+              </g>
             </svg>
           </div>
           {/* X-axis title: fixed in place (not scroll-synced) so it's always visible, centered on

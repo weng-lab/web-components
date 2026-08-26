@@ -1,21 +1,15 @@
 import { HeatmapRect, HeatmapCircle, RectCell, CircleCell } from "@visx/heatmap";
-import { scaleLinear } from "@visx/scale";
 import { useMemo, useRef, memo, ReactElement } from "react";
 import type { AnimationType } from "../../utility";
 import type { ColumnDatum, RowDatum, HeatmapCellId } from "./types";
 import HeatmapCell from "./HeatmapCell";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { useStableCallback } from "../../hooks";
+import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScales, resolveCellAppearance } from "./heatmapCellAppearance";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
 
 const getBins = (d: ColumnDatum) => d.rows;
-
-const DEFAULT_DESELECTED_COLOR = "#d1d5db";
-const DESELECTED_OPACITY = 0.5;
-const NULL_VALUE_COLOR = "none";
-
-const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
 
 export interface HeatmapCellsProps {
   data: ColumnDatum[];
@@ -39,13 +33,9 @@ const HeatmapCells = memo(function HeatmapCells({
   isRect, binWidth, binHeight, animationType,
   tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR,
 }: HeatmapCellsProps) {
-  const colorScale = useMemo(
-    () => scaleLinear<string>({ range: colors, domain: colors.map((_, i) => (i * maxValue) / (colors.length - 1)) }),
+  const { colorScale, opacityScale } = useMemo(
+    () => getHeatmapColorScales(colors, maxValue),
     [colors, maxValue]
-  );
-  const opacityScale = useMemo(
-    () => scaleLinear<number>({ range: [0.5, 1], domain: [0.5, maxValue] }),
-    [maxValue]
   );
   const radius = Math.min(binWidth, binHeight) / 2;
 
@@ -79,14 +69,8 @@ const HeatmapCells = memo(function HeatmapCells({
         {(heatmap) =>
           heatmap.map((heatmapBins, colIndex) =>
             heatmapBins.map((bin) => {
-              const isNullValue = bin.count == null;
               const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey(bin));
-              const fill = isNullValue
-                ? NULL_VALUE_COLOR
-                : isDeselected
-                  ? deselectedColor
-                  : bin.color ?? deselectedColor;
-              const fillOpacity = isNullValue ? 0 : isDeselected ? DESELECTED_OPACITY : bin.opacity ?? 1;
+              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, bin.opacity, isDeselected, deselectedColor);
               return (
                 <HeatmapCell
                   key={`heatmap-cell-${bin.row}-${bin.column}`}
