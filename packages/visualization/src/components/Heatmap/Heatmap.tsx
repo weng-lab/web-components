@@ -33,6 +33,17 @@ const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 const GRID_OVERSCAN_CELLS = 4;
 const getBins = (d: ColumnDatum) => d.rows;
 
+// Minimal scroll offset (along one axis) that brings [boxStart, boxEnd) fully into
+// [current, current+viewportSize) - unchanged if it's already fully visible, and aligned to
+// boxStart if the box itself is bigger than the viewport (can't fit all of it either way).
+// Mirrors Element.scrollIntoView({ block: "nearest" })'s semantics.
+function nearestScrollOffset(current: number, viewportSize: number, boxStart: number, boxEnd: number): number {
+  if (boxEnd - boxStart > viewportSize) return boxStart;
+  if (boxStart < current) return boxStart;
+  if (boxEnd > current + viewportSize) return boxEnd - viewportSize;
+  return current;
+}
+
 function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
   // Null counts are gaps in the data and don't participate in the max. reduce rather than
   // Math.max(...spread): returns 0 (not -Infinity) for empty/all-null input, with no
@@ -64,6 +75,7 @@ const Heatmap = ({
   deselectedColor,
   cellWidth,
   cellHeight,
+  scrollToSelection,
 }: HeatmapProps) => {
   const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -81,6 +93,8 @@ const Heatmap = ({
   const hoveredCellRef = useRef<HeatmapCellId | null>(null);
   const canvasTooltipRef = useRef<PlotTooltipHandle<AnyBin>>(null);
   const drawRafRef = useRef<number | null>(null);
+  
+  const previousSelectionKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => () => {
     if (drawRafRef.current != null) cancelAnimationFrame(drawRafRef.current);
@@ -212,6 +226,36 @@ const Heatmap = ({
     () => yTickValues.slice(axisVisibleRange.rowStart, axisVisibleRange.rowEnd + 1),
     [yTickValues, axisVisibleRange.rowStart, axisVisibleRange.rowEnd]
   );
+
+  // Auto-scrolls to reveal newly-selected cells 
+  useEffect(() => {
+    const previousKeys = previousSelectionKeysRef.current;
+    const cells = selectedCells ?? [];
+    const newCells = cells.filter((cell) => !previousKeys.has(cellKey(cell)));
+    previousSelectionKeysRef.current = new Set(cells.map(cellKey));
+
+    const main = mainPaneRef.current;
+    if (!scrollToSelection || !isScrollable || !main || newCells.length === 0) return;
+
+    let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+    for (const cell of newCells) {
+      if (cell.column < minCol) minCol = cell.column;
+      if (cell.column > maxCol) maxCol = cell.column;
+      if (cell.row < minRow) minRow = cell.row;
+      if (cell.row > maxRow) maxRow = cell.row;
+    }
+
+    const boxLeft = minCol * binWidth;
+    const boxRight = (maxCol + 1) * binWidth;
+    const boxTop = yMax - (maxRow + 1) * binHeight;
+    const boxBottom = yMax - minRow * binHeight;
+
+    const targetLeft = nearestScrollOffset(main.scrollLeft, viewportWidth, boxLeft, boxRight);
+    const targetTop = nearestScrollOffset(main.scrollTop, viewportHeight, boxTop, boxBottom);
+    if (targetLeft !== main.scrollLeft || targetTop !== main.scrollTop) {
+      main.scrollTo({ left: targetLeft, top: targetTop, behavior: "smooth" });
+    }
+  }, [selectedCells, scrollToSelection, isScrollable, binWidth, binHeight, yMax, viewportWidth, viewportHeight]);
 
   const handleGridScroll = useCallback(() => {
     const main = mainPaneRef.current;

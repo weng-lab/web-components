@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
-import { Box } from '@mui/material';
+import { Box, Button, Stack } from '@mui/material';
 import { RowDatum, ColumnDatum, HeatmapCellId } from './types';
 import type { AnyBin } from './HeatmapCells';
 
@@ -187,41 +187,54 @@ export const ScrollableLargeDataset: Story = {
     },
 };
 
-// 650 columns x 80 rows (52,000 cells) - large enough that a per-cell SVG grid drops hover/scroll
-// to ~20fps even with nothing re-rendering. Cells are painted onto a canvas sized to the visible
-// viewport and repainted on scroll, so this should stay smooth regardless of dataset size.
-const veryLargeHeatmapData: ColumnDatum[] = Array.from(
-  { length: 650 },
-  (_, colIndex) =>
-    ({
-      columnName: `Group ${colIndex + 1}`,
-      metadata: { description: "column description", source: "column source" },
-      rows: Array.from(
-        { length: 80 },
-        (_, rowIndex) =>
-          ({
-            rowName: `Row ${rowIndex + 1}`,
-            count: Math.floor(Math.random() * 100),
-            metadata: { description: "row description", source: "row source" },
-          } satisfies RowDatum)
-      ),
-    } satisfies ColumnDatum<MyMetadata>)
-);
-
-export const ScrollableVeryLargeDataset: Story = {
-    args: {
-        data: veryLargeHeatmapData,
-        xLabel: 'X-Axis Label',
-        yLabel: 'Y-Axis Label',
-        colors: ['#20619e', '#fff36e', '#c92b16'],
-        cellWidth: 24,
-        cellHeight: 18,
-        tooltipBody: (bin: AnyBin) => (
-        <Box maxWidth={300}>
-          <div><strong>Row:</strong> {bin.bin.rowName}</div>
-          <div><strong>Column:</strong> {bin.datum.columnName}</div>
-          <div><strong>Value:</strong> {bin?.count}</div>
-        </Box>),
+// Mimics selecting a column/row in an external table: clicking a button sets selectedCells to an
+// entire column or row far outside the current scroll position. With scrollToSelection enabled,
+// the grid should auto-scroll (minimal movement, "nearest" semantics) to reveal it rather than
+// leaving the caller to scroll there manually.
+export const ScrollToSelectionDemo: Story = {
+    render: () => {
+        const [selectedCells, setSelectedCells] = useState<HeatmapCellId[]>([]);
+        const selectColumn = (column: number) =>
+            setSelectedCells(Array.from({ length: 80 }, (_, row) => ({ row, column })));
+        const selectRow = (row: number) =>
+            setSelectedCells(Array.from({ length: 60 }, (_, column) => ({ row, column })));
+        // Adds (rather than replaces) a column's cells to the current selection - re-clicking the
+        // same column replaces just its own cells rather than growing duplicates - so two columns
+        // can be selected at once, testing the scroll-to-selection bounding box across a span
+        // wider than the viewport (first + last column covers the full grid width).
+        const addColumn = (column: number) =>
+            setSelectedCells((current) => [
+                ...current.filter((cell) => cell.column !== column),
+                ...Array.from({ length: 80 }, (_, row) => ({ row, column })),
+            ]);
+        return (
+            // Stack (a flex container) sizes to its content by default - without an explicit
+            // height here, Heatmap's own 100%-height measuring div (ResponsiveContainer) would
+            // resolve against an ancestor with no definite height and collapse to zero, rendering
+            // nothing. The Box around Heatmap takes the remaining flex space instead.
+            <Stack gap={2} sx={{ height: '100%' }}>
+                <Stack direction="row" gap={1}>
+                    <Button variant="outlined" size="small" onClick={() => selectColumn(10)}>Select Column 11</Button>
+                    <Button variant="outlined" size="small" onClick={() => selectColumn(45)}>Select Column 46</Button>
+                    <Button variant="outlined" size="small" onClick={() => selectRow(60)}>Select Row 61</Button>
+                    <Button variant="outlined" size="small" onClick={() => addColumn(0)}>Add First Column</Button>
+                    <Button variant="outlined" size="small" onClick={() => addColumn(59)}>Add Last Column</Button>
+                    <Button variant="outlined" size="small" onClick={() => setSelectedCells([])}>Clear Selection</Button>
+                </Stack>
+                <Box sx={{ flex: 1, minHeight: 0 }}>
+                    <Heatmap
+                        data={largeHeatmapData}
+                        xLabel="X-Axis Label"
+                        yLabel="Y-Axis Label"
+                        colors={['#20619e', '#fff36e', '#c92b16']}
+                        cellWidth={24}
+                        cellHeight={18}
+                        selectedCells={selectedCells}
+                        scrollToSelection
+                    />
+                </Box>
+            </Stack>
+        );
     },
 };
 
