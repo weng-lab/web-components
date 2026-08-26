@@ -583,19 +583,13 @@ const Heatmap = ({
           </div>
           {showLegend && (
             <div style={{ gridColumn: 4, gridRow: 2, width: legendWidth, marginLeft: LEGEND_GAP, height: viewportHeight }}>
-              {/* overflow: visible - the bottom-most tick label's center sits exactly at
-                  viewportHeight (no slack below it, unlike the top-most tick which has binHeight
-                  of slack above), so its lower half would otherwise be clipped by the svg's
-                  default overflow: hidden. */}
               <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
-                <g transform={`translate(0, ${binHeight})`}>
-                  <HeatmapLegend
-                    colors={stableColors}
-                    minValue={0}
-                    maxValue={maxValue}
-                    height={Math.max(0, viewportHeight - binHeight)}
-                  />
-                </g>
+                <HeatmapLegend
+                  colors={stableColors}
+                  minValue={0}
+                  maxValue={maxValue}
+                  height={viewportHeight}
+                />
               </svg>
             </div>
           )}
@@ -643,7 +637,7 @@ const Heatmap = ({
               labelProps={yAxisLabelProps}
             />
             {showLegend && (
-              <g transform={`translate(${xMax + LEGEND_GAP}, ${binHeight})`}>
+              <g transform={`translate(${xMax + LEGEND_GAP}, 0)`}>
                 <HeatmapLegend
                   colors={stableColors}
                   minValue={0}
