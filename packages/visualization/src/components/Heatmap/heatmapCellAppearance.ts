@@ -7,13 +7,11 @@ export const NULL_VALUE_COLOR = "none";
 
 export const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
 
-export function getHeatmapColorScales(colors: [string, string, ...string[]], maxValue: number) {
-  const colorScale = scaleLinear<string>({
+export function getHeatmapColorScale(colors: [string, string, ...string[]], maxValue: number) {
+  return scaleLinear<string>({
     range: colors,
     domain: colors.map((_, i) => (i * maxValue) / (colors.length - 1)),
   });
-  const opacityScale = scaleLinear<number>({ range: [0.5, 1], domain: [0.5, maxValue] });
-  return { colorScale, opacityScale };
 }
 
 /**
@@ -24,13 +22,12 @@ export function getHeatmapColorScales(colors: [string, string, ...string[]], max
 export function resolveCellAppearance(
   count: number | null | undefined,
   color: string | undefined,
-  opacity: number | undefined,
   isDeselected: boolean,
   deselectedColor: string
 ): { fill: string; fillOpacity: number } {
   const isNullValue = count == null;
   return {
     fill: isNullValue ? NULL_VALUE_COLOR : isDeselected ? deselectedColor : color ?? deselectedColor,
-    fillOpacity: isNullValue ? 0 : isDeselected ? DESELECTED_OPACITY : opacity ?? 1,
+    fillOpacity: isNullValue ? 0 : isDeselected ? DESELECTED_OPACITY : 1,
   };
 }

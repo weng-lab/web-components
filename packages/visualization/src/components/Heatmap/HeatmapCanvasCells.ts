@@ -13,7 +13,6 @@ export interface CanvasCellParams {
   xScale: (column: number) => number;
   cellYScale: (row: number) => number;
   colorScale: (count: number) => string | undefined;
-  opacityScale: (count: number) => number | undefined;
   gap: number;
   isRect: boolean;
   binWidth: number;
@@ -83,7 +82,7 @@ export function drawHeatmapCells(
   range: CanvasDrawRange,
   hoveredCell: HeatmapCellId | null
 ) {
-  const { data, colorScale, opacityScale, selectedKeys, deselectedColor } = params;
+  const { data, colorScale, selectedKeys, deselectedColor } = params;
   for (let col = range.colStart; col <= range.colEnd; col++) {
     const columnDatum = data[col];
     if (!columnDatum) continue;
@@ -92,9 +91,8 @@ export function drawHeatmapCells(
       if (!rowDatum) continue;
       const count = rowDatum.count;
       const color = count == null ? undefined : colorScale(count);
-      const opacity = count == null ? undefined : opacityScale(count);
       const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey({ row, column: col }));
-      const { fill, fillOpacity } = resolveCellAppearance(count, color, opacity, isDeselected, deselectedColor);
+      const { fill, fillOpacity } = resolveCellAppearance(count, color, isDeselected, deselectedColor);
       if (fillOpacity <= 0) continue;
 
       const geometry = getCellGeometry(params, col, row);
@@ -138,9 +136,8 @@ export function buildBin(params: CanvasCellParams, cell: HeatmapCellId): AnyBin 
 
   const count = rowDatum.count;
   const color = count == null ? undefined : params.colorScale(count);
-  const opacity = count == null ? undefined : params.opacityScale(count);
   const geometry = getCellGeometry(params, cell.column, cell.row);
-  const shared = { bin: rowDatum, row: cell.row, column: cell.column, datum: columnDatum, gap: params.gap, count, color, opacity };
+  const shared = { bin: rowDatum, row: cell.row, column: cell.column, datum: columnDatum, gap: params.gap, count, color, opacity: count == null ? undefined : 1 };
 
   return geometry.isRect
     ? ({ ...shared, x: geometry.x, y: geometry.y, width: geometry.width, height: geometry.height } as AnyBin)

@@ -5,7 +5,7 @@ import type { ColumnDatum, RowDatum, HeatmapCellId } from "./types";
 import HeatmapCell from "./HeatmapCell";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { useStableCallback } from "../../hooks";
-import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScales, resolveCellAppearance } from "./heatmapCellAppearance";
+import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale, resolveCellAppearance } from "./heatmapCellAppearance";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
 
@@ -33,8 +33,8 @@ const HeatmapCells = memo(function HeatmapCells({
   isRect, binWidth, binHeight, animationType,
   tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR,
 }: HeatmapCellsProps) {
-  const { colorScale, opacityScale } = useMemo(
-    () => getHeatmapColorScales(colors, maxValue),
+  const colorScale = useMemo(
+    () => getHeatmapColorScale(colors, maxValue),
     [colors, maxValue]
   );
   const radius = Math.min(binWidth, binHeight) / 2;
@@ -61,7 +61,6 @@ const HeatmapCells = memo(function HeatmapCells({
         xScale={xScale}
         yScale={yScale}
         colorScale={colorScale}
-        opacityScale={opacityScale}
         bins={getBins}
         gap={gap}
         {...(isRect ? { binWidth, binHeight } : { radius })}
@@ -70,7 +69,7 @@ const HeatmapCells = memo(function HeatmapCells({
           heatmap.map((heatmapBins, colIndex) =>
             heatmapBins.map((bin) => {
               const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey(bin));
-              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, bin.opacity, isDeselected, deselectedColor);
+              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, isDeselected, deselectedColor);
               return (
                 <HeatmapCell
                   key={`heatmap-cell-${bin.row}-${bin.column}`}

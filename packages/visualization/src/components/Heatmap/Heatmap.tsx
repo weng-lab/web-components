@@ -9,7 +9,7 @@ import { AxisLeft, AxisBottom } from "@visx/axis";
 import HeatmapCells, { type AnyBin } from "./HeatmapCells";
 import { heatmapCellStyles } from "./HeatmapCell";
 import HeatmapLegend, { getHeatmapLegendWidth } from "./HeatmapLegend";
-import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScales } from "./heatmapCellAppearance";
+import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale } from "./heatmapCellAppearance";
 import { drawHeatmapCells, getVisibleRange, hitTestCell, buildBin, type CanvasCellParams } from "./HeatmapCanvasCells";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 
@@ -168,8 +168,8 @@ const Heatmap = ({
   const yTickValues = useMemo(() => data[0]?.rows.map((_, i) => i + 0.5) ?? [], [data]);
 
   const resolvedDeselectedColor = deselectedColor ?? DEFAULT_DESELECTED_COLOR;
-  const { colorScale, opacityScale } = useMemo(
-    () => getHeatmapColorScales(stableColors, maxValue),
+  const colorScale = useMemo(
+    () => getHeatmapColorScale(stableColors, maxValue),
     [stableColors, maxValue]
   );
   const selectedKeys = useMemo(
@@ -182,10 +182,10 @@ const Heatmap = ({
   // drawCanvas (and, through it, handleGridScroll) keeps a stable identity across scroll events.
   const canvasCellParams: CanvasCellParams = useMemo(
     () => ({
-      data, numRows, xScale, cellYScale, colorScale, opacityScale, gap, isRect, binWidth, binHeight,
+      data, numRows, xScale, cellYScale, colorScale, gap, isRect, binWidth, binHeight,
       yMax, selectedKeys, deselectedColor: resolvedDeselectedColor,
     }),
-    [data, numRows, xScale, cellYScale, colorScale, opacityScale, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor]
+    [data, numRows, xScale, cellYScale, colorScale, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor]
   );
 
   // Imperative canvas paint - deliberately never routed through React state. Driven both by prop
