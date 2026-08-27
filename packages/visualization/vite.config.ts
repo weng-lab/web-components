@@ -20,7 +20,13 @@ export default mergeConfig(
         formats: ["es"],
       },
       rollupOptions: {
-        external: Object.keys(peerDependencies),
+        // Match subpaths too (e.g. "react-dom/client"), not just the bare peer dep name -
+        // Rollup's external only does exact-string matching by default, so without this a
+        // subpath import gets bundled straight into dist, baking in whatever version of that
+        // peer happened to be installed here at build time instead of deferring to whatever
+        // version the consuming app actually has installed.
+        external: (id) =>
+          Object.keys(peerDependencies).some((dep) => id === dep || id.startsWith(`${dep}/`)),
       },
     },
   })
