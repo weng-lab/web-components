@@ -6,10 +6,10 @@ import type { ColumnDatum, RowDatum, DownloadPlotHandle } from './packages/visua
 
 type ScrollableHeatmapMetadata = { description: string; source: string };
 
-// 60 columns x 80 rows - large enough that fixed-size cells no longer fit the container, so the
+// 650 columns x 80 rows - large enough that fixed-size cells no longer fit the container, so the
 // grid scrolls and the frozen row/column label panes + axis titles kick in.
 const scrollableHeatmapData: ColumnDatum[] = Array.from(
-    { length: 60 },
+    { length: 650 },
     (_, colIndex) =>
         ({
             columnName: `Group ${colIndex + 1}`,

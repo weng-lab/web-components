@@ -81,4 +81,6 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    */
   cellWidth?: number;
   cellHeight?: number;
+  scrollToSelection?: boolean;
+  showMiniMap?: boolean;
 };

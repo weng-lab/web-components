@@ -40,6 +40,7 @@ const config: StorybookConfig = {
     config.define = {
       ...config.define,
       'process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY': JSON.stringify(env.NEXT_PUBLIC_MUI_X_LICENSE_KEY),
+      'process.env.MOHD_API_KEY': JSON.stringify(env.MOHD_API_KEY),
     };
 
     return config;
