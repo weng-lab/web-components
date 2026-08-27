@@ -11,6 +11,7 @@ import { heatmapCellStyles } from "./HeatmapCell";
 import HeatmapLegend, { getHeatmapLegendWidth } from "./HeatmapLegend";
 import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale } from "./heatmapCellAppearance";
 import { drawHeatmapCells, getVisibleRange, hitTestCell, buildBin, type CanvasCellParams } from "./HeatmapCanvasCells";
+import HeatmapMiniMap from "./HeatmapMiniMap";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -31,6 +32,7 @@ const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 // Extra rows/columns painted/rendered just beyond the visible viewport in scrollable mode, so a
 // cell or tick label is already there before it scrolls into view rather than popping in late.
 const GRID_OVERSCAN_CELLS = 4;
+const MINI_MAP_HEIGHT = 50;;
 const getBins = (d: ColumnDatum) => d.rows;
 
 // Minimal scroll offset (along one axis) that brings [boxStart, boxEnd) fully into
@@ -76,6 +78,7 @@ const Heatmap = ({
   cellWidth,
   cellHeight,
   scrollToSelection,
+  showMiniMap = false,
 }: HeatmapProps) => {
   const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -138,8 +141,9 @@ const Heatmap = ({
     bottom: labelBottomSpace + TICK_FONT_SIZE,
   };
 
+  const miniMapSpace = isScrollable && showMiniMap ? MINI_MAP_HEIGHT : 0;
   const availableWidth = Math.max(0, parentWidth - marg.left - marg.right);
-  const availableHeight = Math.max(0, parentHeight - marg.bottom - marg.top);
+  const availableHeight = Math.max(0, parentHeight - marg.bottom - marg.top - miniMapSpace);
 
   const xMax = isScrollable ? data.length * (cellWidth as number) : availableWidth;
   const yMax = isScrollable ? numRows * (cellHeight as number) : availableHeight;
@@ -267,6 +271,13 @@ const Heatmap = ({
       setAxisScrollPos({ left: main.scrollLeft, top: main.scrollTop });
     });
   }, [drawCanvas]);
+
+  // Drives the minimap: scrollTo dispatches a native scroll event on mainPaneRef, which
+  // handleGridScroll picks up the same way it would a manual scroll (repainting the canvas and
+  // updating axisScrollPos, which also moves the minimap's own viewport rectangle).
+  const handleMiniMapNavigate = useCallback((left: number, top: number) => {
+    mainPaneRef.current?.scrollTo({ left, top });
+  }, []);
 
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const main = mainPaneRef.current;
@@ -488,111 +499,129 @@ const Heatmap = ({
   return (
     <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
       {!parentWidth || !parentHeight || data.length === 0 || numRows === 0 ? null : isScrollable ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: showLegend
-              ? `${yTitleWidth}px ${yTickLabelWidth}px ${viewportWidth}px ${LEGEND_GAP + legendWidth}px`
-              : `${yTitleWidth}px ${yTickLabelWidth}px ${viewportWidth}px`,
-            gridTemplateRows: `${marg.top}px ${viewportHeight}px ${xTickLabelHeight}px ${xTitleHeight}px`,
-          }}
-        >
-          <div style={{ gridColumn: 1, gridRow: 2, width: yTitleWidth, height: viewportHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width={yTitleWidth} height={viewportHeight}>
-              <text
-                x={yTitleWidth / 2}
-                y={viewportHeight / 2}
-                transform={`rotate(-90, ${yTitleWidth / 2}, ${viewportHeight / 2})`}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={14}
-                fontFamily="sans-serif"
-              >
-                {yLabel ?? ""}
-              </text>
-            </svg>
-          </div>
-          <div style={{ gridColumn: 2, gridRow: 2, width: yTickLabelWidth, height: viewportHeight, overflow: "hidden" }}>
-            <svg width={yTickLabelWidth} height={viewportHeight}>
-              <g transform={`translate(${yTickLabelWidth},${-axisScrollPos.top})`}>
-                <AxisLeft
-                  scale={yScale}
-                  numTicks={numRows}
-                  tickValues={visibleYTickValues}
-                  tickFormat={yAxisTickFormat}
-                  tickLabelProps={yAxisTickLabelProps}
-                />
-              </g>
-            </svg>
-          </div>
-          <div
-            ref={mainPaneRef}
-            onScroll={handleGridScroll}
-            style={{ gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, overflow: "auto", overscrollBehavior: "contain", position: "relative" }}
-          >
-            <div style={{ width: xMax, height: yMax, position: "relative" }}>
-              <canvas
-                ref={canvasRef}
-                width={viewportWidth * (window.devicePixelRatio || 1)}
-                height={viewportHeight * (window.devicePixelRatio || 1)}
-                style={{
-                  width: viewportWidth,
-                  height: viewportHeight,
-                  position: "sticky",
-                  top: 0,
-                  left: 0,
-                  display: "block",
-                  cursor: "default",
-                }}
-                onMouseMove={handleCanvasMouseMove}
-                onMouseLeave={handleCanvasMouseLeave}
-                onClick={handleCanvasClick}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {showMiniMap && (
+            <div style={{ marginLeft: yTitleWidth + yTickLabelWidth }}>
+              <HeatmapMiniMap
+                canvasCellParams={canvasCellParams}
+                xMax={xMax}
+                yMax={yMax}
+                viewportWidth={viewportWidth}
+                viewportHeight={viewportHeight}
+                scrollLeft={axisScrollPos.left}
+                scrollTop={axisScrollPos.top}
+                width={viewportWidth}
+                height={MINI_MAP_HEIGHT}
+                onNavigate={handleMiniMapNavigate}
               />
             </div>
-          </div>
-          {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
-          <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "hidden" }}>
-            <svg width={viewportWidth} height={xTickLabelHeight}>
-              <g transform={`translate(${-axisScrollPos.left},0)`}>
-                <AxisBottom
-                  top={0}
-                  scale={xScale}
-                  numTicks={data.length}
-                  tickFormat={xAxisTickFormat}
-                  tickValues={visibleXTickValues}
-                  tickLabelProps={xAxisTickLabelProps}
-                />
-              </g>
-            </svg>
-          </div>
-          {/* X-axis title: fixed in place (not scroll-synced) so it's always visible, centered on
-              the visible viewport rather than the full data range */}
-          <div style={{ gridColumn: 3, gridRow: 4, width: viewportWidth, height: xTitleHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width={viewportWidth} height={xTitleHeight}>
-              <text
-                x={viewportWidth / 2}
-                y={xTitleHeight / 2}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={14}
-                fontFamily="sans-serif"
-              >
-                {xLabel ?? ""}
-              </text>
-            </svg>
-          </div>
-          {showLegend && (
-            <div style={{ gridColumn: 4, gridRow: 2, width: legendWidth, marginLeft: LEGEND_GAP, height: viewportHeight }}>
-              <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
-                <HeatmapLegend
-                  colors={stableColors}
-                  minValue={0}
-                  maxValue={maxValue}
-                  height={viewportHeight}
-                />
+          )}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: showLegend
+                ? `${yTitleWidth}px ${yTickLabelWidth}px ${viewportWidth}px ${LEGEND_GAP + legendWidth}px`
+                : `${yTitleWidth}px ${yTickLabelWidth}px ${viewportWidth}px`,
+              gridTemplateRows: `${marg.top}px ${viewportHeight}px ${xTickLabelHeight}px ${xTitleHeight}px`,
+            }}
+          >
+            <div style={{ gridColumn: 1, gridRow: 2, width: yTitleWidth, height: viewportHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width={yTitleWidth} height={viewportHeight}>
+                <text
+                  x={yTitleWidth / 2}
+                  y={viewportHeight / 2}
+                  transform={`rotate(-90, ${yTitleWidth / 2}, ${viewportHeight / 2})`}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={14}
+                  fontFamily="sans-serif"
+                >
+                  {yLabel ?? ""}
+                </text>
               </svg>
             </div>
-          )}
+            <div style={{ gridColumn: 2, gridRow: 2, width: yTickLabelWidth, height: viewportHeight, overflow: "hidden" }}>
+              <svg width={yTickLabelWidth} height={viewportHeight}>
+                <g transform={`translate(${yTickLabelWidth},${-axisScrollPos.top})`}>
+                  <AxisLeft
+                    scale={yScale}
+                    numTicks={numRows}
+                    tickValues={visibleYTickValues}
+                    tickFormat={yAxisTickFormat}
+                    tickLabelProps={yAxisTickLabelProps}
+                  />
+                </g>
+              </svg>
+            </div>
+            <div
+              ref={mainPaneRef}
+              onScroll={handleGridScroll}
+              style={{ gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, overflow: "auto", overscrollBehavior: "contain", position: "relative" }}
+            >
+              <div style={{ width: xMax, height: yMax, position: "relative" }}>
+                <canvas
+                  ref={canvasRef}
+                  width={viewportWidth * (window.devicePixelRatio || 1)}
+                  height={viewportHeight * (window.devicePixelRatio || 1)}
+                  style={{
+                    width: viewportWidth,
+                    height: viewportHeight,
+                    position: "sticky",
+                    top: 0,
+                    left: 0,
+                    display: "block",
+                    cursor: "default",
+                  }}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseLeave={handleCanvasMouseLeave}
+                  onClick={handleCanvasClick}
+                />
+              </div>
+            </div>
+            {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
+            <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "hidden" }}>
+              <svg width={viewportWidth} height={xTickLabelHeight}>
+                <g transform={`translate(${-axisScrollPos.left},0)`}>
+                  <AxisBottom
+                    top={0}
+                    scale={xScale}
+                    numTicks={data.length}
+                    tickFormat={xAxisTickFormat}
+                    tickValues={visibleXTickValues}
+                    tickLabelProps={xAxisTickLabelProps}
+                  />
+                </g>
+              </svg>
+            </div>
+            {/* X-axis title: fixed in place (not scroll-synced) so it's always visible, centered on
+                the visible viewport rather than the full data range */}
+            <div style={{ gridColumn: 3, gridRow: 4, width: viewportWidth, height: xTitleHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width={viewportWidth} height={xTitleHeight}>
+                <text
+                  x={viewportWidth / 2}
+                  y={xTitleHeight / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={14}
+                  fontFamily="sans-serif"
+                >
+                  {xLabel ?? ""}
+                </text>
+              </svg>
+            </div>
+            {showLegend && (
+              <div style={{ gridColumn: 4, gridRow: 2, width: legendWidth, marginLeft: LEGEND_GAP, height: viewportHeight }}>
+                <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
+                  <HeatmapLegend
+                    colors={stableColors}
+                    minValue={0}
+                    maxValue={maxValue}
+                    height={viewportHeight}
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <svg width={parentWidth} height={parentHeight} ref={svgRef}>
