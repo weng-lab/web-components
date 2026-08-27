@@ -155,9 +155,6 @@ export const WithNullValues: Story = {
     },
 };
 
-// A much larger dataset (60 columns x 80 rows) with cellWidth/cellHeight set - cells render at
-// a fixed pixel size instead of shrinking to fit, and the grid scrolls in both directions inside
-// its container. Row and column labels stay pinned (frozen panes) while the cell grid scrolls.
 const largeHeatmapData: ColumnDatum[] = Array.from(
   { length: 60 },
   (_, colIndex) =>
@@ -184,6 +181,7 @@ export const ScrollableLargeDataset: Story = {
         colors: ['#20619e', '#fff36e', '#c92b16'],
         cellWidth: 24,
         cellHeight: 18,
+        xLabelOrientation: 'leftDiagonal',
     },
 };
 
@@ -198,20 +196,12 @@ export const ScrollToSelectionDemo: Story = {
             setSelectedCells(Array.from({ length: 80 }, (_, row) => ({ row, column })));
         const selectRow = (row: number) =>
             setSelectedCells(Array.from({ length: 60 }, (_, column) => ({ row, column })));
-        // Adds (rather than replaces) a column's cells to the current selection - re-clicking the
-        // same column replaces just its own cells rather than growing duplicates - so two columns
-        // can be selected at once, testing the scroll-to-selection bounding box across a span
-        // wider than the viewport (first + last column covers the full grid width).
         const addColumn = (column: number) =>
             setSelectedCells((current) => [
                 ...current.filter((cell) => cell.column !== column),
                 ...Array.from({ length: 80 }, (_, row) => ({ row, column })),
             ]);
         return (
-            // Stack (a flex container) sizes to its content by default - without an explicit
-            // height here, Heatmap's own 100%-height measuring div (ResponsiveContainer) would
-            // resolve against an ancestor with no definite height and collapse to zero, rendering
-            // nothing. The Box around Heatmap takes the remaining flex space instead.
             <Stack gap={2} sx={{ height: '100%' }}>
                 <Stack direction="row" gap={1}>
                     <Button variant="outlined" size="small" onClick={() => selectColumn(10)}>Select Column 11</Button>
