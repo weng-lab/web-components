@@ -1,6 +1,6 @@
 import { scaleLinear } from "@visx/scale";
 import type { HeatmapProps, ColumnDatum, HeatmapCellId } from "./types";
-import { useImperativeHandle, useRef, useMemo, useCallback, useEffect, useState } from "react";
+import { useImperativeHandle, useRef, useMemo, useCallback, useEffect, useState, useId } from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from "../../utility";
@@ -32,7 +32,8 @@ const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 // Extra rows/columns painted/rendered just beyond the visible viewport in scrollable mode, so a
 // cell or tick label is already there before it scrolls into view rather than popping in late.
 const GRID_OVERSCAN_CELLS = 4;
-const MINI_MAP_HEIGHT = 50;;
+const MINI_MAP_HEIGHT = 50;
+const X_AXIS_OVERHANG_CLIP_HEIGHT = 10;
 const getBins = (d: ColumnDatum) => d.rows;
 
 // Minimal scroll offset (along one axis) that brings [boxStart, boxEnd) fully into
@@ -123,6 +124,8 @@ const Heatmap = ({
   const xTickTextAnchor: "middle" | "start" | "end" = xLabelOrientation === "horizontal" ? "middle" : xLabelOrientation === "rightDiagonal" ? "start" : "end";
   const rotatedColNameSpace = maxColNameWidth;
   const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? rotatedColNameSpace : rotatedColNameSpace * Math.SQRT1_2;
+
+  const xTickLeftOverhangMax = xLabelOrientation === "leftDiagonal" ? colLabelHeight : 0;
 
   const colorsKey = colors.join("\u0000");
   const stableColors = useMemo(
@@ -218,6 +221,12 @@ const Heatmap = ({
   }, [isScrollable, drawCanvas]);
 
   const [axisScrollPos, setAxisScrollPos] = useState({ left: 0, top: 0 });
+  const xTickClipId = useId();
+  // Shrinks to 0 as soon as scrolling moves away from the start, so the reveal only ever applies
+  // to column 0's genuine edge case (nothing real to its left) and doesn't linger over the y-axis
+  // pane at other scroll positions, where a real, adjacent column - not empty space - would
+  // otherwise show through.
+  const xTickLeftOverhang = Math.max(0, xTickLeftOverhangMax - axisScrollPos.left);
   const axisVisibleRange = useMemo(
     () => getVisibleRange(canvasCellParams, axisScrollPos.left, axisScrollPos.top, viewportWidth, viewportHeight, GRID_OVERSCAN_CELLS),
     [canvasCellParams, axisScrollPos.left, axisScrollPos.top, viewportWidth, viewportHeight]
@@ -579,17 +588,38 @@ const Heatmap = ({
               </div>
             </div>
             {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
-            <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "hidden" }}>
-              <svg width={viewportWidth} height={xTickLabelHeight}>
-                <g transform={`translate(${-axisScrollPos.left},0)`}>
-                  <AxisBottom
-                    top={0}
-                    scale={xScale}
-                    numTicks={data.length}
-                    tickFormat={xAxisTickFormat}
-                    tickValues={visibleXTickValues}
-                    tickLabelProps={xAxisTickLabelProps}
-                  />
+            <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "visible" }}>
+              <svg width={viewportWidth} height={xTickLabelHeight} style={{ overflow: "visible" }}>
+                {xTickLeftOverhangMax > 0 && (
+                  <defs>
+                    <clipPath id={xTickClipId}>
+                      {/* The pane itself, always fully visible. */}
+                      <rect x={0} y={0} width={viewportWidth} height={xTickLabelHeight} />
+                      {/* The leftDiagonal overhang reach (shrinks to 0 as axisScrollPos.left grows
+                          - see xTickLeftOverhang) - full height except a thin strip at the top,
+                          where the axis's own tick-line stub would otherwise show through
+                          underneath the y-axis pane. Leaving that strip out of the clip hides just
+                          the stub; the label text, which sits lower, is unaffected. */}
+                      <rect
+                        x={-xTickLeftOverhang}
+                        y={X_AXIS_OVERHANG_CLIP_HEIGHT}
+                        width={xTickLeftOverhang}
+                        height={Math.max(0, xTickLabelHeight - X_AXIS_OVERHANG_CLIP_HEIGHT)}
+                      />
+                    </clipPath>
+                  </defs>
+                )}
+                <g clipPath={xTickLeftOverhangMax > 0 ? `url(#${xTickClipId})` : undefined}>
+                  <g transform={`translate(${-axisScrollPos.left},0)`}>
+                    <AxisBottom
+                      top={0}
+                      scale={xScale}
+                      numTicks={data.length}
+                      tickFormat={xAxisTickFormat}
+                      tickValues={visibleXTickValues}
+                      tickLabelProps={xAxisTickLabelProps}
+                    />
+                  </g>
                 </g>
               </svg>
             </div>
