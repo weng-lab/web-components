@@ -1,9 +1,9 @@
 import React, { useCallback, useImperativeHandle, useMemo } from 'react';
 import { ChartProps, ZoomType } from './types';
-import { Tooltip as VisxTooltip, TooltipProps, Portal } from '@visx/tooltip';
+import { Tooltip as VisxTooltip, TooltipProps, Portal, defaultStyles as visxTooltipStyles } from '@visx/tooltip';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
-import { IconButton, Stack, Tooltip } from '@mui/material';
+import { IconButton, Stack, Tooltip, useTheme } from '@mui/material';
 import { HighlightAlt } from '@mui/icons-material';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
@@ -19,6 +19,22 @@ import { useCrosshair } from './hooks/useCrosshair';
 
 const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
 
+/**
+ * The point tooltip is portalled to document.body, so it leaves the plot's stacking
+ * context and cannot be layered against the plot's own overlays by DOM order alone.
+ * visx ships no z-index of its own, which leaves it below the controls and the minimap
+ * toggle (z-index 10) - those sit in the root stacking context, so they win against an
+ * auto z-index no matter where the portal lands. Lifting the tooltip to the theme's
+ * tooltip layer keeps it above them, and matches the MUI tooltips on the same controls.
+ */
+const useTooltipStyle = () => {
+    const theme = useTheme();
+    return useMemo(
+        () => ({ ...visxTooltipStyles, zIndex: theme.zIndex.tooltip }),
+        [theme.zIndex.tooltip]
+    );
+};
+
 const ScatterPlot = <T extends object, S extends boolean | undefined = undefined, Z extends boolean | undefined = undefined>(
     props: ChartProps<T, S, Z>
 ) => {
@@ -27,6 +43,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
  * @todo remove this when possible
  */
     const VisTooltip = VisxTooltip as unknown as React.FC<TooltipProps>;
+
+    const tooltipStyle = useTooltipStyle();
 
     const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
@@ -211,7 +229,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                 )}
                 {!props.disableTooltip && tooltipOpen && tooltipData && (
                     <Portal>
-                        <VisTooltip left={mouseX + 10} top={mouseY}>
+                        <VisTooltip left={mouseX + 10} top={mouseY} style={tooltipStyle}>
                             <ScatterTooltip tooltipBody={props.tooltipBody} tooltipData={tooltipData} />
                         </VisTooltip>
                     </Portal>
