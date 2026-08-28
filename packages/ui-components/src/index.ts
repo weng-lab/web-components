@@ -14,7 +14,7 @@ export { GenomeSearch, useEntityAutocomplete } from "./components/GenomeSearch";
 export type { GenomeSearchProps, Result, Domain, ResultType, StaticListOption } from "./components/GenomeSearch";
 
 export { TwoPaneLayout, useSyncedTable, useTablePlotSync } from "./components/TwoPaneLayout";
-export type { TwoPanePlotConfig, TwoPaneLayoutProps } from "./components/TwoPaneLayout";
+export type { TwoPanePlotConfig, TwoPaneLayoutProps, SyncedTableProps } from "./components/TwoPaneLayout";
 
 export { ResizablePanes, useResizablePanes } from "./components/ResizablePanes";
 export type { ResizablePanesProps, Direction, ResponsiveDirection } from "./components/ResizablePanes";

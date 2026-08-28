@@ -58,5 +58,8 @@ export function useSyncedTable<T>({
     [apiRef, composedOnReady, isPresorted, initialSort, autoSort, setAutoSort, restTableProps, columnsWithCheckbox]
   );
 
-  return { syncedTableProps };
+  return { syncedTableProps, autoSort };
 }
+
+/** The props object returned by useSyncedTable for spreading onto <Table>. */
+export type SyncedTableProps<T> = ReturnType<typeof useSyncedTable<T>>["syncedTableProps"];
