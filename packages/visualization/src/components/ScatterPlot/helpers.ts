@@ -1,5 +1,5 @@
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { Line, Point } from "./types";
+import { Line, Point, TransformMatrix } from "./types";
 
 //rescale x and y scales when zooming
 //converts to pixel values before applying transformations
@@ -24,6 +24,16 @@ export const rescaleY = (scale: ScaleLinear<number, number, never>, translateY: 
         );
     return scale.copy().domain(newXDomain);
 };
+
+//Invert a zoom-transformed scale at a pixel position without building a rescaled copy.
+//Equivalent to rescaleX(scale, translate, scaleFactor).invert(pixel) for linear scales, but
+//allocation-free - this runs on every mouse move.
+export const invertRescaled = (
+    scale: ScaleLinear<number, number, never>,
+    translate: number,
+    scaleFactor: number,
+    pixel: number
+) => scale.invert((pixel - translate) / scaleFactor);
 
 //find all points within the drawn lasso for selection purposes
 export const isPointInLasso = (point: { x: number; y: number }, lasso: Line): boolean => {
@@ -89,6 +99,64 @@ export const getPointExtents = <T extends object>(pointData: Point<T>[]) => {
         y: [minY, maxY] as [number, number],
     };
 };
+
+/**
+ * Fraction of an axis' data range padded onto each side, so points never sit exactly on the
+ * axis line. A fraction rather than a fixed amount because these plots carry everything from
+ * genomic coordinates in the millions to PCA components around 1e-2, and any one constant
+ * either vanishes against the former or swamps the latter.
+ */
+const DOMAIN_PADDING_FRACTION = 0.05;
+
+/**
+ * Pads one axis' extent. A zero range - every point sharing a coordinate, or a single point -
+ * leaves no range to take a fraction of, so the pad falls back to the magnitude of the value
+ * itself, and to 1 at the origin where there is no magnitude either.
+ */
+const padExtent = ([min, max]: [number, number]): [number, number] => {
+    const spread = max - min;
+    const pad = (spread > 0 ? spread : Math.abs(max) || 1) * DOMAIN_PADDING_FRACTION;
+    return [min - pad, max + pad];
+};
+
+export const getDomains = (extents: { x: [number, number]; y: [number, number] }) => ({
+    xDomain: padExtent(extents.x),
+    yDomain: padExtent(extents.y),
+});
+
+/**
+ * Domains covering every given set of points, for plots that share a coordinate space and so
+ * need to share a coordinate frame - pass the result to each plot's xDomain/yDomain so a given
+ * coordinate lands on the same pixel in all of them.
+ *
+ * Memoize the result: passing a fresh array on every render rebuilds each plot's scales.
+ */
+export const getSharedDomains = (...pointDataSets: readonly { x: number; y: number }[][]) => {
+    const populated = pointDataSets.filter((points) => points.length > 0);
+    if (populated.length === 0) return getDomains(getPointExtents([]));
+
+    const merged = populated
+        .map((points) => getPointExtents(points))
+        .reduce((combined, extents) => ({
+            x: [Math.min(combined.x[0], extents.x[0]), Math.max(combined.x[1], extents.x[1])] as [number, number],
+            y: [Math.min(combined.y[0], extents.y[0]), Math.max(combined.y[1], extents.y[1])] as [number, number],
+        }));
+
+    return getDomains(merged);
+};
+
+/**
+ * Value comparison for transform matrices. Reference comparison is not enough once a matrix can
+ * come from outside the component (a shared zoom, a restored view) rather than only from visx.
+ */
+export const isSameTransform = (a: TransformMatrix, b: TransformMatrix) => (
+    a.scaleX === b.scaleX &&
+    a.scaleY === b.scaleY &&
+    a.translateX === b.translateX &&
+    a.translateY === b.translateY &&
+    a.skewX === b.skewX &&
+    a.skewY === b.skewY
+);
 
 export const prepareCanvas = (
     context: CanvasRenderingContext2D,

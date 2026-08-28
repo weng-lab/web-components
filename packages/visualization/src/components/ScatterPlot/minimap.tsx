@@ -1,4 +1,11 @@
 import { MapProps } from "./types";
+import { CROSSHAIR_DASH, CROSSHAIR_STROKE, CROSSHAIR_STROKE_WIDTH } from "./Crosshair";
+
+const MINIMAP_SCALE_FACTOR = 0.25;
+// The crosshair is drawn inside the scaled group, so its stroke and dashes shrink with it.
+// Scale them back up so it renders identically to the crosshair on the plot itself.
+const MINIMAP_CROSSHAIR_STROKE_WIDTH = CROSSHAIR_STROKE_WIDTH / MINIMAP_SCALE_FACTOR;
+const MINIMAP_CROSSHAIR_DASH = CROSSHAIR_DASH.map((dash) => dash / MINIMAP_SCALE_FACTOR).join(",");
 
 const MiniMap = <T,>({
     miniMap,
@@ -7,8 +14,16 @@ const MiniMap = <T,>({
     pointData,
     xScale,
     yScale,
-    zoom
+    zoom,
+    crosshair
 }: MapProps<T>) => {
+    // The minimap frame is the whole plot area untransformed, so a data coordinate maps onto it
+    // through the base scales - no need to undo the current zoom.
+    const crosshairX = crosshair ? xScale(crosshair.x) : null;
+    const crosshairY = crosshair ? yScale(crosshair.y) : null;
+    const frameWidth = width - 100;
+    const frameHeight = height - 100;
+
     return (
         <div
             style={{
@@ -19,14 +34,14 @@ const MiniMap = <T,>({
         >
             {/* Canvas for rendering points on minimap */}
             <canvas
-                width={(width - 100) / 4}
-                height={(height - 100) / 4}
+                width={frameWidth * MINIMAP_SCALE_FACTOR}
+                height={frameHeight * MINIMAP_SCALE_FACTOR}
                 ref={(canvas) => {
                     if (canvas) {
                         const context = canvas.getContext('2d');
-                        const scaleFactor = 0.25;
-                        const scaledWidth = (width - 100) * scaleFactor;
-                        const scaledHeight = (height - 100) * scaleFactor;
+                        const scaleFactor = MINIMAP_SCALE_FACTOR;
+                        const scaledWidth = frameWidth * scaleFactor;
+                        const scaledHeight = frameHeight * scaleFactor;
                         if (context) {
                             // Clear canvas
                             context.clearRect(0, 0, canvas.width, canvas.height);
@@ -55,14 +70,14 @@ const MiniMap = <T,>({
 
             {/* SVG for rendering the zoom window */}
             <svg
-                width={(width - 100) / 4}
-                height={(height - 100) / 4}
+                width={frameWidth * MINIMAP_SCALE_FACTOR}
+                height={frameHeight * MINIMAP_SCALE_FACTOR}
                 style={{ position: 'absolute', top: 0, left: 0 }}
             >
-                <g transform={`scale(0.25)`}>
+                <g transform={`scale(${MINIMAP_SCALE_FACTOR})`}>
                     <rect
-                        width={width - 100}
-                        height={height - 100}
+                        width={frameWidth}
+                        height={frameHeight}
                         fill="#0d0f98"
                         fillOpacity={0.2}
                         stroke="#0d0f98"
@@ -102,6 +117,30 @@ const MiniMap = <T,>({
                             }
                         }}
                     />
+                    {crosshairY !== null && crosshairY >= 0 && crosshairY <= frameHeight && (
+                        <line
+                            x1={0}
+                            x2={frameWidth}
+                            y1={crosshairY}
+                            y2={crosshairY}
+                            stroke={CROSSHAIR_STROKE}
+                            strokeWidth={MINIMAP_CROSSHAIR_STROKE_WIDTH}
+                            strokeDasharray={MINIMAP_CROSSHAIR_DASH}
+                            pointerEvents="none"
+                        />
+                    )}
+                    {crosshairX !== null && crosshairX >= 0 && crosshairX <= frameWidth && (
+                        <line
+                            x1={crosshairX}
+                            x2={crosshairX}
+                            y1={0}
+                            y2={frameHeight}
+                            stroke={CROSSHAIR_STROKE}
+                            strokeWidth={MINIMAP_CROSSHAIR_STROKE_WIDTH}
+                            strokeDasharray={MINIMAP_CROSSHAIR_DASH}
+                            pointerEvents="none"
+                        />
+                    )}
                 </g>
             </svg>
         </div>

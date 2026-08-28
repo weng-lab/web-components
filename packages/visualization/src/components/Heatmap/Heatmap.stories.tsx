@@ -109,6 +109,10 @@ export const LeftDiagonalXLabels: Story = {
 // Click cells to select them - every unselected cell dims to gray while selected cells keep
 // their gradient color. Click a selected cell again to remove it from the selection.
 export const SelectableCells: Story = {
+    args: {
+        data: heatmapData,
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+    },
     render: () => {
         const [selectedCells, setSelectedCells] = useState<HeatmapCellId[]>([]);
         return (

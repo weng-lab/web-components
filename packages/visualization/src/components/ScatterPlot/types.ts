@@ -61,6 +61,16 @@ export type Point<T> = {
     metaData?: T;
 };
 
+/**
+    Position of the crosshair overlay, in data coordinates (the same units as Point.x / Point.y)
+    rather than pixels, so it stays meaningful across plots of different sizes and survives
+    zooming and panning.
+*/
+export type CrosshairPosition = {
+    x: number;
+    y: number;
+};
+
 export type SelectionMode = "select" | "pan" | "none";
 
 /**
@@ -232,6 +242,43 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     backgroundGradient?: BackgroundGradient;
     /**
+     * If true, renders thin crosshair lines tracking the mouse across the full plot area.
+     * @default
+     * false
+     */
+    crosshair?: boolean;
+    /**
+     * Crosshair position in data coordinates, drawn when the mouse is not over this plot.
+     * Used to mirror another plot's crosshair onto this one - see ScatterPlotSync.
+     *
+     * Requires crosshair to be enabled.
+     */
+    crosshairPosition?: CrosshairPosition | null;
+    /**
+     * Callback fired as the crosshair moves, with its position in data coordinates,
+     * or null once the mouse leaves the plot area.
+     *
+     * Requires crosshair to be enabled.
+     */
+    onCrosshairChange?: (position: CrosshairPosition | null) => void;
+    /**
+     * An externally owned zoom instance. When provided the plot drives that zoom instead of
+     * creating its own, so several plots can share one view - see ScatterPlotSync.
+     *
+     * Plots sharing a zoom must be the same size and share their domains, since the transform
+     * is in pixels.
+     */
+    zoom?: ZoomType;
+    /**
+     * Fixes the x axis domain instead of deriving it from the data extents. Useful to keep the
+     * axes stable as the data changes, or to give several plots a shared coordinate frame.
+     */
+    xDomain?: [number, number];
+    /**
+     * Fixes the y axis domain instead of deriving it from the data extents.
+     */
+    yDomain?: [number, number];
+    /**
      * Position of the zoom/selection controls relative to the chart.
      * @default
      * "left"
@@ -263,6 +310,7 @@ export type MapProps<T> = {
     xScale: ScaleLinear<number, number, never>;
     yScale: ScaleLinear<number, number, never>;
     zoom: ZoomType;
+    crosshair?: CrosshairPosition | null;
 }
 
 export type TooltipProps<T> = {
@@ -283,7 +331,7 @@ export type ControlButtonsProps = {
     downloadPlot: () => void;
 }
 
-interface TransformMatrix {
+export interface TransformMatrix {
     scaleX: number;
     scaleY: number;
     translateX: number;

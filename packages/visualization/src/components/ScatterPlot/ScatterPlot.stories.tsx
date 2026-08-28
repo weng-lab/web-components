@@ -1,5 +1,8 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { useMemo } from 'react';
 import ScatterPlot from './scatterplot';
+import ScatterPlotSync from './ScatterPlotSync';
+import { getSharedDomains } from './helpers';
 import { MiniMapProps } from './types';
 
 const meta = {
@@ -438,4 +441,90 @@ export const ManualSize: Story = {
           </div>
         ),
       ],
+};
+
+// Two plots over the same coordinate space, linked by ScatterPlotSync: hovering either one draws
+// the same crosshair on both, and zooming or panning either one moves both. Only the hovered
+// plot shows a tooltip.
+const syncedDataA: Point[] = generatePoints(600);
+const syncedDataB: Point[] = generatePoints(600)
+    .map((point, index) => ({
+        ...point,
+        x: point.x + Math.sin(index) * 6,
+        y: point.y + Math.cos(index) * 6,
+        color: `hsl(${(index % 360)}, 60%, 40%)`,
+    }));
+
+export const SyncedPlots: Story = {
+    args: {
+        pointData: syncedDataA,
+        loading: false,
+    },
+    render: () => {
+        // Memoized: a fresh domain array on every render would rebuild both plots' scales.
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const domains = useMemo(() => getSharedDomains(syncedDataA, syncedDataB), []);
+
+        return (
+            <ScatterPlotSync {...domains}>
+                {(sync) => (
+                    <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+                        <div style={{ flex: 1, height: '100%' }}>
+                            <ScatterPlot
+                                pointData={syncedDataA}
+                                loading={false}
+                                leftAxisLabel="Y-Axis Label"
+                                bottomAxisLabel="Sample A"
+                                miniMap={miniMap}
+                                disableTooltip
+                                initialState={{ minimap: { open: true }, controls: { selectionType: "pan" } }}
+                                {...sync}
+                            />
+                        </div>
+                        <div style={{ flex: 1, height: '100%' }}>
+                            <ScatterPlot
+                                pointData={syncedDataB}
+                                loading={false}
+                                leftAxisLabel="Y-Axis Label"
+                                bottomAxisLabel="Sample B"
+                                miniMap={miniMap}
+                                disableTooltip
+                                controlsPosition="right"
+                                initialState={{ minimap: { open: true }, controls: { selectionType: "pan" } }}
+                                {...sync}
+                            />
+                        </div>
+                    </div>
+                )}
+            </ScatterPlotSync>
+        );
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 1000, height: 500 }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+// A single plot with crosshairs and no sync - the plot tracks its own pointer.
+export const Crosshairs: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        crosshair: true,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        initialState: {
+            minimap: {
+                open: true,
+            },
+            controls: {
+                selectionType: "pan"
+            }
+        }
+    },
 };

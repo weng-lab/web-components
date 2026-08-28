@@ -8,11 +8,12 @@ import { Text } from "@visx/text";
 import { curveBasis } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { BackgroundGradient, ChartProps, Point, SelectionMode, ZoomType } from "./types";
+import { BackgroundGradient, ChartProps, CrosshairPosition, Point, SelectionMode, ZoomType } from "./types";
 import { drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, prepareCanvas, rescaleX, rescaleY } from "./helpers";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
+import Crosshair from "./Crosshair";
 import { useDragSelection } from "./hooks/useDragSelection";
 
 type ScatterPlotViewportProps<T extends object> = {
@@ -43,6 +44,8 @@ type ScatterPlotViewportProps<T extends object> = {
     border: boolean;
     originLine?: boolean;
     backgroundGradient?: BackgroundGradient;
+    /** Crosshair position in data coordinates, or null for no crosshair. */
+    crosshair?: CrosshairPosition | null;
     divRef: React.RefObject<HTMLDivElement | null>;
 };
 
@@ -74,6 +77,7 @@ const ScatterPlotViewport = <T extends object>({
     border,
     originLine,
     backgroundGradient,
+    crosshair,
     divRef,
 }: ScatterPlotViewportProps<T>) => {
     const graphRef = useRef<SVGRectElement | null>(null);
@@ -397,6 +401,16 @@ const ScatterPlotViewport = <T extends object>({
                                     onWheel={onSurfaceWheel}
                                     onClick={handlePointClick}
                                 />
+                                {crosshair && !isDragging && (
+                                    <Crosshair
+                                        position={{
+                                            x: xScaleTransformed(crosshair.x),
+                                            y: yScaleTransformed(crosshair.y),
+                                        }}
+                                        boundedWidth={boundedWidth}
+                                        boundedHeight={boundedHeight}
+                                    />
+                                )}
                             </Group>
                             <Group top={margin.top} left={margin.left}>
                                 <AxisLeft
