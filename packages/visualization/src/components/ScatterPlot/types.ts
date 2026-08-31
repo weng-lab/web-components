@@ -177,6 +177,22 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     onPointClicked?: (point: Point<T>) => void;
     /**
+     * Callback fired when the hovered point changes, with the point under the
+     * cursor or null once nothing is hovered.
+     *
+     * Fires on transitions only, not on every mouse move, so it is safe to drive
+     * state with: moving within one point stays silent, and leaving the plot
+     * announces null once.
+     *
+     * Independent of disableTooltip - hover is still tracked when the tooltip is
+     * turned off, so this is the way to render hover affordances of your own
+     * (highlighting a legend entry, say) without also taking the built-in tooltip.
+     *
+     * @returns
+     * Singular point including all info and metadata, or null
+     */
+    onHoveredPointChange?: (point: Point<T> | null) => void;
+    /**
      * Optional key to specify if you want to group your points.
      * Must be a key of type Point, or an existing key already in meta data
      * 

@@ -85,7 +85,13 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     }, [boundedHeight, yDomainMin, yDomainMax]);
 
     const { hoveredPoint, tooltipData, tooltipOpen, mouseX, mouseY, handleMouseMove, handleMouseLeave } =
-        useHoverTooltip({ pointData: props.pointData, margin: MARGIN, xScale, yScale });
+        useHoverTooltip({
+            pointData: props.pointData,
+            margin: MARGIN,
+            xScale,
+            yScale,
+            onHoveredPointChange: props.onHoveredPointChange,
+        });
 
     const crosshairEnabled = props.crosshair ?? false;
 

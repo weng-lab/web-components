@@ -1,14 +1,16 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { Point, ZoomType } from "../types";
 import { rescaleX, rescaleY } from "../helpers";
+import { useStableCallback } from "../../../hooks";
 
 type UseHoverTooltipProps<T extends object> = {
     pointData: Point<T>[];
     margin: { top: number; left: number };
     xScale: ScaleLinear<number, number, never>;
     yScale: ScaleLinear<number, number, never>;
+    onHoveredPointChange?: (point: Point<T> | null) => void;
 };
 
 type TransformedPointCache<T extends object> = {
@@ -25,6 +27,7 @@ export const useHoverTooltip = <T extends object>({
     margin,
     xScale,
     yScale,
+    onHoveredPointChange,
 }: UseHoverTooltipProps<T>) => {
     const [tooltipData, setTooltipData] = useState<Point<T> | null>(null);
     const [tooltipOpen, setTooltipOpen] = useState(false);
@@ -38,6 +41,19 @@ export const useHoverTooltip = <T extends object>({
             : null,
         [pointData, tooltipData]
     );
+
+    // Published from an effect rather than the move handler because hoveredPoint is derived:
+    // setTooltipData is called on every move and React discards the ones that do not change it,
+    // so watching the derived value is what turns a stream of moves into enter/leave events.
+    // The ref keeps that true when the effect itself is re-run without a real change.
+    const publishHoverChange = useStableCallback(onHoveredPointChange);
+    const publishedPointRef = useRef<Point<T> | null>(null);
+
+    useEffect(() => {
+        if (publishedPointRef.current === hoveredPoint) return;
+        publishedPointRef.current = hoveredPoint;
+        publishHoverChange(hoveredPoint);
+    }, [hoveredPoint, publishHoverChange]);
 
     const handleMouseMove = useCallback((event: React.MouseEvent<SVGElement>, zoom: ZoomType) => {
         if (zoom.isDragging) {

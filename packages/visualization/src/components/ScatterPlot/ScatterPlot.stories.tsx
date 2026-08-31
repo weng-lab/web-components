@@ -1,5 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
 import ScatterPlotSync from './ScatterPlotSync';
 import { getSharedDomains } from './helpers';
@@ -527,4 +527,112 @@ export const Crosshairs: Story = {
             }
         }
     },
+};
+
+// onHoveredPointChange publishes the point under the cursor, and null once nothing is hovered.
+// It fires on transitions only - moving within one point stays silent - so it is safe to drive
+// state with directly.
+//
+// Here it drives a legend that lives outside the plot: hovering a point rings its group.
+// disableTooltip is on deliberately, because that is the case the callback exists for - hover is
+// still tracked with the tooltip turned off, so a plot can carry hover affordances of its own
+// without also taking the built-in one. groupPointsAnchor swells the rest of the hovered group
+// at the same time, so the plot and the legend answer the same question together.
+type GroupedPoint = {
+    x: number;
+    y: number;
+    color: string;
+    metaData: { group: string };
+};
+
+const HOVER_GROUPS = [
+    { name: "Alpha", color: "#E41A1C" },
+    { name: "Beta", color: "#377EB8" },
+    { name: "Gamma", color: "#4DAF4A" },
+    { name: "Delta", color: "#984EA3" },
+];
+
+const groupedData: GroupedPoint[] = HOVER_GROUPS.flatMap(({ name, color }, groupIndex) =>
+    Array.from({ length: 160 }, (_, i) => {
+        const angle = (i / 160) * Math.PI * 2;
+        const radius = 3 + (i % 8) * 0.6;
+        return {
+            x: Math.cos(angle) * radius + groupIndex * 13,
+            y: Math.sin(angle) * radius + (groupIndex % 2) * 11,
+            color,
+            metaData: { group: name },
+        };
+    }),
+);
+
+export const HoveredPointChange: Story = {
+    args: {
+        pointData: groupedData,
+        loading: false,
+    },
+    render: () => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontFamily: "system-ui" }}>
+                    {HOVER_GROUPS.map(({ name, color }) => {
+                        const on = name === hoveredGroup;
+                        return (
+                            <span
+                                key={name}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: "4px 10px",
+                                    borderRadius: 999,
+                                    fontSize: 13,
+                                    background: on ? "#e0e0e0" : "#f5f5f5",
+                                    // Outline rather than border: drawn outside the box, so a ring
+                                    // appearing under the cursor cannot reflow the row.
+                                    outline: on ? `2px solid ${color}` : "none",
+                                    outlineOffset: 1,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: 10,
+                                        height: 10,
+                                        borderRadius: "50%",
+                                        background: color,
+                                    }}
+                                />
+                                {name}
+                            </span>
+                        );
+                    })}
+                </div>
+
+                <div style={{ flex: 1, minHeight: 0 }}>
+                    <ScatterPlot
+                        pointData={groupedData}
+                        loading={false}
+                        disableTooltip
+                        groupPointsAnchor="group"
+                        leftAxisLabel="Y-Axis Label"
+                        bottomAxisLabel="X-Axis Label"
+                        onHoveredPointChange={(point) => setHoveredGroup(point?.metaData?.group ?? null)}
+                    />
+                </div>
+
+                <div style={{ fontFamily: "system-ui", fontSize: 13, color: "#666" }}>
+                    hovered group: <strong>{hoveredGroup ?? "none"}</strong>
+                </div>
+            </div>
+        );
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 850, height: 560 }}>
+                <Story />
+            </div>
+        ),
+    ],
 };
