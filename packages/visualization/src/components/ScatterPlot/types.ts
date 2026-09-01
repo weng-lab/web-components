@@ -313,6 +313,18 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      * "left"
      */
     controlsPosition?: "left" | "right";
+    /**
+     * Lock the plot to a square, sized to the shorter side of its container and centred in it.
+     *
+     * Off by default, in which case the plot fills the container and its aspect ratio follows
+     * whatever shape that is. Turn it on when the two axes are in the same units and a circle
+     * of points has to stay a circle - a PCA or UMAP embedding, say - rather than being
+     * stretched by the shape of the box it happens to sit in.
+     *
+     * @default
+     * false
+     */
+    square?: boolean;
 };
 
 export type BackgroundGradient = {

@@ -17,7 +17,8 @@ import Crosshair from "./Crosshair";
 import { useDragSelection } from "./hooks/useDragSelection";
 
 type ScatterPlotViewportProps<T extends object> = {
-    size: number;
+    width: number;
+    height: number;
     margin: { top: number; left: number };
     boundedWidth: number;
     boundedHeight: number;
@@ -60,7 +61,8 @@ const HOVER_GROW_MS = 120;
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
 const ScatterPlotViewport = <T extends object>({
-    size,
+    width,
+    height,
     margin,
     boundedWidth,
     boundedHeight,
@@ -374,7 +376,7 @@ const ScatterPlotViewport = <T extends object>({
 
     return (
         <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>
-            <Box sx={{ width: size, height: size }}>
+            <Box sx={{ width, height }}>
                 {loading ? (
                     <Box display="flex" width="100%" height="100%" sx={{ justifyContent: "center", alignItems: "center" }}>
                         <CircularProgress />
@@ -396,8 +398,8 @@ const ScatterPlotViewport = <T extends object>({
                             }}
                         />
                         <svg
-                            width={size}
-                            height={size}
+                            width={width}
+                            height={height}
                             overflow="visible"
                             style={{ position: "absolute", userSelect: "none" }}
                             onMouseMove={(event) => {

@@ -50,12 +50,22 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
+    // The square path is kept exactly as it was, so turning `square` on is a no-op against
+    // previous versions. Unsquared, the plot takes the whole container and only the axis
+    // margins are held back.
+    const square = props.square ?? false;
     const size = Math.min(parentHeight, parentWidth)
+    const plotWidth = square ? size : parentWidth;
+    const plotHeight = square ? size : parentHeight;
 
     const divRef = React.useRef<HTMLDivElement>(null);
     const selectable = props.selectable ?? false;
-    const boundedWidth = size * 0.9 - MARGIN.left;
-    const boundedHeight = boundedWidth;
+    const boundedWidth = square
+        ? size * 0.9 - MARGIN.left
+        : Math.max(0, plotWidth - MARGIN.left - MARGIN.right);
+    const boundedHeight = square
+        ? size * 0.9 - MARGIN.left
+        : Math.max(0, plotHeight - MARGIN.top - MARGIN.bottom);
     const downloadButton = props.downloadButton ?? false
 
     const { selectMode, handleSelectionModeChange } = useSelectionMode({ initialSelectionMode });
@@ -151,9 +161,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         sx={{
                             position: 'absolute',
                             ...(controlsPosition === "right"
-                                ? { right: `max(10px, calc(45% - ${size / 2}px))` }
-                                : { left: `max(10px, calc(45% - ${size / 2}px))` }),
-                            top: `calc(50% - ${size / 2}px + ${MARGIN.top}px)`,
+                                ? { right: square ? `max(10px, calc(45% - ${size / 2}px))` : "10px" }
+                                : { left: square ? `max(10px, calc(45% - ${size / 2}px))` : "10px" }),
+                            top: square ? `calc(50% - ${size / 2}px + ${MARGIN.top}px)` : `${MARGIN.top}px`,
                             zIndex: 10
                         }}
                     >
@@ -172,7 +182,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     </Stack>
                 )}
                 <ScatterPlotViewport
-                    size={size}
+                    width={plotWidth}
+                    height={plotHeight}
                     margin={MARGIN}
                     boundedWidth={boundedWidth}
                     boundedHeight={boundedHeight}
@@ -225,8 +236,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                 {showMiniMap && props.miniMap && !props.disableZoom && !props.loading && (
                     <MiniMap
                         miniMap={props.miniMap}
-                        width={size}
-                        height={size}
+                        width={plotWidth}
+                        height={plotHeight}
                         pointData={props.pointData}
                         xScale={xScale}
                         yScale={yScale}

@@ -654,3 +654,45 @@ export const HoveredPointChange: Story = {
         ),
     ],
 };
+
+// square locks the plot to the shorter side of its container and centres it, which is what you
+// want when both axes are in the same units and a circular cluster has to stay circular - a PCA
+// or UMAP embedding. Off by default: the plot fills the container instead.
+//
+// Both stories below sit in the same wide 900x420 container, so the difference is the point.
+export const Square: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        square: true,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+export const FillsContainer: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
