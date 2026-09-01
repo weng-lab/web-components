@@ -34,6 +34,7 @@ type ScatterPlotViewportProps<T extends object> = {
     disableZoom?: boolean;
     groupPointsAnchor?: keyof Point<T> | keyof T;
     hoveredPoint: Point<T> | null;
+    hoveredPoints?: Point<T>[];
     handleMouseMove: (event: React.MouseEvent<SVGElement>, zoom: ZoomType) => void;
     handleMouseLeave: () => void;
     onDisplayedPointsChange?: (points: Point<T>[]) => void;
@@ -76,6 +77,7 @@ const ScatterPlotViewport = <T extends object>({
     disableZoom,
     groupPointsAnchor,
     hoveredPoint,
+    hoveredPoints,
     handleMouseMove,
     handleMouseLeave,
     onDisplayedPointsChange,
@@ -149,21 +151,36 @@ const ScatterPlotViewport = <T extends object>({
         [yScale, zoom.transformMatrix]
     );
 
+    // What is hovered: the point under the cursor if there is one, otherwise whatever the
+    // consumer has asked to highlight. The cursor takes precedence so the plot's own hover is
+    // never overridden mid-gesture.
+    const highlightSeeds: Point<T>[] = useMemo(
+        () => (hoveredPoint ? [hoveredPoint] : hoveredPoints ?? []),
+        [hoveredPoint, hoveredPoints]
+    );
+
     const groupedPoints: Point<T>[] = useMemo(() => {
         const anchor = groupPointsAnchor;
-        if (anchor && hoveredPoint) {
-            return pointData.filter((point) => {
-                if (anchor in point) {
-                    return point[anchor as keyof Point<T>] === hoveredPoint[anchor as keyof Point<T>];
-                }
-                if (point.metaData && hoveredPoint.metaData) {
-                    return point.metaData[anchor as keyof T] === hoveredPoint.metaData[anchor as keyof T];
-                }
-                return false;
-            });
-        }
-        return hoveredPoint ? [hoveredPoint] : [];
-    }, [hoveredPoint, groupPointsAnchor, pointData]);
+        if (!anchor) return highlightSeeds;
+
+        const anchorValue = (point: Point<T>): unknown =>
+            anchor in point
+                ? point[anchor as keyof Point<T>]
+                : point.metaData?.[anchor as keyof T];
+
+        // Collect the seeds' anchor values first, so this stays O(points + seeds). Matching each
+        // point against each seed would be 2.5m comparisons when a whole 750-point group is
+        // handed in against 3.4k points.
+        const seedValues = new Set(
+            highlightSeeds.map(anchorValue).filter((value) => value !== undefined)
+        );
+        if (seedValues.size === 0) return [];
+
+        return pointData.filter((point) => {
+            const value = anchorValue(point);
+            return value !== undefined && seedValues.has(value);
+        });
+    }, [highlightSeeds, groupPointsAnchor, pointData]);
 
     const previousHoveredKeysRef = useRef<Set<string>>(new Set());
 

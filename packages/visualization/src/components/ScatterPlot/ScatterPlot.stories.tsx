@@ -538,6 +538,10 @@ export const Crosshairs: Story = {
 // still tracked with the tooltip turned off, so a plot can carry hover affordances of its own
 // without also taking the built-in one. groupPointsAnchor swells the rest of the hovered group
 // at the same time, so the plot and the legend answer the same question together.
+//
+// hoveredPoints runs the same wiring backwards: hovering a legend entry hands the plot that
+// group's points and they light up as though the cursor were on one. Between them the legend
+// and the plot drive each other in both directions.
 type GroupedPoint = {
     x: number;
     y: number;
@@ -573,16 +577,27 @@ export const HoveredPointChange: Story = {
     render: () => {
         // eslint-disable-next-line react-hooks/rules-of-hooks
         const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [hoveredLegend, setHoveredLegend] = useState<string | null>(null);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const hoveredPoints = useMemo(
+            () => (hoveredLegend ? groupedData.filter((point) => point.metaData.group === hoveredLegend) : undefined),
+            [hoveredLegend],
+        );
 
         return (
             <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontFamily: "system-ui" }}>
                     {HOVER_GROUPS.map(({ name, color }) => {
-                        const on = name === hoveredGroup;
+                        const on = name === hoveredGroup || name === hoveredLegend;
                         return (
                             <span
                                 key={name}
+                                onMouseEnter={() => setHoveredLegend(name)}
+                                onMouseLeave={() => setHoveredLegend(null)}
                                 style={{
+                                    cursor: "default",
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: 6,
@@ -618,12 +633,15 @@ export const HoveredPointChange: Story = {
                         groupPointsAnchor="group"
                         leftAxisLabel="Y-Axis Label"
                         bottomAxisLabel="X-Axis Label"
+                        hoveredPoints={hoveredPoints}
                         onHoveredPointChange={(point) => setHoveredGroup(point?.metaData?.group ?? null)}
                     />
                 </div>
 
                 <div style={{ fontFamily: "system-ui", fontSize: 13, color: "#666" }}>
                     hovered group: <strong>{hoveredGroup ?? "none"}</strong>
+                    {"  |  "}
+                    from the legend: <strong>{hoveredLegend ?? "none"}</strong>
                 </div>
             </div>
         );

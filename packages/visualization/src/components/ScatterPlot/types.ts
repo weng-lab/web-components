@@ -193,6 +193,19 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     onHoveredPointChange?: (point: Point<T> | null) => void;
     /**
+     * Points to render as hovered when the cursor is not over one itself - a legend entry being
+     * hovered, a search hit, a brush on another chart. They grow and gain the hover ring exactly
+     * as a real hover does, easing in and leaving instantly.
+     *
+     * The cursor wins: while it is over a point, that point is what is hovered and this is
+     * ignored. The two cannot really collide anyway, since reaching a legend means leaving
+     * the plot.
+     *
+     * With groupPointsAnchor set, each entry stands for its whole group - so passing one member
+     * highlights the group, and passing the group itself gives the same result.
+     */
+    hoveredPoints?: Point<T>[];
+    /**
      * Optional key to specify if you want to group your points.
      * Must be a key of type Point, or an existing key already in meta data
      * 

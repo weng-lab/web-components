@@ -189,6 +189,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     disableZoom={props.disableZoom}
                     groupPointsAnchor={props.groupPointsAnchor}
                     hoveredPoint={hoveredPoint}
+                    hoveredPoints={props.hoveredPoints}
                     handleMouseMove={handlePointerMove}
                     handleMouseLeave={handlePointerLeave}
                     onDisplayedPointsChange={props.onDisplayedPointsChange}
