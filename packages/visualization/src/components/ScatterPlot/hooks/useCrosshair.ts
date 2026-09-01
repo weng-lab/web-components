@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { CrosshairPosition, ZoomType } from "../types";
@@ -25,6 +25,13 @@ type UseCrosshairProps = {
  *
  * The zoom transform arrives as an argument rather than a hook input because it only exists
  * inside the Zoom render prop, below where this hook is called.
+ *
+ * Moves are coalesced to one update per animation frame. A mouse can report positions faster
+ * than the browser paints, and mousemove is a continuous event that React flushes synchronously,
+ * so publishing every one of them - into this state and, through onCrosshairChange, into a
+ * parent shared by several plots - re-renders the whole group without ever yielding, and React
+ * eventually warns about the update depth. Leaving is published immediately: it ends the
+ * gesture, and a frame queued behind it would put the crosshair back.
  */
 export const useCrosshair = ({
     enabled,
@@ -39,13 +46,42 @@ export const useCrosshair = ({
     const publishedRef = useRef<CrosshairPosition | null>(null);
     const publishChange = useStableCallback(onCrosshairChange);
 
-    const publish = useCallback((position: CrosshairPosition | null) => {
-        // Leaving the plot area fires on every subsequent move; only announce the first one.
-        if (position === null && publishedRef.current === null) return;
+    const frameRef = useRef<number | null>(null);
+    const pendingRef = useRef<CrosshairPosition | null>(null);
+
+    const cancelFrame = useCallback(() => {
+        if (frameRef.current === null) return;
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+    }, []);
+
+    const apply = useCallback((position: CrosshairPosition | null) => {
         publishedRef.current = position;
         setCrosshairPosition(position);
         publishChange(position);
     }, [publishChange]);
+
+    const publish = useCallback((position: CrosshairPosition | null) => {
+        if (position === null) {
+            cancelFrame();
+            pendingRef.current = null;
+            // Leaving the plot area fires on every subsequent move; only announce the first one.
+            if (publishedRef.current === null) return;
+            apply(null);
+            return;
+        }
+
+        pendingRef.current = position;
+        if (frameRef.current !== null) return;
+        frameRef.current = requestAnimationFrame(() => {
+            frameRef.current = null;
+            const pending = pendingRef.current;
+            pendingRef.current = null;
+            if (pending) apply(pending);
+        });
+    }, [apply, cancelFrame]);
+
+    useEffect(() => cancelFrame, [cancelFrame]);
 
     const handleCrosshairMove = useCallback((event: React.MouseEvent<SVGElement>, zoom: ZoomType) => {
         if (!enabled) return;

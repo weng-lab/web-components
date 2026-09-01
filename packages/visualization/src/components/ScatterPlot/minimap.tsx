@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { MapProps } from "./types";
 import { CROSSHAIR_DASH, CROSSHAIR_STROKE, CROSSHAIR_STROKE_WIDTH } from "./Crosshair";
+import { useStableCallback } from "../../hooks";
 
 const MINIMAP_SCALE_FACTOR = 0.25;
 // The crosshair is drawn inside the scaled group, so its stroke and dashes shrink with it.
@@ -23,6 +25,66 @@ const MiniMap = <T,>({
     const crosshairY = crosshair ? yScale(crosshair.y) : null;
     const frameWidth = width - 100;
     const frameHeight = height - 100;
+
+    /**
+     * Dragging the window is coalesced to one zoom update per animation frame.
+     *
+     * This handler sets the transform matrix directly rather than going through zoom.dragMove,
+     * so it needs its own coalescing: without it a mouse reporting faster than the browser
+     * paints updates a zoom shared by every synced plot on each move, and React eventually
+     * warns that the update depth was exceeded.
+     *
+     * Movement is accumulated rather than replaced: these are deltas, so dropping the moves in
+     * between would lose the distance they covered. A pointer moving faster than the frame rate
+     * still pans exactly as far as it travelled.
+     */
+    const frameRef = useRef<number | null>(null);
+    const pendingRef = useRef<{ dx: number; dy: number } | null>(null);
+    // Touch events carry absolute positions, so a drag delta is the step from the previous one.
+    const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+
+    const flushPan = useStableCallback(() => {
+        const pending = pendingRef.current;
+        pendingRef.current = null;
+        if (!pending) return;
+
+        zoom.setTransformMatrix({
+            ...zoom.transformMatrix,
+            translateX: zoom.transformMatrix.translateX - pending.dx / MINIMAP_SCALE_FACTOR * zoom.transformMatrix.scaleX,
+            translateY: zoom.transformMatrix.translateY - pending.dy / MINIMAP_SCALE_FACTOR * zoom.transformMatrix.scaleY,
+        });
+    });
+
+    const accumulate = (dx: number, dy: number) => {
+        const pending = pendingRef.current ?? { dx: 0, dy: 0 };
+        pending.dx += dx;
+        pending.dy += dy;
+        pendingRef.current = pending;
+    };
+
+    const scheduleFrame = () => {
+        if (frameRef.current !== null) return;
+        frameRef.current = requestAnimationFrame(() => {
+            frameRef.current = null;
+            flushPan();
+        });
+    };
+
+    // Apply whatever is still queued before the gesture closes, so the window lands where the
+    // pointer left it rather than a frame behind.
+    const endPan = () => {
+        if (frameRef.current !== null) {
+            cancelAnimationFrame(frameRef.current);
+            frameRef.current = null;
+        }
+        flushPan();
+        lastTouchRef.current = null;
+        zoom.dragEnd();
+    };
+
+    useEffect(() => () => {
+        if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    }, []);
 
     return (
         <div
@@ -85,36 +147,35 @@ const MiniMap = <T,>({
                         rx={8}
                         transform={zoom.toStringInvert()}
                         //drag functionality for window, must invert zoom and take the scale into account
-                        style={{ cursor: zoom.isDragging ? "grabbing" : "grab" }}
+                        style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
                         onMouseDown={zoom.dragStart}
-                        onMouseUp={zoom.dragEnd}
+                        onMouseUp={endPan}
                         onMouseMove={(event) => {
                             if (zoom.isDragging) {
-                                zoom.setTransformMatrix({
-                                    scaleX: zoom.transformMatrix.scaleX,
-                                    scaleY: zoom.transformMatrix.scaleY,
-                                    translateX: zoom.transformMatrix.translateX - event.movementX / .25 * zoom.transformMatrix.scaleX,
-                                    translateY: zoom.transformMatrix.translateY - event.movementY / .25 * zoom.transformMatrix.scaleY,
-                                    skewX: zoom.transformMatrix.skewX,
-                                    skewY: zoom.transformMatrix.skewY
-                                });
+                                accumulate(event.movementX, event.movementY);
+                                scheduleFrame();
                             }
                         }}
-                        onMouseLeave={zoom.dragEnd}
-                        onTouchStart={zoom.dragStart}
-                        onTouchEnd={zoom.dragEnd}
+                        onMouseLeave={endPan}
+                        onTouchStart={(event) => {
+                            const touch = event.touches[0];
+                            // Seed the previous position so the first move measures a step from
+                            // where the finger landed, not from the origin.
+                            if (touch) lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+                            zoom.dragStart(event);
+                        }}
+                        onTouchEnd={endPan}
+                        onTouchCancel={endPan}
                         onTouchMove={(event) => {
-                            if (zoom.isDragging && event.touches.length === 1) {
-                                const touch = event.touches[0];
-                                zoom.setTransformMatrix({
-                                    scaleX: zoom.transformMatrix.scaleX,
-                                    scaleY: zoom.transformMatrix.scaleY,
-                                    translateX: zoom.transformMatrix.translateX - touch.clientX / .25,
-                                    translateY: zoom.transformMatrix.translateY - touch.clientY / .25,
-                                    skewX: zoom.transformMatrix.skewX,
-                                    skewY: zoom.transformMatrix.skewY
-                                });
-                            }
+                            // Only a single finger pans; a second one is a pinch, which belongs
+                            // to the plot's own zoom rather than to this window.
+                            if (!zoom.isDragging || event.touches.length !== 1) return;
+                            const touch = event.touches[0];
+                            const last = lastTouchRef.current;
+                            lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+                            if (!last) return;
+                            accumulate(touch.clientX - last.x, touch.clientY - last.y);
+                            scheduleFrame();
                         }}
                     />
                     {crosshairY !== null && crosshairY >= 0 && crosshairY <= frameHeight && (

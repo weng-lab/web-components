@@ -10,6 +10,7 @@ import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { BackgroundGradient, ChartProps, CrosshairPosition, Point, SelectionMode, ZoomType } from "./types";
 import { drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, prepareCanvas, rescaleX, rescaleY } from "./helpers";
+import { useStableCallback } from "../../hooks";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
@@ -306,6 +307,57 @@ const ScatterPlotViewport = <T extends object>({
         completeSelection(zoom);
     };
 
+    /**
+     * Panning is coalesced to one zoom update per animation frame.
+     *
+     * zoom.dragMove sets the transform matrix on every move it is handed, and a mouse reports
+     * positions faster than the browser paints. Because mousemove is a continuous event that
+     * React flushes synchronously - and because a shared zoom sits above every synced plot, so
+     * one update re-renders all of them - handling each move outright never lets the browser
+     * paint, and React eventually warns that the update depth was exceeded.
+     *
+     * The buffer holds nativeEvent rather than the synthetic event: React clears currentTarget
+     * once dispatch returns, and this runs a frame later. Routing through useStableCallback
+     * keeps the frame calling the current zoom rather than the one captured when it was queued.
+     */
+    const dragFrameRef = useRef<number | null>(null);
+    const pendingDragRef = useRef<MouseEvent | TouchEvent | null>(null);
+    const dragMoveLatest = useStableCallback((event: MouseEvent | TouchEvent) => {
+        zoom.dragMove(event as unknown as React.MouseEvent | React.TouchEvent);
+    });
+
+    const flushPendingDrag = useCallback(() => {
+        if (dragFrameRef.current !== null) {
+            cancelAnimationFrame(dragFrameRef.current);
+            dragFrameRef.current = null;
+        }
+        const pending = pendingDragRef.current;
+        pendingDragRef.current = null;
+        if (pending) dragMoveLatest(pending);
+    }, [dragMoveLatest]);
+
+    useEffect(() => () => {
+        if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    }, []);
+
+    const onZoomDragMove = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
+        pendingDragRef.current = event.nativeEvent;
+        if (dragFrameRef.current !== null) return;
+        dragFrameRef.current = requestAnimationFrame(() => {
+            dragFrameRef.current = null;
+            const pending = pendingDragRef.current;
+            pendingDragRef.current = null;
+            if (pending) dragMoveLatest(pending);
+        });
+    };
+
+    // The queued frame is applied before the gesture closes, so the plot lands on the position
+    // the pointer was actually released at rather than a frame behind it.
+    const onZoomDragEnd = () => {
+        flushPendingDrag();
+        zoom.dragEnd();
+    };
+
     const onSurfaceMouseDown = selectMode === "none"
         ? undefined
         : selectMode === "select"
@@ -315,17 +367,17 @@ const ScatterPlotViewport = <T extends object>({
         ? undefined
         : selectMode === "select"
             ? handleSelectionEnd
-            : disableZoom ? undefined : zoom.dragEnd;
+            : disableZoom ? undefined : onZoomDragEnd;
     const onSurfaceMouseMove = selectMode === "none"
         ? undefined
         : selectMode === "select"
             ? (isDragging ? dragMove : undefined)
-            : disableZoom ? undefined : zoom.dragMove;
+            : disableZoom ? undefined : onZoomDragMove;
     const onSurfaceMouseLeave = selectMode === "none"
         ? undefined
         : selectMode === "select"
             ? handleSelectionEnd
-            : disableZoom ? undefined : zoom.dragEnd;
+            : disableZoom ? undefined : onZoomDragEnd;
     const onSurfaceTouchStart = selectMode === "none"
         ? undefined
         : selectMode === "select"
@@ -335,12 +387,12 @@ const ScatterPlotViewport = <T extends object>({
         ? undefined
         : selectMode === "select"
             ? handleSelectionEnd
-            : disableZoom ? undefined : zoom.dragEnd;
+            : disableZoom ? undefined : onZoomDragEnd;
     const onSurfaceTouchMove = selectMode === "none"
         ? undefined
         : selectMode === "select"
             ? (isDragging ? dragMove : undefined)
-            : disableZoom ? undefined : zoom.dragMove;
+            : disableZoom ? undefined : onZoomDragMove;
     const onSurfaceWheel: React.WheelEventHandler<SVGRectElement> = (event) => {
         setShowPointAnimation(false);
         if (!disableZoom) {
