@@ -49,6 +49,15 @@ type ScatterPlotViewportProps<T extends object> = {
     divRef: React.RefObject<HTMLDivElement | null>;
 };
 
+/**
+ * Hover growth eases in over this long, and is dropped instantly on the way out.
+ * Easing the exit too would drag a tail of still-shrinking points behind the cursor
+ * whenever it sweeps across a dense plot.
+ */
+const HOVER_GROW_MS = 120;
+
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
 const ScatterPlotViewport = <T extends object>({
     size,
     margin,
@@ -82,6 +91,10 @@ const ScatterPlotViewport = <T extends object>({
 }: ScatterPlotViewportProps<T>) => {
     const graphRef = useRef<SVGRectElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    // Hover growth is driven straight onto the canvas through a ref. A redraw is ~0.3ms at
+    // 3.4k points so the drawing is cheap, but a re-render per frame would not be.
+    const hoverAmountRef = useRef(0);
+    const animatedKeysRef = useRef<Set<string> | null>(null);
 
     // Animation state — viewport owns what it renders
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(animation));
@@ -152,10 +165,24 @@ const ScatterPlotViewport = <T extends object>({
         return hoveredPoint ? [hoveredPoint] : [];
     }, [hoveredPoint, groupPointsAnchor, pointData]);
 
-    const hoveredPointKeys = useMemo(
-        () => new Set(groupedPoints.map((point) => `${point.x},${point.y}`)),
-        [groupedPoints]
-    );
+    const previousHoveredKeysRef = useRef<Set<string>>(new Set());
+
+    const hoveredPointKeys = useMemo(() => {
+        const next = new Set(groupedPoints.map((point) => `${point.x},${point.y}`));
+        const previous = previousHoveredKeysRef.current;
+
+        // Moving between points inside one anchored group rebuilds this set, but its contents
+        // are unchanged - the hovered group is the same group. Handing back the previous Set
+        // keeps its identity stable, so the redraw effect and the hover growth it drives both
+        // sit still instead of restarting on every point the cursor crosses. Purely a
+        // memoisation hint: the contents are correct either way.
+        if (next.size === previous.size && [...next].every((key) => previous.has(key))) {
+            return previous;
+        }
+
+        previousHoveredKeysRef.current = next;
+        return next;
+    }, [groupedPoints]);
 
     const currentDisplayedPoints = useMemo(
         () => pointData.filter((point) => {
@@ -199,7 +226,7 @@ const ScatterPlotViewport = <T extends object>({
             const transformedX = xST(point.x);
             const transformedY = yST(point.y);
             if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
-            drawCanvasPoint(context, point, transformedX, transformedY, isHovered);
+            drawCanvasPoint(context, point, transformedX, transformedY, isHovered ? hoverAmountRef.current : 0);
         };
 
         nonHovered.forEach((point) => drawRenderedPoint(point, false));
@@ -207,10 +234,37 @@ const ScatterPlotViewport = <T extends object>({
     }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient]);
 
     useEffect(() => {
-        if (canvasRef.current && !showPointAnimation) {
-            drawPoints(xScaleTransformed, yScaleTransformed, canvasRef.current);
+        const canvas = canvasRef.current;
+        if (!canvas || showPointAnimation) return;
+
+        // Leaving is instant: drop the growth and repaint once.
+        if (hoveredPointKeys.size === 0) {
+            animatedKeysRef.current = null;
+            hoverAmountRef.current = 0;
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+            return;
         }
-    }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation]);
+
+        // Only a change of hovered set starts the growth. This effect also runs on pan, zoom
+        // and data changes, which should repaint at the size the points have already reached
+        // rather than snapping them back to zero.
+        if (animatedKeysRef.current === hoveredPointKeys) {
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+            return;
+        }
+        animatedKeysRef.current = hoveredPointKeys;
+
+        const startedAt = performance.now();
+        hoverAmountRef.current = 0;
+        let frame = requestAnimationFrame(function step() {
+            const t = Math.min(1, (performance.now() - startedAt) / HOVER_GROW_MS);
+            hoverAmountRef.current = easeOutCubic(t);
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+            if (t < 1) frame = requestAnimationFrame(step);
+        });
+
+        return () => cancelAnimationFrame(frame);
+    }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation, hoveredPointKeys]);
 
     const handlePointClick = useCallback(() => {
         if (hoveredPoint) onPointClicked?.(hoveredPoint);

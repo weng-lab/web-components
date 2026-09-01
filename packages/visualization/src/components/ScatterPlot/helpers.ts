@@ -192,9 +192,10 @@ export const drawCanvasPoint = <T extends object>(
     point: Point<T>,
     x: number,
     y: number,
-    isHovered: boolean
+    /** How far into its hover growth this point is: 0 at rest, 1 fully hovered. */
+    hoverAmount: number
 ) => {
-    const size = (point.r || 3) + (isHovered ? 2 : 0);
+    const size = (point.r || 3) + 2 * hoverAmount;
     context.beginPath();
 
     if (!point.shape || point.shape === "circle") {
@@ -210,9 +211,16 @@ export const drawCanvasPoint = <T extends object>(
     context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
     context.fill();
 
-    if (isHovered || point.stroke) {
+    if (hoverAmount > 0 || point.stroke) {
         context.lineWidth = 1;
-        context.strokeStyle = isHovered ? "black" : point.stroke!;
+        if (hoverAmount > 0) {
+            // Fade the hover ring in alongside the growth. Snapping it to full black on the
+            // first frame reads as a flicker against a point that is still growing.
+            context.strokeStyle = "black";
+            context.globalAlpha = (point.opacity ?? 1) * hoverAmount;
+        } else {
+            context.strokeStyle = point.stroke!;
+        }
         context.stroke();
     }
 };
