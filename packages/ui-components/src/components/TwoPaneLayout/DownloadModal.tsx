@@ -1,16 +1,25 @@
 import React from "react";
 import { Modal, Box, IconButton, Stack, Typography, Divider, Button } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
+import type { DataDownloadLink } from "./types";
 
 export interface DownloadModalProps {
   open: boolean;
   onClose: () => void;
   onDownloadSVG?: () => void;
   onDownloadPNG?: () => void;
+  dataDownloadLinks?: DataDownloadLink[];
   plotTitle: string;
 }
 
-const DownloadModal: React.FC<DownloadModalProps> = ({ open, onClose, onDownloadSVG, onDownloadPNG, plotTitle }) => {
+const DownloadModal: React.FC<DownloadModalProps> = ({
+  open,
+  onClose,
+  onDownloadSVG,
+  onDownloadPNG,
+  dataDownloadLinks,
+  plotTitle,
+}) => {
   const downloadOptions = [
     { label: "PNG", action: onDownloadPNG },
     { label: "SVG", action: onDownloadSVG },
@@ -47,6 +56,32 @@ const DownloadModal: React.FC<DownloadModalProps> = ({ open, onClose, onDownload
             </Stack>
           ))}
         </Stack>
+        {dataDownloadLinks && dataDownloadLinks.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="h6" fontWeight={600} mb={1}>
+              Download Data
+            </Typography>
+            <Stack spacing={1.5} divider={<Divider flexItem />}>
+              {dataDownloadLinks.map((option) => (
+                <Stack key={option.title} direction="row" alignItems="center" justifyContent="space-between">
+                  <Typography variant="body1">{option.title}</Typography>
+                  <IconButton
+                    color="primary"
+                    component="a"
+                    href={option.link}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Download ${option.title}`}
+                  >
+                    <DownloadIcon />
+                  </IconButton>
+                </Stack>
+              ))}
+            </Stack>
+          </>
+        )}
         <Box mt={3} textAlign="right">
           <Button onClick={onClose}>Close</Button>
         </Box>
