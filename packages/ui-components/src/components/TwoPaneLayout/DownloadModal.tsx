@@ -3,6 +3,35 @@ import { Modal, Box, IconButton, Stack, Typography, Divider, Button } from "@mui
 import DownloadIcon from "@mui/icons-material/Download";
 import type { DataDownloadLink } from "./types";
 
+interface DownloadOptionProps {
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}
+
+const DownloadOption: React.FC<DownloadOptionProps> = ({ label, onClick, href }) => (
+  <Stack direction="row" alignItems="center" justifyContent="space-between">
+    <Typography variant="body1">{label}</Typography>
+    {href ? (
+      <IconButton
+        color="primary"
+        component="a"
+        href={href}
+        download
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Download ${label}`}
+      >
+        <DownloadIcon />
+      </IconButton>
+    ) : (
+      <IconButton color="primary" onClick={onClick} aria-label={`Download ${label}`}>
+        <DownloadIcon />
+      </IconButton>
+    )}
+  </Stack>
+);
+
 export interface DownloadModalProps {
   open: boolean;
   onClose: () => void;
@@ -48,12 +77,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         </Typography>
         <Stack spacing={1.5} divider={<Divider flexItem />}>
           {downloadOptions.map((option) => (
-            <Stack key={option.label} direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="body1">{option.label}</Typography>
-              <IconButton color="primary" onClick={option.action} aria-label={`Download ${option.label}`}>
-                <DownloadIcon />
-              </IconButton>
-            </Stack>
+            <DownloadOption key={option.label} label={option.label} onClick={option.action} />
           ))}
         </Stack>
         {dataDownloadLinks && dataDownloadLinks.length > 0 && (
@@ -64,20 +88,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             </Typography>
             <Stack spacing={1.5} divider={<Divider flexItem />}>
               {dataDownloadLinks.map((option) => (
-                <Stack key={option.title} direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="body1">{option.title}</Typography>
-                  <IconButton
-                    color="primary"
-                    component="a"
-                    href={option.link}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Download ${option.title}`}
-                  >
-                    <DownloadIcon />
-                  </IconButton>
-                </Stack>
+                <DownloadOption key={option.title} label={option.title} href={option.link} />
               ))}
             </Stack>
           </>
