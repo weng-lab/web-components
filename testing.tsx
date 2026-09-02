@@ -3,6 +3,8 @@ import { useRef } from 'react';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import { Heatmap } from './packages/visualization/src';
 import type { ColumnDatum, RowDatum, DownloadPlotHandle } from './packages/visualization/src';
+import { TwoPaneLayout } from './packages/ui-components/src';
+import type { TwoPanePlotConfig } from './packages/ui-components/src';
 
 type ScrollableHeatmapMetadata = { description: string; source: string };
 
@@ -118,11 +120,75 @@ function NonScrollingHeatmapTest() {
     );
 }
 
+// Exercises DownloadModal's "Download Data" section (dataDownloadLinks) alongside the
+// existing PNG/SVG download actions.
+function TwoPaneDataDownloadTest() {
+    const plots: TwoPanePlotConfig[] = [
+        {
+            tabTitle: 'With data links',
+            plotComponent: (
+                <Box sx={{ p: 2 }}>
+                    <Typography>Plot with SVG, PNG, and multiple data download links.</Typography>
+                </Box>
+            ),
+            onDownloadSVG: () => alert('download SVG'),
+            onDownloadPNG: () => alert('download PNG'),
+            dataDownloadLinks: [
+                {
+                    title: 'Metallomics',
+                    link: 'https://downloads.mohdconsortium.org/Metals/snapshot1_metallomics_quant.tsv',
+                },
+                {
+                    title: 'Metabolomics',
+                    link: 'https://downloads.mohdconsortium.org/5_Metabolomics/snapshot1_metabolomics_quant.tsv',
+                },
+                {
+                    title: 'Lipidomics',
+                    link: 'https://downloads.mohdconsortium.org/6_Lipidomics/snapshot1_lipidomics_quant.tsv',
+                },
+                {
+                    title: 'Exposomics',
+                    link: 'https://downloads.mohdconsortium.org/7_Exposomics/snapshot1_exposomics_quant.tsv',
+                },
+            ],
+        },
+        {
+            tabTitle: 'Data link only',
+            plotComponent: (
+                <Box sx={{ p: 2 }}>
+                    <Typography>Plot with only a data download link (no SVG/PNG handlers).</Typography>
+                </Box>
+            ),
+            dataDownloadLinks: [
+                {
+                    title: 'Metabolomics',
+                    link: 'https://downloads.mohdconsortium.org/5_Metabolomics/snapshot1_metabolomics_quant.tsv',
+                },
+            ],
+        },
+    ];
+
+    return (
+        <Box sx={{ p: 2 }}>
+            <Typography variant="h6" mb={2}>
+                TwoPaneLayout - dataDownloadLinks
+            </Typography>
+            <Box sx={{ width: 850, height: 500, border: '1px solid #ccc' }}>
+                <TwoPaneLayout
+                    TableComponent={<Typography sx={{ p: 2 }}>Table placeholder</Typography>}
+                    plots={plots}
+                />
+            </Box>
+        </Box>
+    );
+}
+
 function TestingPage() {
     return (
         <>
             <ScrollableHeatmapTest />
             <NonScrollingHeatmapTest />
+            <TwoPaneDataDownloadTest />
         </>
     );
 }

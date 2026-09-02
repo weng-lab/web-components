@@ -35,7 +35,11 @@ const TwoPaneLayout = ({
 
   const tabValue = Math.min(tab, plots.length - 1);
   const activePlot = plots[tabValue];
-  const hasDownload = !!(activePlot?.onDownloadSVG || activePlot?.onDownloadPNG);
+  const hasDownload = !!(
+    activePlot?.onDownloadSVG ||
+    activePlot?.onDownloadPNG ||
+    activePlot?.dataDownloadLinks?.length
+  );
 
   const handleSetTab = (newTab: number) => {
     setTab(newTab);
@@ -151,6 +155,7 @@ const TwoPaneLayout = ({
             onClose={() => setModalOpen(false)}
             onDownloadSVG={activePlot?.onDownloadSVG}
             onDownloadPNG={activePlot?.onDownloadPNG}
+            dataDownloadLinks={activePlot?.dataDownloadLinks}
             plotTitle={activePlot?.tabTitle}
           />
         )}

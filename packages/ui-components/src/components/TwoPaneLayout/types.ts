@@ -6,12 +6,18 @@ import type React from "react";
 export type { Direction, ResponsiveDirection } from "../ResizablePanes";
 import type { ResponsiveDirection } from "../ResizablePanes";
 
+export type DataDownloadLink = {
+  title: string;
+  link: string;
+};
+
 export type TwoPanePlotConfig = {
   tabTitle: string;
   icon?: TabOwnProps["icon"];
   plotComponent: React.ReactNode;
   onDownloadSVG?: () => void;
   onDownloadPNG?: () => void;
+  dataDownloadLinks?: DataDownloadLink[];
 };
 
 export type TwoPaneLayoutProps = {
