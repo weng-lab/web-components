@@ -221,6 +221,10 @@ const Heatmap = ({
   }, [isScrollable, drawCanvas]);
 
   const [axisScrollPos, setAxisScrollPos] = useState({ left: 0, top: 0 });
+  const setMainPaneNode = useCallback((node: HTMLDivElement | null) => {
+    mainPaneRef.current = node;
+    if (node) setAxisScrollPos({ left: node.scrollLeft, top: node.scrollTop });
+  }, []);
   const xTickClipId = useId();
   // Shrinks to 0 as soon as scrolling moves away from the start, so the reveal only ever applies
   // to column 0's genuine edge case (nothing real to its left) and doesn't linger over the y-axis
@@ -558,7 +562,7 @@ const Heatmap = ({
               </svg>
             </div>
             <div
-              ref={mainPaneRef}
+              ref={setMainPaneNode}
               onScroll={handleGridScroll}
               style={{ gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, overflow: "auto", overscrollBehavior: "contain", position: "relative" }}
             >
