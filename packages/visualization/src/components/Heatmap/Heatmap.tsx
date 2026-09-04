@@ -250,25 +250,20 @@ const Heatmap = ({
     const main = mainPaneRef.current;
     if (!scrollToSelection || !isScrollable || !main || newCells.length === 0) return;
 
-    let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+    let minCol = Infinity, maxCol = -Infinity;
     for (const cell of newCells) {
       if (cell.column < minCol) minCol = cell.column;
       if (cell.column > maxCol) maxCol = cell.column;
-      if (cell.row < minRow) minRow = cell.row;
-      if (cell.row > maxRow) maxRow = cell.row;
     }
 
     const boxLeft = minCol * binWidth;
     const boxRight = (maxCol + 1) * binWidth;
-    const boxTop = yMax - (maxRow + 1) * binHeight;
-    const boxBottom = yMax - minRow * binHeight;
 
     const targetLeft = nearestScrollOffset(main.scrollLeft, viewportWidth, boxLeft, boxRight);
-    const targetTop = nearestScrollOffset(main.scrollTop, viewportHeight, boxTop, boxBottom);
-    if (targetLeft !== main.scrollLeft || targetTop !== main.scrollTop) {
-      main.scrollTo({ left: targetLeft, top: targetTop, behavior: "smooth" });
+    if (targetLeft !== main.scrollLeft) {
+      main.scrollTo({ left: targetLeft, behavior: "smooth" });
     }
-  }, [selectedCells, scrollToSelection, isScrollable, binWidth, binHeight, yMax, viewportWidth, viewportHeight]);
+  }, [selectedCells, scrollToSelection, isScrollable, binWidth, viewportWidth]);
 
   const handleGridScroll = useCallback(() => {
     const main = mainPaneRef.current;
