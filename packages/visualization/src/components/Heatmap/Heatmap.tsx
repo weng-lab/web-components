@@ -33,6 +33,9 @@ const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 // cell or tick label is already there before it scrolls into view rather than popping in late.
 const GRID_OVERSCAN_CELLS = 4;
 const MINI_MAP_HEIGHT = 50;
+
+const MINI_MAP_POPUP_MARGIN = 24;
+const MINI_MAP_POPUP_PADDING = 12;
 const X_AXIS_OVERHANG_CLIP_HEIGHT = 10;
 const getBins = (d: ColumnDatum) => d.rows;
 
@@ -287,6 +290,30 @@ const Heatmap = ({
     mainPaneRef.current?.scrollTo({ left, top });
   }, []);
 
+  const [isMiniMapExpanded, setIsMiniMapExpanded] = useState(false);
+  const miniMapContainerRef = useRef<HTMLDivElement | null>(null);
+  // The popup itself lives outside miniMapContainerRef in the tree (it's positioned relative to
+  // the plot's outer container, not the small inline minimap) - both refs count as "inside" for
+  // the outside-click check below.
+  const miniMapPopupRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isMiniMapExpanded) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (miniMapContainerRef.current?.contains(target) || miniMapPopupRef.current?.contains(target)) return;
+      setIsMiniMapExpanded(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMiniMapExpanded(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMiniMapExpanded]);
+
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const main = mainPaneRef.current;
     if (!main) return;
@@ -507,9 +534,10 @@ const Heatmap = ({
   return (
     <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
       {!parentWidth || !parentHeight || data.length === 0 || numRows === 0 ? null : isScrollable ? (
+        <>
         <div style={{ display: "flex", flexDirection: "column" }}>
           {showMiniMap && (
-            <div style={{ marginLeft: yTitleWidth + yTickLabelWidth }}>
+            <div ref={miniMapContainerRef} style={{ marginLeft: yTitleWidth + yTickLabelWidth, position: "relative", width: viewportWidth }}>
               <HeatmapMiniMap
                 canvasCellParams={canvasCellParams}
                 xMax={xMax}
@@ -521,6 +549,14 @@ const Heatmap = ({
                 width={viewportWidth}
                 height={MINI_MAP_HEIGHT}
                 onNavigate={handleMiniMapNavigate}
+              />
+              {/* Swallows all pointer interaction with the small minimap and opens the popup
+                  instead - the small minimap itself never navigates directly. */}
+              <button
+                type="button"
+                aria-label="Expand minimap"
+                onClick={() => setIsMiniMapExpanded(true)}
+                style={{ position: "absolute", inset: 0, width: viewportWidth, height: MINI_MAP_HEIGHT, padding: 0, margin: 0, border: "none", background: "transparent", cursor: "pointer" }}
               />
             </div>
           )}
@@ -646,6 +682,42 @@ const Heatmap = ({
             )}
           </div>
         </div>
+        {showMiniMap && isMiniMapExpanded && (
+          <div
+            ref={miniMapPopupRef}
+            style={{
+              position: "absolute",
+              top: MINI_MAP_POPUP_MARGIN,
+              left: MINI_MAP_POPUP_MARGIN,
+              right: MINI_MAP_POPUP_MARGIN,
+              bottom: MINI_MAP_POPUP_MARGIN,
+              zIndex: 20,
+              boxSizing: "border-box",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: MINI_MAP_POPUP_PADDING,
+              background: "#fff",
+              border: "1px solid #d5d5d5",
+              borderRadius: 4,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+            }}
+          >
+            <HeatmapMiniMap
+              canvasCellParams={canvasCellParams}
+              xMax={xMax}
+              yMax={yMax}
+              viewportWidth={viewportWidth}
+              viewportHeight={viewportHeight}
+              scrollLeft={axisScrollPos.left}
+              scrollTop={axisScrollPos.top}
+              width={Math.max(0, parentWidth - 2 * MINI_MAP_POPUP_MARGIN - 2 * MINI_MAP_POPUP_PADDING - 2)}
+              height={Math.max(0, parentHeight - 2 * MINI_MAP_POPUP_MARGIN - 2 * MINI_MAP_POPUP_PADDING - 2)}
+              onNavigate={handleMiniMapNavigate}
+            />
+          </div>
+        )}
+        </>
       ) : (
         <svg width={parentWidth} height={parentHeight} ref={svgRef}>
           {/* Inside the <svg> so cell hover styling survives the SVG/PNG download serialization */}
