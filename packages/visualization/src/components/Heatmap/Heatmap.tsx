@@ -590,26 +590,20 @@ const Heatmap = ({
             {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
             <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "visible" }}>
               <svg width={viewportWidth} height={xTickLabelHeight} style={{ overflow: "visible" }}>
-                {xTickLeftOverhangMax > 0 && (
-                  <defs>
-                    <clipPath id={xTickClipId}>
-                      {/* The pane itself, always fully visible. */}
-                      <rect x={0} y={0} width={viewportWidth} height={xTickLabelHeight} />
-                      {/* The leftDiagonal overhang reach (shrinks to 0 as axisScrollPos.left grows
-                          - see xTickLeftOverhang) - full height except a thin strip at the top,
-                          where the axis's own tick-line stub would otherwise show through
-                          underneath the y-axis pane. Leaving that strip out of the clip hides just
-                          the stub; the label text, which sits lower, is unaffected. */}
+                <defs>
+                  <clipPath id={xTickClipId}>
+                    <rect x={0} y={0} width={viewportWidth} height={xTickLabelHeight} />
+                    {xTickLeftOverhangMax > 0 && (
                       <rect
                         x={-xTickLeftOverhang}
                         y={X_AXIS_OVERHANG_CLIP_HEIGHT}
                         width={xTickLeftOverhang}
                         height={Math.max(0, xTickLabelHeight - X_AXIS_OVERHANG_CLIP_HEIGHT)}
                       />
-                    </clipPath>
-                  </defs>
-                )}
-                <g clipPath={xTickLeftOverhangMax > 0 ? `url(#${xTickClipId})` : undefined}>
+                    )}
+                  </clipPath>
+                </defs>
+                <g clipPath={`url(#${xTickClipId})`}>
                   <g transform={`translate(${-axisScrollPos.left},0)`}>
                     <AxisBottom
                       top={0}
