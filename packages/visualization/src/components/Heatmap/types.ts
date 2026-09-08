@@ -49,6 +49,10 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    * Colors for the gradient. At least two required for the gradient, additional can be passed to define midpoints.
    */
   colors: [string, string, ...string[]]
+  /**
+   * Value range mapped across `colors`, evenly spaced. Defaults to [0, max value in data].
+   */
+  colorDomain?: [number, number];
   xLabel?: string;
   yLabel?: string;
   tooltipBody?: (bin:  RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>) => ReactElement;

@@ -69,6 +69,7 @@ const Heatmap = ({
   ref,
   downloadFileName,
   colors,
+  colorDomain,
   xLabel,
   yLabel,
   tooltipBody,
@@ -112,7 +113,8 @@ const Heatmap = ({
 
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
   const allRowNames = useMemo(() => data[0]?.rows.map((r) => r.rowName) ?? [], [data]);
-  const maxValue = useMemo(() => maxOf(data, (d) => maxOf(getBins(d), (r) => r.count)), [data]);
+  const dataMaxValue = useMemo(() => maxOf(data, (d) => maxOf(getBins(d), (r) => r.count)), [data]);
+  const [minValue, maxValue] = colorDomain ?? [0, dataMaxValue];
   const numRows = useMemo(() => maxOf(data, (d) => getBins(d).length), [data]);
 
   // Measured (not estimated) pixel width of the longest label, so any label - short or long,
@@ -139,7 +141,7 @@ const Heatmap = ({
     [colorsKey]
   );
 
-  const legendWidth = useMemo(() => getHeatmapLegendWidth(0, maxValue), [maxValue]);
+  const legendWidth = useMemo(() => getHeatmapLegendWidth(minValue, maxValue), [minValue, maxValue]);
   const defaultRight = showLegend ? legendWidth + LEGEND_GAP : 10;
   const defaultTop = 20;
   const labelBottomSpace = colLabelHeight + AXIS_LABEL_GAP + X_AXIS_TITLE_SPACE;
@@ -182,8 +184,8 @@ const Heatmap = ({
 
   const resolvedDeselectedColor = deselectedColor ?? DEFAULT_DESELECTED_COLOR;
   const colorScale = useMemo(
-    () => getHeatmapColorScale(stableColors, maxValue),
-    [stableColors, maxValue]
+    () => getHeatmapColorScale(stableColors, [minValue, maxValue]),
+    [stableColors, minValue, maxValue]
   );
   const selectedKeys = useMemo(
     () => (selectedCells?.length ? new Set(selectedCells.map(cellKey)) : null),
@@ -416,6 +418,7 @@ const Heatmap = ({
               xScale={xScale}
               yScale={cellYScale}
               colors={stableColors}
+              minValue={minValue}
               maxValue={maxValue}
               gap={gap}
               isRect={isRect}
@@ -691,7 +694,7 @@ const Heatmap = ({
                 <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
                   <HeatmapLegend
                     colors={stableColors}
-                    minValue={0}
+                    minValue={minValue}
                     maxValue={maxValue}
                     height={viewportHeight}
                   />
@@ -787,6 +790,7 @@ const Heatmap = ({
               xScale={xScale}
               yScale={cellYScale}
               colors={stableColors}
+              minValue={minValue}
               maxValue={maxValue}
               gap={gap}
               isRect={isRect}
@@ -823,7 +827,7 @@ const Heatmap = ({
               <g transform={`translate(${xMax + LEGEND_GAP}, 0)`}>
                 <HeatmapLegend
                   colors={stableColors}
-                  minValue={0}
+                  minValue={minValue}
                   maxValue={maxValue}
                   height={yMax}
                 />
