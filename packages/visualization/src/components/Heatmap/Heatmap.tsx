@@ -33,9 +33,12 @@ const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 // cell or tick label is already there before it scrolls into view rather than popping in late.
 const GRID_OVERSCAN_CELLS = 4;
 const MINI_MAP_HEIGHT = 50;
-
-const MINI_MAP_POPUP_MARGIN = 24;
-const MINI_MAP_POPUP_PADDING = 12;
+// The expanded minimap opens as a viewport-fixed modal sized off the screen, not the plot's own
+// (often much smaller) container - nearly the whole screen, but leaving a visible backdrop margin
+// so it still reads as a popup rather than a page navigation.
+const MINI_MAP_POPUP_WIDTH_VW = 94;
+const MINI_MAP_POPUP_HEIGHT_VH = 90;
+const MINI_MAP_POPUP_PADDING = 16;
 const X_AXIS_OVERHANG_CLIP_HEIGHT = 10;
 const getBins = (d: ColumnDatum) => d.rows;
 
@@ -314,6 +317,28 @@ const Heatmap = ({
     };
   }, [isMiniMapExpanded]);
 
+  // The expanded minimap's canvas needs real pixel dimensions (for dpr scaling), but the popup
+  // itself is sized by CSS (vw/vh) against the viewport, which can change as the window resizes
+  // while the popup is open - ResizeObserver on the flex-filled area inside it is what actually
+  // measures that, rather than computing it from window.innerWidth/innerHeight up front.
+  const [expandedMiniMapSize, setExpandedMiniMapSize] = useState<{ width: number; height: number } | null>(null);
+  const expandedMiniMapObserverRef = useRef<ResizeObserver | null>(null);
+  const expandedMiniMapAreaRef = useCallback((node: HTMLDivElement | null) => {
+    expandedMiniMapObserverRef.current?.disconnect();
+    expandedMiniMapObserverRef.current = null;
+    if (!node) {
+      setExpandedMiniMapSize(null);
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setExpandedMiniMapSize({ width: Math.floor(width), height: Math.floor(height) });
+    });
+    observer.observe(node);
+    expandedMiniMapObserverRef.current = observer;
+  }, []);
+
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const main = mainPaneRef.current;
     if (!main) return;
@@ -549,14 +574,7 @@ const Heatmap = ({
                 width={viewportWidth}
                 height={MINI_MAP_HEIGHT}
                 onNavigate={handleMiniMapNavigate}
-              />
-              {/* Swallows all pointer interaction with the small minimap and opens the popup
-                  instead - the small minimap itself never navigates directly. */}
-              <button
-                type="button"
-                aria-label="Expand minimap"
-                onClick={() => setIsMiniMapExpanded(true)}
-                style={{ position: "absolute", inset: 0, width: viewportWidth, height: MINI_MAP_HEIGHT, padding: 0, margin: 0, border: "none", background: "transparent", cursor: "pointer" }}
+                onCanvasClick={() => setIsMiniMapExpanded(true)}
               />
             </div>
           )}
@@ -683,38 +701,79 @@ const Heatmap = ({
           </div>
         </div>
         {showMiniMap && isMiniMapExpanded && (
-          <div
-            ref={miniMapPopupRef}
-            style={{
-              position: "absolute",
-              top: MINI_MAP_POPUP_MARGIN,
-              left: MINI_MAP_POPUP_MARGIN,
-              right: MINI_MAP_POPUP_MARGIN,
-              bottom: MINI_MAP_POPUP_MARGIN,
-              zIndex: 20,
-              boxSizing: "border-box",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: MINI_MAP_POPUP_PADDING,
-              background: "#fff",
-              border: "1px solid #d5d5d5",
-              borderRadius: 4,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-            }}
-          >
-            <HeatmapMiniMap
-              canvasCellParams={canvasCellParams}
-              xMax={xMax}
-              yMax={yMax}
-              viewportWidth={viewportWidth}
-              viewportHeight={viewportHeight}
-              scrollLeft={axisScrollPos.left}
-              scrollTop={axisScrollPos.top}
-              width={Math.max(0, parentWidth - 2 * MINI_MAP_POPUP_MARGIN - 2 * MINI_MAP_POPUP_PADDING - 2)}
-              height={Math.max(0, parentHeight - 2 * MINI_MAP_POPUP_MARGIN - 2 * MINI_MAP_POPUP_PADDING - 2)}
-              onNavigate={handleMiniMapNavigate}
-            />
+          <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              ref={miniMapPopupRef}
+              style={{
+                position: "relative",
+                width: `${MINI_MAP_POPUP_WIDTH_VW}vw`,
+                height: `${MINI_MAP_POPUP_HEIGHT_VH}vh`,
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                background: "#fff",
+                border: "1px solid #d5d5d5",
+                borderRadius: 8,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+                overflow: "hidden",
+              }}
+            >
+              {/* A proper title bar, not just a close button floating in extra top padding - its
+                  horizontal padding matches the body's below so the panel reads as evenly framed. */}
+              <div
+                style={{
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: `10px ${MINI_MAP_POPUP_PADDING}px`,
+                  background: "#f7f7f8",
+                  borderBottom: "1px solid #e5e5e5",
+                }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>Minimap</span>
+                <button
+                  type="button"
+                  aria-label="Close expanded minimap"
+                  onClick={() => setIsMiniMapExpanded(false)}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
+                    border: "none",
+                    borderRadius: "50%",
+                    background: "#fff",
+                    color: "#555",
+                    fontSize: 16,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, display: "flex", padding: MINI_MAP_POPUP_PADDING }}>
+                <div ref={expandedMiniMapAreaRef} style={{ flex: 1, minHeight: 0, position: "relative" }}>
+                  {expandedMiniMapSize && expandedMiniMapSize.width > 0 && expandedMiniMapSize.height > 0 && (
+                    <HeatmapMiniMap
+                      canvasCellParams={canvasCellParams}
+                      xMax={xMax}
+                      yMax={yMax}
+                      viewportWidth={viewportWidth}
+                      viewportHeight={viewportHeight}
+                      scrollLeft={axisScrollPos.left}
+                      scrollTop={axisScrollPos.top}
+                      width={expandedMiniMapSize.width}
+                      height={expandedMiniMapSize.height}
+                      onNavigate={handleMiniMapNavigate}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
         </>
