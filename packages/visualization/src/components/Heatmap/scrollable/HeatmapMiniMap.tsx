@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { drawHeatmapCells, type CanvasCellParams } from "./HeatmapCanvasCells";
+import { drawHeatmapCells, type CanvasCellParams } from "../HeatmapCanvasCells";
 
 export interface HeatmapMiniMapProps {
   canvasCellParams: CanvasCellParams;
@@ -11,8 +11,8 @@ export interface HeatmapMiniMapProps {
   scrollTop: number;
   width: number;
   height: number;
-  /** Called with a new (unclamped-by-caller) scroll position when the user clicks or drags the minimap. */
   onNavigate: (left: number, top: number) => void;
+  onCanvasClick?: () => void;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -28,6 +28,7 @@ const HeatmapMiniMap = ({
   width,
   height,
   onNavigate,
+  onCanvasClick,
 }: HeatmapMiniMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scaleX = xMax > 0 ? width / xMax : 0;
@@ -62,11 +63,15 @@ const HeatmapMiniMap = ({
 
   const handleCanvasPointerDown = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
+      if (onCanvasClick) {
+        onCanvasClick();
+        return;
+      }
       if (scaleX <= 0 || scaleY <= 0) return;
       const rect = event.currentTarget.getBoundingClientRect();
       navigateCentered((event.clientX - rect.left) / scaleX, (event.clientY - rect.top) / scaleY);
     },
-    [navigateCentered, scaleX, scaleY]
+    [onCanvasClick, navigateCentered, scaleX, scaleY]
   );
 
   const handleRectPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {

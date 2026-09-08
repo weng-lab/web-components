@@ -7,10 +7,11 @@ export const NULL_VALUE_COLOR = "none";
 
 export const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
 
-export function getHeatmapColorScale(colors: [string, string, ...string[]], maxValue: number) {
+export function getHeatmapColorScale(colors: [string, string, ...string[]], domain: [number, number]) {
+  const [minValue, maxValue] = domain;
   return scaleLinear<string>({
     range: colors,
-    domain: colors.map((_, i) => (i * maxValue) / (colors.length - 1)),
+    domain: colors.map((_, i) => minValue + (i * (maxValue - minValue)) / (colors.length - 1)),
   });
 }
 

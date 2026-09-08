@@ -46,6 +46,7 @@ function ScrollableHeatmapTest() {
                 <Heatmap
                     ref={heatmapRef}
                     data={scrollableHeatmapData}
+                    showMiniMap
                     xLabel="X-Axis Label"
                     yLabel="Y-Axis Label"
                     colors={['#20619e', '#fff36e', '#c92b16']}
