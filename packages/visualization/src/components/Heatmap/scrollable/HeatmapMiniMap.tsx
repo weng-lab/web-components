@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { drawHeatmapCells, type CanvasCellParams } from "./HeatmapCanvasCells";
+import { drawHeatmapCells, type CanvasCellParams } from "../HeatmapCanvasCells";
 
 export interface HeatmapMiniMapProps {
   canvasCellParams: CanvasCellParams;

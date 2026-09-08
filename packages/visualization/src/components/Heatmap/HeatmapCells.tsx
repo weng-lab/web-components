@@ -6,10 +6,9 @@ import HeatmapCell from "./HeatmapCell";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { useStableCallback } from "../../hooks";
 import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale, resolveCellAppearance } from "./heatmapCellAppearance";
+import { getBins } from "./heatmapLayout";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
-
-const getBins = (d: ColumnDatum) => d.rows;
 
 export interface HeatmapCellsProps {
   data: ColumnDatum[];
