@@ -6,16 +6,20 @@ import HeatmapCell from "./HeatmapCell";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { useStableCallback } from "../../hooks";
 import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale, resolveCellAppearance } from "./heatmapCellAppearance";
+import { getBins } from "./heatmapLayout";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
-
-const getBins = (d: ColumnDatum) => d.rows;
 
 export interface HeatmapCellsProps {
   data: ColumnDatum[];
   xScale: (d: number) => number;
   yScale: (d: number) => number;
   colors: [string, string, ...string[]];
+  /**
+   * Value mapped to the first color. Defaults to 0. Pass a negative value (e.g. paired with a
+   * positive maxValue) for a diverging scale centered away from zero.
+   */
+  minValue?: number;
   maxValue: number;
   gap: number;
   isRect: boolean;
@@ -29,13 +33,13 @@ export interface HeatmapCellsProps {
 }
 
 const HeatmapCells = memo(function HeatmapCells({
-  data, xScale, yScale, colors, maxValue, gap,
+  data, xScale, yScale, colors, minValue = 0, maxValue, gap,
   isRect, binWidth, binHeight, animationType,
   tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR,
 }: HeatmapCellsProps) {
   const colorScale = useMemo(
-    () => getHeatmapColorScale(colors, maxValue),
-    [colors, maxValue]
+    () => getHeatmapColorScale(colors, [minValue, maxValue]),
+    [colors, minValue, maxValue]
   );
   const radius = Math.min(binWidth, binHeight) / 2;
 
