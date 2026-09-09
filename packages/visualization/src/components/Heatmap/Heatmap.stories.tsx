@@ -109,6 +109,10 @@ export const LeftDiagonalXLabels: Story = {
 // Click cells to select them - every unselected cell dims to gray while selected cells keep
 // their gradient color. Click a selected cell again to remove it from the selection.
 export const SelectableCells: Story = {
+    args: {
+        data: heatmapData,
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+    },
     render: () => {
         const [selectedCells, setSelectedCells] = useState<HeatmapCellId[]>([]);
         return (
@@ -190,6 +194,10 @@ export const ScrollableLargeDataset: Story = {
 // the grid should auto-scroll (minimal movement, "nearest" semantics) to reveal it rather than
 // leaving the caller to scroll there manually.
 export const ScrollToSelectionDemo: Story = {
+    args: {
+        data: largeHeatmapData,
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+    },
     render: () => {
         const [selectedCells, setSelectedCells] = useState<HeatmapCellId[]>([]);
         const selectColumn = (column: number) =>

@@ -201,7 +201,6 @@ export const OnLeafHoverChange: Story = {
     height: 600,
     getColor,
     getLabel,
-    onLeafClick: (id) => window.alert("Clicked: " + id),
     tooltipContents: (item) => (
       <div style={{ fontSize: 12 }}>
         <div style={{ fontWeight: 600 }}>{getLabel(item)}</div>

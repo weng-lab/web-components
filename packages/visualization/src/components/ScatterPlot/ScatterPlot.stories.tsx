@@ -1,5 +1,8 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
+import ScatterPlotSync from './ScatterPlotSync';
+import { getSharedDomains } from './helpers';
 import { MiniMapProps } from './types';
 
 const meta = {
@@ -438,4 +441,258 @@ export const ManualSize: Story = {
           </div>
         ),
       ],
+};
+
+// Two plots over the same coordinate space, linked by ScatterPlotSync: hovering either one draws
+// the same crosshair on both, and zooming or panning either one moves both. Only the hovered
+// plot shows a tooltip.
+const syncedDataA: Point[] = generatePoints(600);
+const syncedDataB: Point[] = generatePoints(600)
+    .map((point, index) => ({
+        ...point,
+        x: point.x + Math.sin(index) * 6,
+        y: point.y + Math.cos(index) * 6,
+        color: `hsl(${(index % 360)}, 60%, 40%)`,
+    }));
+
+export const SyncedPlots: Story = {
+    args: {
+        pointData: syncedDataA,
+        loading: false,
+    },
+    render: () => {
+        // Memoized: a fresh domain array on every render would rebuild both plots' scales.
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const domains = useMemo(() => getSharedDomains(syncedDataA, syncedDataB), []);
+
+        return (
+            <ScatterPlotSync {...domains}>
+                {(sync) => (
+                    <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+                        <div style={{ flex: 1, height: '100%' }}>
+                            <ScatterPlot
+                                pointData={syncedDataA}
+                                loading={false}
+                                leftAxisLabel="Y-Axis Label"
+                                bottomAxisLabel="Sample A"
+                                miniMap={miniMap}
+                                disableTooltip
+                                initialState={{ minimap: { open: true }, controls: { selectionType: "pan" } }}
+                                {...sync}
+                            />
+                        </div>
+                        <div style={{ flex: 1, height: '100%' }}>
+                            <ScatterPlot
+                                pointData={syncedDataB}
+                                loading={false}
+                                leftAxisLabel="Y-Axis Label"
+                                bottomAxisLabel="Sample B"
+                                miniMap={miniMap}
+                                disableTooltip
+                                controlsPosition="right"
+                                initialState={{ minimap: { open: true }, controls: { selectionType: "pan" } }}
+                                {...sync}
+                            />
+                        </div>
+                    </div>
+                )}
+            </ScatterPlotSync>
+        );
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 1000, height: 500 }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+// A single plot with crosshairs and no sync - the plot tracks its own pointer.
+export const Crosshairs: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        crosshair: true,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        initialState: {
+            minimap: {
+                open: true,
+            },
+            controls: {
+                selectionType: "pan"
+            }
+        }
+    },
+};
+
+// onHoveredPointChange publishes the point under the cursor, and null once nothing is hovered.
+// It fires on transitions only - moving within one point stays silent - so it is safe to drive
+// state with directly.
+//
+// Here it drives a legend that lives outside the plot: hovering a point rings its group.
+// disableTooltip is on deliberately, because that is the case the callback exists for - hover is
+// still tracked with the tooltip turned off, so a plot can carry hover affordances of its own
+// without also taking the built-in one. groupPointsAnchor swells the rest of the hovered group
+// at the same time, so the plot and the legend answer the same question together.
+//
+// hoveredPoints runs the same wiring backwards: hovering a legend entry hands the plot that
+// group's points and they light up as though the cursor were on one. Between them the legend
+// and the plot drive each other in both directions.
+type GroupedPoint = {
+    x: number;
+    y: number;
+    color: string;
+    metaData: { group: string };
+};
+
+const HOVER_GROUPS = [
+    { name: "Alpha", color: "#E41A1C" },
+    { name: "Beta", color: "#377EB8" },
+    { name: "Gamma", color: "#4DAF4A" },
+    { name: "Delta", color: "#984EA3" },
+];
+
+const groupedData: GroupedPoint[] = HOVER_GROUPS.flatMap(({ name, color }, groupIndex) =>
+    Array.from({ length: 160 }, (_, i) => {
+        const angle = (i / 160) * Math.PI * 2;
+        const radius = 3 + (i % 8) * 0.6;
+        return {
+            x: Math.cos(angle) * radius + groupIndex * 13,
+            y: Math.sin(angle) * radius + (groupIndex % 2) * 11,
+            color,
+            metaData: { group: name },
+        };
+    }),
+);
+
+export const HoveredPointChange: Story = {
+    args: {
+        pointData: groupedData,
+        loading: false,
+    },
+    render: () => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [hoveredLegend, setHoveredLegend] = useState<string | null>(null);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const hoveredPoints = useMemo(
+            () => (hoveredLegend ? groupedData.filter((point) => point.metaData.group === hoveredLegend) : undefined),
+            [hoveredLegend],
+        );
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontFamily: "system-ui" }}>
+                    {HOVER_GROUPS.map(({ name, color }) => {
+                        const on = name === hoveredGroup || name === hoveredLegend;
+                        return (
+                            <span
+                                key={name}
+                                onMouseEnter={() => setHoveredLegend(name)}
+                                onMouseLeave={() => setHoveredLegend(null)}
+                                style={{
+                                    cursor: "default",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: "4px 10px",
+                                    borderRadius: 999,
+                                    fontSize: 13,
+                                    background: on ? "#e0e0e0" : "#f5f5f5",
+                                    // Outline rather than border: drawn outside the box, so a ring
+                                    // appearing under the cursor cannot reflow the row.
+                                    outline: on ? `2px solid ${color}` : "none",
+                                    outlineOffset: 1,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: 10,
+                                        height: 10,
+                                        borderRadius: "50%",
+                                        background: color,
+                                    }}
+                                />
+                                {name}
+                            </span>
+                        );
+                    })}
+                </div>
+
+                <div style={{ flex: 1, minHeight: 0 }}>
+                    <ScatterPlot
+                        pointData={groupedData}
+                        loading={false}
+                        disableTooltip
+                        groupPointsAnchor="group"
+                        leftAxisLabel="Y-Axis Label"
+                        bottomAxisLabel="X-Axis Label"
+                        hoveredPoints={hoveredPoints}
+                        onHoveredPointChange={(point) => setHoveredGroup(point?.metaData?.group ?? null)}
+                    />
+                </div>
+
+                <div style={{ fontFamily: "system-ui", fontSize: 13, color: "#666" }}>
+                    hovered group: <strong>{hoveredGroup ?? "none"}</strong>
+                    {"  |  "}
+                    from the legend: <strong>{hoveredLegend ?? "none"}</strong>
+                </div>
+            </div>
+        );
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 850, height: 560 }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+// square locks the plot to the shorter side of its container and centres it, which is what you
+// want when both axes are in the same units and a circular cluster has to stay circular - a PCA
+// or UMAP embedding. Off by default: the plot fills the container instead.
+//
+// Both stories below sit in the same wide 900x420 container, so the difference is the point.
+export const Square: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        square: true,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+export const FillsContainer: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        miniMap: miniMap,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
+                <Story />
+            </div>
+        ),
+    ],
 };

@@ -8,15 +8,18 @@ import { Text } from "@visx/text";
 import { curveBasis } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { BackgroundGradient, ChartProps, Point, SelectionMode, ZoomType } from "./types";
+import { BackgroundGradient, ChartProps, CrosshairPosition, Point, SelectionMode, ZoomType } from "./types";
 import { drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, prepareCanvas, rescaleX, rescaleY } from "./helpers";
+import { useStableCallback } from "../../hooks";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
+import Crosshair from "./Crosshair";
 import { useDragSelection } from "./hooks/useDragSelection";
 
 type ScatterPlotViewportProps<T extends object> = {
-    size: number;
+    width: number;
+    height: number;
     margin: { top: number; left: number };
     boundedWidth: number;
     boundedHeight: number;
@@ -33,6 +36,7 @@ type ScatterPlotViewportProps<T extends object> = {
     disableZoom?: boolean;
     groupPointsAnchor?: keyof Point<T> | keyof T;
     hoveredPoint: Point<T> | null;
+    hoveredPoints?: Point<T>[];
     handleMouseMove: (event: React.MouseEvent<SVGElement>, zoom: ZoomType) => void;
     handleMouseLeave: () => void;
     onDisplayedPointsChange?: (points: Point<T>[]) => void;
@@ -43,11 +47,23 @@ type ScatterPlotViewportProps<T extends object> = {
     border: boolean;
     originLine?: boolean;
     backgroundGradient?: BackgroundGradient;
+    /** Crosshair position in data coordinates, or null for no crosshair. */
+    crosshair?: CrosshairPosition | null;
     divRef: React.RefObject<HTMLDivElement | null>;
 };
 
+/**
+ * Hover growth eases in over this long, and is dropped instantly on the way out.
+ * Easing the exit too would drag a tail of still-shrinking points behind the cursor
+ * whenever it sweeps across a dense plot.
+ */
+const HOVER_GROW_MS = 120;
+
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
 const ScatterPlotViewport = <T extends object>({
-    size,
+    width,
+    height,
     margin,
     boundedWidth,
     boundedHeight,
@@ -64,6 +80,7 @@ const ScatterPlotViewport = <T extends object>({
     disableZoom,
     groupPointsAnchor,
     hoveredPoint,
+    hoveredPoints,
     handleMouseMove,
     handleMouseLeave,
     onDisplayedPointsChange,
@@ -74,10 +91,15 @@ const ScatterPlotViewport = <T extends object>({
     border,
     originLine,
     backgroundGradient,
+    crosshair,
     divRef,
 }: ScatterPlotViewportProps<T>) => {
     const graphRef = useRef<SVGRectElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    // Hover growth is driven straight onto the canvas through a ref. A redraw is ~0.3ms at
+    // 3.4k points so the drawing is cheap, but a re-render per frame would not be.
+    const hoverAmountRef = useRef(0);
+    const animatedKeysRef = useRef<Set<string> | null>(null);
 
     // Animation state — viewport owns what it renders
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(animation));
@@ -132,26 +154,55 @@ const ScatterPlotViewport = <T extends object>({
         [yScale, zoom.transformMatrix]
     );
 
+    // What is hovered: the point under the cursor if there is one, otherwise whatever the
+    // consumer has asked to highlight. The cursor takes precedence so the plot's own hover is
+    // never overridden mid-gesture.
+    const highlightSeeds: Point<T>[] = useMemo(
+        () => (hoveredPoint ? [hoveredPoint] : hoveredPoints ?? []),
+        [hoveredPoint, hoveredPoints]
+    );
+
     const groupedPoints: Point<T>[] = useMemo(() => {
         const anchor = groupPointsAnchor;
-        if (anchor && hoveredPoint) {
-            return pointData.filter((point) => {
-                if (anchor in point) {
-                    return point[anchor as keyof Point<T>] === hoveredPoint[anchor as keyof Point<T>];
-                }
-                if (point.metaData && hoveredPoint.metaData) {
-                    return point.metaData[anchor as keyof T] === hoveredPoint.metaData[anchor as keyof T];
-                }
-                return false;
-            });
-        }
-        return hoveredPoint ? [hoveredPoint] : [];
-    }, [hoveredPoint, groupPointsAnchor, pointData]);
+        if (!anchor) return highlightSeeds;
 
-    const hoveredPointKeys = useMemo(
-        () => new Set(groupedPoints.map((point) => `${point.x},${point.y}`)),
-        [groupedPoints]
-    );
+        const anchorValue = (point: Point<T>): unknown =>
+            anchor in point
+                ? point[anchor as keyof Point<T>]
+                : point.metaData?.[anchor as keyof T];
+
+        // Collect the seeds' anchor values first, so this stays O(points + seeds). Matching each
+        // point against each seed would be 2.5m comparisons when a whole 750-point group is
+        // handed in against 3.4k points.
+        const seedValues = new Set(
+            highlightSeeds.map(anchorValue).filter((value) => value !== undefined)
+        );
+        if (seedValues.size === 0) return [];
+
+        return pointData.filter((point) => {
+            const value = anchorValue(point);
+            return value !== undefined && seedValues.has(value);
+        });
+    }, [highlightSeeds, groupPointsAnchor, pointData]);
+
+    const previousHoveredKeysRef = useRef<Set<string>>(new Set());
+
+    const hoveredPointKeys = useMemo(() => {
+        const next = new Set(groupedPoints.map((point) => `${point.x},${point.y}`));
+        const previous = previousHoveredKeysRef.current;
+
+        // Moving between points inside one anchored group rebuilds this set, but its contents
+        // are unchanged - the hovered group is the same group. Handing back the previous Set
+        // keeps its identity stable, so the redraw effect and the hover growth it drives both
+        // sit still instead of restarting on every point the cursor crosses. Purely a
+        // memoisation hint: the contents are correct either way.
+        if (next.size === previous.size && [...next].every((key) => previous.has(key))) {
+            return previous;
+        }
+
+        previousHoveredKeysRef.current = next;
+        return next;
+    }, [groupedPoints]);
 
     const currentDisplayedPoints = useMemo(
         () => pointData.filter((point) => {
@@ -195,7 +246,7 @@ const ScatterPlotViewport = <T extends object>({
             const transformedX = xST(point.x);
             const transformedY = yST(point.y);
             if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
-            drawCanvasPoint(context, point, transformedX, transformedY, isHovered);
+            drawCanvasPoint(context, point, transformedX, transformedY, isHovered ? hoverAmountRef.current : 0);
         };
 
         nonHovered.forEach((point) => drawRenderedPoint(point, false));
@@ -203,10 +254,37 @@ const ScatterPlotViewport = <T extends object>({
     }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient]);
 
     useEffect(() => {
-        if (canvasRef.current && !showPointAnimation) {
-            drawPoints(xScaleTransformed, yScaleTransformed, canvasRef.current);
+        const canvas = canvasRef.current;
+        if (!canvas || showPointAnimation) return;
+
+        // Leaving is instant: drop the growth and repaint once.
+        if (hoveredPointKeys.size === 0) {
+            animatedKeysRef.current = null;
+            hoverAmountRef.current = 0;
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+            return;
         }
-    }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation]);
+
+        // Only a change of hovered set starts the growth. This effect also runs on pan, zoom
+        // and data changes, which should repaint at the size the points have already reached
+        // rather than snapping them back to zero.
+        if (animatedKeysRef.current === hoveredPointKeys) {
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+            return;
+        }
+        animatedKeysRef.current = hoveredPointKeys;
+
+        const startedAt = performance.now();
+        hoverAmountRef.current = 0;
+        let frame = requestAnimationFrame(function step() {
+            const t = Math.min(1, (performance.now() - startedAt) / HOVER_GROW_MS);
+            hoverAmountRef.current = easeOutCubic(t);
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+            if (t < 1) frame = requestAnimationFrame(step);
+        });
+
+        return () => cancelAnimationFrame(frame);
+    }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation, hoveredPointKeys]);
 
     const handlePointClick = useCallback(() => {
         if (hoveredPoint) onPointClicked?.(hoveredPoint);
@@ -229,6 +307,57 @@ const ScatterPlotViewport = <T extends object>({
         completeSelection(zoom);
     };
 
+    /**
+     * Panning is coalesced to one zoom update per animation frame.
+     *
+     * zoom.dragMove sets the transform matrix on every move it is handed, and a mouse reports
+     * positions faster than the browser paints. Because mousemove is a continuous event that
+     * React flushes synchronously - and because a shared zoom sits above every synced plot, so
+     * one update re-renders all of them - handling each move outright never lets the browser
+     * paint, and React eventually warns that the update depth was exceeded.
+     *
+     * The buffer holds nativeEvent rather than the synthetic event: React clears currentTarget
+     * once dispatch returns, and this runs a frame later. Routing through useStableCallback
+     * keeps the frame calling the current zoom rather than the one captured when it was queued.
+     */
+    const dragFrameRef = useRef<number | null>(null);
+    const pendingDragRef = useRef<MouseEvent | TouchEvent | null>(null);
+    const dragMoveLatest = useStableCallback((event: MouseEvent | TouchEvent) => {
+        zoom.dragMove(event as unknown as React.MouseEvent | React.TouchEvent);
+    });
+
+    const flushPendingDrag = useCallback(() => {
+        if (dragFrameRef.current !== null) {
+            cancelAnimationFrame(dragFrameRef.current);
+            dragFrameRef.current = null;
+        }
+        const pending = pendingDragRef.current;
+        pendingDragRef.current = null;
+        if (pending) dragMoveLatest(pending);
+    }, [dragMoveLatest]);
+
+    useEffect(() => () => {
+        if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    }, []);
+
+    const onZoomDragMove = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
+        pendingDragRef.current = event.nativeEvent;
+        if (dragFrameRef.current !== null) return;
+        dragFrameRef.current = requestAnimationFrame(() => {
+            dragFrameRef.current = null;
+            const pending = pendingDragRef.current;
+            pendingDragRef.current = null;
+            if (pending) dragMoveLatest(pending);
+        });
+    };
+
+    // The queued frame is applied before the gesture closes, so the plot lands on the position
+    // the pointer was actually released at rather than a frame behind it.
+    const onZoomDragEnd = () => {
+        flushPendingDrag();
+        zoom.dragEnd();
+    };
+
     const onSurfaceMouseDown = selectMode === "none"
         ? undefined
         : selectMode === "select"
@@ -238,17 +367,17 @@ const ScatterPlotViewport = <T extends object>({
         ? undefined
         : selectMode === "select"
             ? handleSelectionEnd
-            : disableZoom ? undefined : zoom.dragEnd;
+            : disableZoom ? undefined : onZoomDragEnd;
     const onSurfaceMouseMove = selectMode === "none"
         ? undefined
         : selectMode === "select"
             ? (isDragging ? dragMove : undefined)
-            : disableZoom ? undefined : zoom.dragMove;
+            : disableZoom ? undefined : onZoomDragMove;
     const onSurfaceMouseLeave = selectMode === "none"
         ? undefined
         : selectMode === "select"
             ? handleSelectionEnd
-            : disableZoom ? undefined : zoom.dragEnd;
+            : disableZoom ? undefined : onZoomDragEnd;
     const onSurfaceTouchStart = selectMode === "none"
         ? undefined
         : selectMode === "select"
@@ -258,12 +387,12 @@ const ScatterPlotViewport = <T extends object>({
         ? undefined
         : selectMode === "select"
             ? handleSelectionEnd
-            : disableZoom ? undefined : zoom.dragEnd;
+            : disableZoom ? undefined : onZoomDragEnd;
     const onSurfaceTouchMove = selectMode === "none"
         ? undefined
         : selectMode === "select"
             ? (isDragging ? dragMove : undefined)
-            : disableZoom ? undefined : zoom.dragMove;
+            : disableZoom ? undefined : onZoomDragMove;
     const onSurfaceWheel: React.WheelEventHandler<SVGRectElement> = (event) => {
         setShowPointAnimation(false);
         if (!disableZoom) {
@@ -299,7 +428,7 @@ const ScatterPlotViewport = <T extends object>({
 
     return (
         <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>
-            <Box sx={{ width: size, height: size }}>
+            <Box sx={{ width, height }}>
                 {loading ? (
                     <Box display="flex" width="100%" height="100%" sx={{ justifyContent: "center", alignItems: "center" }}>
                         <CircularProgress />
@@ -321,8 +450,8 @@ const ScatterPlotViewport = <T extends object>({
                             }}
                         />
                         <svg
-                            width={size}
-                            height={size}
+                            width={width}
+                            height={height}
                             overflow="visible"
                             style={{ position: "absolute", userSelect: "none" }}
                             onMouseMove={(event) => {
@@ -397,6 +526,16 @@ const ScatterPlotViewport = <T extends object>({
                                     onWheel={onSurfaceWheel}
                                     onClick={handlePointClick}
                                 />
+                                {crosshair && !isDragging && (
+                                    <Crosshair
+                                        position={{
+                                            x: xScaleTransformed(crosshair.x),
+                                            y: yScaleTransformed(crosshair.y),
+                                        }}
+                                        boundedWidth={boundedWidth}
+                                        boundedHeight={boundedHeight}
+                                    />
+                                )}
                             </Group>
                             <Group top={margin.top} left={margin.left}>
                                 <AxisLeft

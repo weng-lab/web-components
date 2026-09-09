@@ -61,6 +61,16 @@ export type Point<T> = {
     metaData?: T;
 };
 
+/**
+    Position of the crosshair overlay, in data coordinates (the same units as Point.x / Point.y)
+    rather than pixels, so it stays meaningful across plots of different sizes and survives
+    zooming and panning.
+*/
+export type CrosshairPosition = {
+    x: number;
+    y: number;
+};
+
 export type SelectionMode = "select" | "pan" | "none";
 
 /**
@@ -167,6 +177,35 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     onPointClicked?: (point: Point<T>) => void;
     /**
+     * Callback fired when the hovered point changes, with the point under the
+     * cursor or null once nothing is hovered.
+     *
+     * Fires on transitions only, not on every mouse move, so it is safe to drive
+     * state with: moving within one point stays silent, and leaving the plot
+     * announces null once.
+     *
+     * Independent of disableTooltip - hover is still tracked when the tooltip is
+     * turned off, so this is the way to render hover affordances of your own
+     * (highlighting a legend entry, say) without also taking the built-in tooltip.
+     *
+     * @returns
+     * Singular point including all info and metadata, or null
+     */
+    onHoveredPointChange?: (point: Point<T> | null) => void;
+    /**
+     * Points to render as hovered when the cursor is not over one itself - a legend entry being
+     * hovered, a search hit, a brush on another chart. They grow and gain the hover ring exactly
+     * as a real hover does, easing in and leaving instantly.
+     *
+     * The cursor wins: while it is over a point, that point is what is hovered and this is
+     * ignored. The two cannot really collide anyway, since reaching a legend means leaving
+     * the plot.
+     *
+     * With groupPointsAnchor set, each entry stands for its whole group - so passing one member
+     * highlights the group, and passing the group itself gives the same result.
+     */
+    hoveredPoints?: Point<T>[];
+    /**
      * Optional key to specify if you want to group your points.
      * Must be a key of type Point, or an existing key already in meta data
      * 
@@ -232,11 +271,60 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     backgroundGradient?: BackgroundGradient;
     /**
+     * If true, renders thin crosshair lines tracking the mouse across the full plot area.
+     * @default
+     * false
+     */
+    crosshair?: boolean;
+    /**
+     * Crosshair position in data coordinates, drawn when the mouse is not over this plot.
+     * Used to mirror another plot's crosshair onto this one - see ScatterPlotSync.
+     *
+     * Requires crosshair to be enabled.
+     */
+    crosshairPosition?: CrosshairPosition | null;
+    /**
+     * Callback fired as the crosshair moves, with its position in data coordinates,
+     * or null once the mouse leaves the plot area.
+     *
+     * Requires crosshair to be enabled.
+     */
+    onCrosshairChange?: (position: CrosshairPosition | null) => void;
+    /**
+     * An externally owned zoom instance. When provided the plot drives that zoom instead of
+     * creating its own, so several plots can share one view - see ScatterPlotSync.
+     *
+     * Plots sharing a zoom must be the same size and share their domains, since the transform
+     * is in pixels.
+     */
+    zoom?: ZoomType;
+    /**
+     * Fixes the x axis domain instead of deriving it from the data extents. Useful to keep the
+     * axes stable as the data changes, or to give several plots a shared coordinate frame.
+     */
+    xDomain?: [number, number];
+    /**
+     * Fixes the y axis domain instead of deriving it from the data extents.
+     */
+    yDomain?: [number, number];
+    /**
      * Position of the zoom/selection controls relative to the chart.
      * @default
      * "left"
      */
     controlsPosition?: "left" | "right";
+    /**
+     * Lock the plot to a square, sized to the shorter side of its container and centred in it.
+     *
+     * Off by default, in which case the plot fills the container and its aspect ratio follows
+     * whatever shape that is. Turn it on when the two axes are in the same units and a circle
+     * of points has to stay a circle - a PCA or UMAP embedding, say - rather than being
+     * stretched by the shape of the box it happens to sit in.
+     *
+     * @default
+     * false
+     */
+    square?: boolean;
 };
 
 export type BackgroundGradient = {
@@ -263,6 +351,7 @@ export type MapProps<T> = {
     xScale: ScaleLinear<number, number, never>;
     yScale: ScaleLinear<number, number, never>;
     zoom: ZoomType;
+    crosshair?: CrosshairPosition | null;
 }
 
 export type TooltipProps<T> = {
@@ -283,7 +372,7 @@ export type ControlButtonsProps = {
     downloadPlot: () => void;
 }
 
-interface TransformMatrix {
+export interface TransformMatrix {
     scaleX: number;
     scaleY: number;
     translateX: number;
