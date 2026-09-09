@@ -6,7 +6,7 @@ import { ZoomType } from './types';
  * Shared by every plot that creates a zoom, so a plot driving its own zoom and a plot driving a
  * shared one behave identically.
  */
-export const initialTransformMatrix = {
+const initialTransformMatrix = {
     scaleX: 1,
     scaleY: 1,
     translateX: 0,

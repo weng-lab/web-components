@@ -81,7 +81,13 @@ export const useCrosshair = ({
         });
     }, [apply, cancelFrame]);
 
-    useEffect(() => cancelFrame, [cancelFrame]);
+    // On unmount, drop any queued frame and announce the crosshair as gone. Without the second
+    // half a parent mirroring this position onto sibling plots - ScatterPlotSync - keeps drawing
+    // the crosshair of a plot that no longer exists, until something else happens to move it.
+    useEffect(() => () => {
+        cancelFrame();
+        if (publishedRef.current !== null) publishChange(null);
+    }, [cancelFrame, publishChange]);
 
     const handleCrosshairMove = useCallback((event: React.MouseEvent<SVGElement>, zoom: ZoomType) => {
         if (!enabled) return;

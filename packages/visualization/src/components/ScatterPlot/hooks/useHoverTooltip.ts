@@ -55,6 +55,13 @@ export const useHoverTooltip = <T extends object>({
         publishHoverChange(hoveredPoint);
     }, [hoveredPoint, publishHoverChange]);
 
+    // Announce the hover as ended when the plot unmounts, so a consumer driving highlight state
+    // of its own - a legend entry, a linked chart - isn't left lit for a plot that is gone.
+    // Kept apart from the effect above, whose cleanup would otherwise fire on every transition.
+    useEffect(() => () => {
+        if (publishedPointRef.current !== null) publishHoverChange(null);
+    }, [publishHoverChange]);
+
     const handleMouseMove = useCallback((event: React.MouseEvent<SVGElement>, zoom: ZoomType) => {
         if (zoom.isDragging) {
             setTooltipOpen(false);
