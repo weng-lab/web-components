@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import HeatmapMiniMap, { type HeatmapMiniMapProps } from "./HeatmapMiniMap";
 
 // The expanded minimap opens as a viewport-fixed modal sized off the screen, not the plot's own
@@ -7,6 +8,13 @@ import HeatmapMiniMap, { type HeatmapMiniMapProps } from "./HeatmapMiniMap";
 const MINI_MAP_POPUP_WIDTH_VW = 94;
 const MINI_MAP_POPUP_HEIGHT_VH = 90;
 const MINI_MAP_POPUP_PADDING = 16;
+// `position: fixed` only escapes to the viewport if every ancestor is un-transformed; a single
+// transform/filter/will-change/contain anywhere between the heatmap and <body> in a consuming
+// app re-scopes it to that ancestor instead, letting unrelated elements elsewhere on the page
+// stack above it regardless of z-index. Portaling straight to document.body below sidesteps
+// that; the max practical z-index on top of it is belt-and-suspenders against anything else on
+// the host page (app chrome, third-party widgets) that also claims a very high value.
+const MINI_MAP_POPUP_Z_INDEX = 2147483647;
 
 type MiniMapPassThroughProps = Omit<HeatmapMiniMapProps, "width" | "height" | "onCanvasClick">;
 
@@ -65,8 +73,8 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, ...miniMapProps }: Heatmap
     observerRef.current = observer;
   }, []);
 
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: MINI_MAP_POPUP_Z_INDEX, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <style>{"@keyframes heatmapMiniMapSpinnerRotate { to { transform: rotate(360deg); } }"}</style>
       <div
         ref={popupRef}
@@ -160,7 +168,8 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, ...miniMapProps }: Heatmap
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
