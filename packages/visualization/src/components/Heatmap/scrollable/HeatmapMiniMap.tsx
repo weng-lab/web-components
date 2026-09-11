@@ -13,6 +13,9 @@ export interface HeatmapMiniMapProps {
   height: number;
   onNavigate: (left: number, top: number) => void;
   onCanvasClick?: () => void;
+  /** Fires after each draw completes, so a caller (e.g. the expanded popup) can show its own
+   * loading state for the full-dataset draw without this component needing to know about it. */
+  onReady?: () => void;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -29,26 +32,41 @@ const HeatmapMiniMap = ({
   height,
   onNavigate,
   onCanvasClick,
+  onReady,
 }: HeatmapMiniMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scaleX = xMax > 0 ? width / xMax : 0;
   const scaleY = yMax > 0 ? height / yMax : 0;
 
+  // Read via a ref rather than as an effect dependency below - onReady is commonly passed as an
+  // inline arrow function, and putting it in the deps array would re-trigger (and re-run) the
+  // draw effect on every parent render instead of only when the drawable content actually changes.
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || scaleX <= 0 || scaleY <= 0) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(dpr * scaleX, 0, 0, dpr * scaleY, 0, 0);
-    ctx.clearRect(0, 0, xMax, yMax);
-    const range = {
-      colStart: 0,
-      colEnd: Math.max(0, canvasCellParams.data.length - 1),
-      rowStart: 0,
-      rowEnd: Math.max(0, canvasCellParams.numRows - 1),
-    };
-    drawHeatmapCells(ctx, canvasCellParams, range, null);
+    // The full-dataset draw below is synchronous and can take a while for large grids (the
+    // minimap has no windowing, unlike the main grid). Deferring it a frame lets the surrounding
+    // UI - the expanded popup's backdrop, border, and title bar - paint first, so opening the
+    // minimap feels immediate instead of the whole popup appearing to hang.
+    const raf = requestAnimationFrame(() => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(dpr * scaleX, 0, 0, dpr * scaleY, 0, 0);
+      ctx.clearRect(0, 0, xMax, yMax);
+      const range = {
+        colStart: 0,
+        colEnd: Math.max(0, canvasCellParams.data.length - 1),
+        rowStart: 0,
+        rowEnd: Math.max(0, canvasCellParams.numRows - 1),
+      };
+      drawHeatmapCells(ctx, canvasCellParams, range, null);
+      onReadyRef.current?.();
+    });
+    return () => cancelAnimationFrame(raf);
   }, [canvasCellParams, xMax, yMax, scaleX, scaleY]);
 
   const navigateCentered = useCallback(
