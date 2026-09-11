@@ -83,6 +83,14 @@ export function drawHeatmapCells(
   hoveredCell: HeatmapCellId | null
 ) {
   const { data, colorScale, selectedKeys, deselectedColor } = params;
+  // fillStyle/globalAlpha assignment forces the browser to re-parse the CSS color string even
+  // when it's unchanged from the previous cell - skipping redundant writes matters at this scale
+  // (this loop runs per-cell, up to hundreds of thousands of times for the minimap's full-dataset
+  // draw). Rects also use fillRect directly (no beginPath/rect/fill trio) since it's a faster
+  // native path for solid fills; a path is only built for a cell when it's the hovered one, so
+  // its outline can still be stroked.
+  let lastFill: string | null = null;
+  let lastAlpha = -1;
   for (let col = range.colStart; col <= range.colEnd; col++) {
     const columnDatum = data[col];
     if (!columnDatum) continue;
@@ -96,18 +104,33 @@ export function drawHeatmapCells(
       if (fillOpacity <= 0) continue;
 
       const geometry = getCellGeometry(params, col, row);
-      ctx.globalAlpha = fillOpacity;
-      ctx.fillStyle = fill;
-      ctx.beginPath();
-      if (geometry.isRect) {
-        ctx.rect(geometry.x, geometry.y, Math.max(geometry.width, 0), Math.max(geometry.height, 0));
-      } else {
-        ctx.arc(geometry.cx, geometry.cy, Math.max(geometry.r, 0), 0, Math.PI * 2);
+      if (fillOpacity !== lastAlpha) {
+        ctx.globalAlpha = fillOpacity;
+        lastAlpha = fillOpacity;
       }
-      ctx.fill();
+      if (fill !== lastFill) {
+        ctx.fillStyle = fill;
+        lastFill = fill;
+      }
 
-      if (hoveredCell && hoveredCell.row === row && hoveredCell.column === col) {
+      const isHovered = hoveredCell !== null && hoveredCell.row === row && hoveredCell.column === col;
+      if (geometry.isRect) {
+        const width = Math.max(geometry.width, 0);
+        const height = Math.max(geometry.height, 0);
+        ctx.fillRect(geometry.x, geometry.y, width, height);
+        if (isHovered) {
+          ctx.beginPath();
+          ctx.rect(geometry.x, geometry.y, width, height);
+        }
+      } else {
+        ctx.beginPath();
+        ctx.arc(geometry.cx, geometry.cy, Math.max(geometry.r, 0), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (isHovered) {
         ctx.globalAlpha = 1;
+        lastAlpha = 1;
         ctx.lineWidth = 2;
         ctx.strokeStyle = fill;
         ctx.stroke();

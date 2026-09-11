@@ -42,6 +42,12 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, ...miniMapProps }: Heatmap
   // while the popup is open - ResizeObserver on the flex-filled area inside it is what actually
   // measures that, rather than computing it from window.innerWidth/innerHeight up front.
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  // The minimap draws its entire dataset with no windowing, so for large grids the popup can sit
+  // blank for a noticeable moment after opening - a skeleton fills that gap instead of looking
+  // like the popup hung. Owned here (not inside HeatmapMiniMap) since only the expanded view is
+  // large/slow enough to warrant one; the small always-visible inline minimap doesn't need it.
+  const [isReady, setIsReady] = useState(false);
+  const handleReady = useCallback(() => setIsReady(true), []);
   const observerRef = useRef<ResizeObserver | null>(null);
   const areaRef = useCallback((node: HTMLDivElement | null) => {
     observerRef.current?.disconnect();
@@ -61,6 +67,7 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, ...miniMapProps }: Heatmap
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{"@keyframes heatmapMiniMapSpinnerRotate { to { transform: rotate(360deg); } }"}</style>
       <div
         ref={popupRef}
         style={{
@@ -116,8 +123,39 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, ...miniMapProps }: Heatmap
         </div>
         <div style={{ flex: 1, minHeight: 0, display: "flex", padding: MINI_MAP_POPUP_PADDING }}>
           <div ref={areaRef} style={{ flex: 1, minHeight: 0, position: "relative" }}>
+            {/* Rendered as soon as the popup mounts, independent of `size` - the area div is
+                already laid out by CSS (flex: 1) on this same paint, so the skeleton can fill it
+                immediately. Waiting on `size` (the async ResizeObserver round-trip) would leave a
+                blank gap before the skeleton itself shows up, which is exactly what it's meant to
+                cover. */}
+            {!isReady && (
+              <div
+                aria-label="Loading minimap"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    border: "4px solid #e5e5e5",
+                    // Matches the viewport-rectangle accent color HeatmapMiniMap itself uses.
+                    borderTopColor: "#0d0f98",
+                    animation: "heatmapMiniMapSpinnerRotate 0.8s linear infinite",
+                  }}
+                />
+              </div>
+            )}
             {size && size.width > 0 && size.height > 0 && (
-              <HeatmapMiniMap {...miniMapProps} width={size.width} height={size.height} />
+              <HeatmapMiniMap {...miniMapProps} width={size.width} height={size.height} onReady={handleReady} />
             )}
           </div>
         </div>

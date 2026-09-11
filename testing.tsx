@@ -3,21 +3,22 @@ import { useRef } from 'react';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import { Heatmap } from './packages/visualization/src';
 import type { ColumnDatum, RowDatum, DownloadPlotHandle } from './packages/visualization/src';
-import { TwoPaneLayout } from './packages/ui-components/src';
-import type { TwoPanePlotConfig } from './packages/ui-components/src';
 
-type ScrollableHeatmapMetadata = { description: string; source: string };
+type LargeHeatmapMetadata = { description: string; source: string };
 
-// 650 columns x 80 rows - large enough that fixed-size cells no longer fit the container, so the
-// grid scrolls and the frozen row/column label panes + axis titles kick in.
-const scrollableHeatmapData: ColumnDatum[] = Array.from(
-    { length: 650 },
+const LARGE_HEATMAP_COLS = 1000;
+const LARGE_HEATMAP_ROWS = 1000;
+
+// 1000 columns x 1000 rows (1M cells) - stress test for minimap draw performance, particularly
+// expanding the minimap popup.
+const largeHeatmapData: ColumnDatum[] = Array.from(
+    { length: LARGE_HEATMAP_COLS },
     (_, colIndex) =>
         ({
-            columnName: `Group ${colIndex + 1}`,
+            columnName: `Col ${colIndex + 1}`,
             metadata: { description: 'column description', source: 'column source' },
             rows: Array.from(
-                { length: 80 },
+                { length: LARGE_HEATMAP_ROWS },
                 (_, rowIndex) =>
                     ({
                         rowName: `Row ${rowIndex + 1}`,
@@ -25,16 +26,18 @@ const scrollableHeatmapData: ColumnDatum[] = Array.from(
                         metadata: { description: 'row description', source: 'row source' },
                     } satisfies RowDatum)
             ),
-        } satisfies ColumnDatum<ScrollableHeatmapMetadata>)
+        } satisfies ColumnDatum<LargeHeatmapMetadata>)
 );
 
-function ScrollableHeatmapTest() {
+function LargeHeatmapTest() {
     const heatmapRef = useRef<DownloadPlotHandle>(null);
 
     return (
         <Box sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h6">Scrollable Heatmap (frozen panes)</Typography>
+                <Typography variant="h6">
+                    Large Heatmap ({LARGE_HEATMAP_COLS} x {LARGE_HEATMAP_ROWS}) - Minimap Perf Test
+                </Typography>
                 <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadSVG()}>
                     Download SVG
                 </Button>
@@ -45,7 +48,7 @@ function ScrollableHeatmapTest() {
             <Box sx={{ width: 850, height: 500, border: '1px solid #ccc' }}>
                 <Heatmap
                     ref={heatmapRef}
-                    data={scrollableHeatmapData}
+                    data={largeHeatmapData}
                     showMiniMap
                     xLabel="X-Axis Label"
                     yLabel="Y-Axis Label"
@@ -65,133 +68,4 @@ function ScrollableHeatmapTest() {
     );
 }
 
-type NonScrollingHeatmapMetadata = { description: string; source: string };
-
-// 10 columns x 16 rows - small enough to fit the container without scrolling, so cells stretch
-// to fill it (the normal, non-scrollable rendering path).
-const nonScrollingHeatmapData: ColumnDatum[] = Array.from(
-    { length: 10 },
-    (_, colIndex) =>
-        ({
-            columnName: `Group ${colIndex + 1}`,
-            metadata: { description: 'column description', source: 'column source' },
-            rows: Array.from(
-                { length: 16 },
-                (_, rowIndex) =>
-                    ({
-                        rowName: `Group ${String.fromCharCode(65 + rowIndex)}`,
-                        count: Math.floor(Math.random() * 100),
-                        metadata: { description: 'row description', source: 'row source' },
-                    } satisfies RowDatum)
-            ),
-        } satisfies ColumnDatum<NonScrollingHeatmapMetadata>)
-);
-
-function NonScrollingHeatmapTest() {
-    const heatmapRef = useRef<DownloadPlotHandle>(null);
-
-    return (
-        <Box sx={{ p: 2 }}>
-            <Stack direction="row" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h6">Non-Scrolling Heatmap</Typography>
-                <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadSVG()}>
-                    Download SVG
-                </Button>
-                <Button variant="outlined" size="small" onClick={() => heatmapRef.current?.downloadPNG()}>
-                    Download PNG
-                </Button>
-            </Stack>
-            <Box sx={{ width: 850, height: 500, border: '1px solid #ccc' }}>
-                <Heatmap
-                    ref={heatmapRef}
-                    data={nonScrollingHeatmapData}
-                    xLabel="X-Axis Label"
-                    yLabel="Y-Axis Label"
-                    colors={['#20619e', '#fff36e', '#c92b16']}
-                    tooltipBody={(bin) => (
-                        <Box maxWidth={300}>
-                            <div><strong>Row:</strong> {bin.bin.rowName}</div>
-                            <div><strong>Column:</strong> {bin.datum.columnName}</div>
-                            <div><strong>Value:</strong> {bin?.count}</div>
-                        </Box>
-                    )}
-                />
-            </Box>
-        </Box>
-    );
-}
-
-// Exercises DownloadModal's "Download Data" section (dataDownloadLinks) alongside the
-// existing PNG/SVG download actions.
-function TwoPaneDataDownloadTest() {
-    const plots: TwoPanePlotConfig[] = [
-        {
-            tabTitle: 'With data links',
-            plotComponent: (
-                <Box sx={{ p: 2 }}>
-                    <Typography>Plot with SVG, PNG, and multiple data download links.</Typography>
-                </Box>
-            ),
-            onDownloadSVG: () => alert('download SVG'),
-            onDownloadPNG: () => alert('download PNG'),
-            dataDownloadLinks: [
-                {
-                    title: 'Metallomics',
-                    link: 'https://downloads.mohdconsortium.org/Metals/snapshot1_metallomics_quant.tsv',
-                },
-                {
-                    title: 'Metabolomics',
-                    link: 'https://downloads.mohdconsortium.org/5_Metabolomics/snapshot1_metabolomics_quant.tsv',
-                },
-                {
-                    title: 'Lipidomics',
-                    link: 'https://downloads.mohdconsortium.org/6_Lipidomics/snapshot1_lipidomics_quant.tsv',
-                },
-                {
-                    title: 'Exposomics',
-                    link: 'https://downloads.mohdconsortium.org/7_Exposomics/snapshot1_exposomics_quant.tsv',
-                },
-            ],
-        },
-        {
-            tabTitle: 'Data link only',
-            plotComponent: (
-                <Box sx={{ p: 2 }}>
-                    <Typography>Plot with only a data download link (no SVG/PNG handlers).</Typography>
-                </Box>
-            ),
-            dataDownloadLinks: [
-                {
-                    title: 'Metabolomics',
-                    link: 'https://downloads.mohdconsortium.org/5_Metabolomics/snapshot1_metabolomics_quant.tsv',
-                },
-            ],
-        },
-    ];
-
-    return (
-        <Box sx={{ p: 2 }}>
-            <Typography variant="h6" mb={2}>
-                TwoPaneLayout - dataDownloadLinks
-            </Typography>
-            <Box sx={{ width: 850, height: 500, border: '1px solid #ccc' }}>
-                <TwoPaneLayout
-                    TableComponent={<Typography sx={{ p: 2 }}>Table placeholder</Typography>}
-                    plots={plots}
-                />
-            </Box>
-        </Box>
-    );
-}
-
-function TestingPage() {
-    return (
-        <>
-            <ScrollableHeatmapTest />
-            <NonScrollingHeatmapTest />
-            <TwoPaneDataDownloadTest />
-        </>
-    );
-}
-
-ReactDOM.createRoot(document.getElementById('root')!).render(<TestingPage />);
+ReactDOM.createRoot(document.getElementById('root')!).render(<LargeHeatmapTest />);
