@@ -1,42 +1,58 @@
-import React from "react";
-import { Modal, Box, IconButton, Stack, Typography, Divider, Button } from "@mui/material";
+import React, { useState } from "react";
+import { Modal, Box, IconButton, Stack, Typography, Divider, Button, CircularProgress } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import type { DataDownloadLink } from "./types";
 
 interface DownloadOptionProps {
   label: string;
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   href?: string;
 }
 
-const DownloadOption: React.FC<DownloadOptionProps> = ({ label, onClick, href }) => (
-  <Stack direction="row" alignItems="center" justifyContent="space-between">
-    <Typography variant="body1">{label}</Typography>
-    {href ? (
-      <IconButton
-        color="primary"
-        component="a"
-        href={href}
-        download
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Download ${label}`}
-      >
-        <DownloadIcon />
-      </IconButton>
-    ) : (
-      <IconButton color="primary" onClick={onClick} aria-label={`Download ${label}`}>
-        <DownloadIcon />
-      </IconButton>
-    )}
-  </Stack>
-);
+const DownloadOption: React.FC<DownloadOptionProps> = ({ label, onClick, href }) => {
+  // Local rather than lifted to DownloadModal - each option's own icon tracks only its own
+  // in-flight download, so downloading PNG doesn't spin the SVG button too.
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    if (!onClick || loading) return;
+    setLoading(true);
+    try {
+      await onClick();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Typography variant="body1">{label}</Typography>
+      {href ? (
+        <IconButton
+          color="primary"
+          component="a"
+          href={href}
+          download
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Download ${label}`}
+        >
+          <DownloadIcon />
+        </IconButton>
+      ) : (
+        <IconButton color="primary" onClick={handleClick} disabled={loading} aria-label={`Download ${label}`}>
+          {loading ? <CircularProgress size={24} color="inherit" /> : <DownloadIcon />}
+        </IconButton>
+      )}
+    </Stack>
+  );
+};
 
 export interface DownloadModalProps {
   open: boolean;
   onClose: () => void;
-  onDownloadSVG?: () => void;
-  onDownloadPNG?: () => void;
+  onDownloadSVG?: () => void | Promise<void>;
+  onDownloadPNG?: () => void | Promise<void>;
   dataDownloadLinks?: DataDownloadLink[];
   plotTitle: string;
 }
