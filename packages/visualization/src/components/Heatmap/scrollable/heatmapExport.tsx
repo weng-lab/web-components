@@ -1,24 +1,19 @@
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { AxisLeft, AxisBottom } from "@visx/axis";
-import type { ColumnDatum, HeatmapCellId } from "../types";
-import type { AnimationType } from "../../../utility";
+import type { ColumnDatum } from "../types";
+import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS } from "../../../utility";
 import type { HeatmapLayout } from "../heatmapLayout";
 import { LEGEND_GAP } from "../heatmapLayout";
 import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, yAxisTickLabelProps } from "../heatmapAxisProps";
-import HeatmapCells, { type AnyBin } from "../HeatmapCells";
+import { drawHeatmapCells } from "../HeatmapCanvasCells";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const XLINK_NS = "http://www.w3.org/1999/xlink";
 
 interface ScrollableExportOptions {
   layout: HeatmapLayout;
   data: ColumnDatum[];
-  gap: number;
-  isRect: boolean;
-  animationType?: AnimationType;
-  onClick?: (bin: AnyBin) => void;
-  selectedCells?: HeatmapCellId[];
-  deselectedColor?: string;
   xLabel?: string;
   yLabel?: string;
   showLegend: boolean;
@@ -48,17 +43,65 @@ const appendClone = (exportSvg: SVGSVGElement, source: SVGSVGElement, x: number,
   exportSvg.appendChild(group);
 };
 
-// Builds a standalone, off-DOM <svg> at full content size for export. Both the on-screen cell
-// layer (a canvas painting only the current scroll viewport) and the on-screen row/column axis
-// panes (SVGs windowed to the visible tick range) only ever hold a slice of the full grid -
-// neither can just be cloned for export without capturing an incomplete/mispositioned snapshot.
-// So all three (cells, row axis, column axis) are instead rendered fresh here in one detached
-// tree - synchronously, full grid, no windowing - purely to snapshot into the export SVG below.
+// Rasterizes the full (unwindowed) cell grid onto an off-DOM canvas using the same paint
+// routine the live scrollable grid and minimap use for their own canvases (drawHeatmapCells),
+// and returns it as a PNG data URL sized to embed directly into the export SVG. This is the key
+// difference from every other layer here: a large grid (e.g. 1000x1000 = 1M cells) rendered as
+// individual SVG shapes via React would mean 1M DOM nodes built synchronously and then
+// serialized into a multi-hundred-MB XML string - that's what used to hang/crash the tab.
+// Painting into a canvas instead collapses that to a bounded number of fillRect calls plus one
+// small PNG blob, which is exactly how the minimap already handles full-dataset draws.
+// Resolution is capped (never upscaled) so the canvas itself can't exceed what browsers will
+// reliably allocate - past that, some browsers just hand back a blank canvas instead of erroring.
+function renderCellsToDataURL(o: ScrollableExportOptions): string | null {
+  const { xMax, yMax, canvasCellParams, numRows } = o.layout;
+  if (xMax <= 0 || yMax <= 0) return null;
+
+  const desiredScale = window.devicePixelRatio || 2;
+  const scale = Math.min(
+    desiredScale,
+    MAX_CANVAS_EXPORT_DIMENSION / xMax,
+    MAX_CANVAS_EXPORT_DIMENSION / yMax,
+    Math.sqrt(MAX_CANVAS_EXPORT_PIXELS / (xMax * yMax))
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(xMax * scale));
+  canvas.height = Math.max(1, Math.round(yMax * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  const range = { colStart: 0, colEnd: Math.max(0, o.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
+  drawHeatmapCells(ctx, canvasCellParams, range, null);
+  return canvas.toDataURL("image/png");
+}
+
+const appendCellsImage = (exportSvg: SVGSVGElement, dataUrl: string, x: number, y: number, width: number, height: number) => {
+  const image = document.createElementNS(SVG_NS, "image");
+  image.setAttribute("x", String(x));
+  image.setAttribute("y", String(y));
+  image.setAttribute("width", String(width));
+  image.setAttribute("height", String(height));
+  image.setAttribute("preserveAspectRatio", "none");
+  // Both attributes are set for compatibility: xlink:href is what older SVG renderers (and some
+  // image editors) still expect, href is the modern SVG2/browser-native attribute.
+  image.setAttributeNS(XLINK_NS, "href", dataUrl);
+  image.setAttribute("href", dataUrl);
+  exportSvg.appendChild(image);
+};
+
+// Builds a standalone, off-DOM <svg> at full content size for export. The on-screen row/column
+// axis panes (SVGs windowed to the visible tick range) only ever hold a slice of the full grid -
+// they can't just be cloned for export without capturing an incomplete/mispositioned snapshot -
+// so both are rendered fresh here in one detached tree, synchronously, full grid, no windowing,
+// purely to snapshot into the export SVG below. The cell layer is handled separately (see
+// renderCellsToDataURL above) since it doesn't have this problem's flip side: rendering it fresh
+// as SVG shapes is exactly what's too expensive at full-grid scale.
 export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElement | null {
   const { layout } = o;
   const {
-    marg, xMax, yMax, xScale, yScale, cellYScale, stableColors, minValue, maxValue,
-    binWidth, binHeight, numRows, xTickValues, yTickValues, yTickLabelWidth, xTickLabelHeight,
+    marg, xMax, yMax, xScale, yScale, numRows, xTickValues, yTickValues, yTickLabelWidth, xTickLabelHeight,
     yTitleWidth, xTitleHeight,
   } = layout;
 
@@ -66,7 +109,9 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElem
   exportSvg.setAttribute("width", String(marg.left + xMax + marg.right));
   exportSvg.setAttribute("height", String(marg.top + yMax + marg.bottom));
 
-  let fullCells: SVGSVGElement | null = null;
+  const cellsDataUrl = renderCellsToDataURL(o);
+  if (cellsDataUrl) appendCellsImage(exportSvg, cellsDataUrl, marg.left, marg.top, xMax, yMax);
+
   let fullRowAxis: SVGSVGElement | null = null;
   let fullColAxis: SVGSVGElement | null = null;
   const exportContainer = document.createElement("div");
@@ -74,24 +119,6 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElem
   flushSync(() => {
     exportRoot.render(
       <>
-        <svg width={xMax} height={yMax} ref={(el) => { fullCells = el; }}>
-          <HeatmapCells
-            data={o.data}
-            xScale={xScale}
-            yScale={cellYScale}
-            colors={stableColors}
-            minValue={minValue}
-            maxValue={maxValue}
-            gap={o.gap}
-            isRect={o.isRect}
-            binWidth={binWidth}
-            binHeight={binHeight}
-            animationType={o.animationType}
-            onClick={o.onClick}
-            selectedCells={o.selectedCells}
-            deselectedColor={o.deselectedColor}
-          />
-        </svg>
         <svg width={yTickLabelWidth} height={yMax} ref={(el) => { fullRowAxis = el; }}>
           <g transform={`translate(${yTickLabelWidth},0)`}>
             <AxisLeft
@@ -116,7 +143,6 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElem
       </>
     );
   });
-  if (fullCells) appendClone(exportSvg, fullCells, marg.left, marg.top);
   if (fullRowAxis) appendClone(exportSvg, fullRowAxis, yTitleWidth, marg.top);
   if (fullColAxis) appendClone(exportSvg, fullColAxis, marg.left, marg.top + yMax);
   exportRoot.unmount();

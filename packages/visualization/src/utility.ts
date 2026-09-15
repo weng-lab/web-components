@@ -5,8 +5,10 @@ import { easeOut, Transition } from "framer-motion";
 export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
 
 export interface DownloadPlotHandle {
-  downloadSVG: () => void;
-  downloadPNG: () => void;
+  // May return a Promise: callers driving a loading indicator (e.g. DownloadModal) await it to
+  // keep the indicator up for as long as the export actually takes.
+  downloadSVG: () => void | Promise<void>;
+  downloadPNG: () => void | Promise<void>;
 }
 
 /**
@@ -80,6 +82,12 @@ export function downloadAsSVG(svgElement: SVGSVGElement, fileName = "chart.svg")
     URL.revokeObjectURL(url);
 }
 
+// Browsers silently produce a blank canvas (rather than throwing) once a canvas's pixel
+// dimensions or total area get too large - the exact threshold varies by browser, so this stays
+// comfortably under the tightest known limits rather than the most permissive one.
+export const MAX_CANVAS_EXPORT_DIMENSION = 16384;
+export const MAX_CANVAS_EXPORT_PIXELS = MAX_CANVAS_EXPORT_DIMENSION * MAX_CANVAS_EXPORT_DIMENSION;
+
 /**
  * Converts an SVG element to PNG and downloads it. svgElement must be attached to the document
  * (clientWidth/clientHeight are read from its layout box) for the whole duration of the export -
@@ -99,8 +107,17 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
         const canvas = document.createElement("canvas");
         const width = svgElement.clientWidth || 800;
         const height = svgElement.clientHeight || 600;
-        canvas.width = width * scale;
-        canvas.height = height * scale;
+        // A very large source (e.g. a full-content export of a big scrollable heatmap) can
+        // otherwise ask for a canvas past what the browser will actually allocate - clamp the
+        // scale down (never up) so the output always fits within a safe pixel budget.
+        const clampedScale = Math.min(
+            scale,
+            MAX_CANVAS_EXPORT_DIMENSION / width,
+            MAX_CANVAS_EXPORT_DIMENSION / height,
+            Math.sqrt(MAX_CANVAS_EXPORT_PIXELS / (width * height))
+        );
+        canvas.width = Math.max(1, Math.round(width * clampedScale));
+        canvas.height = Math.max(1, Math.round(height * clampedScale));
 
         const ctx = canvas.getContext("2d");
         if (!ctx) {
@@ -109,7 +126,7 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
         }
 
         // Ensure sharp scaling
-        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.setTransform(clampedScale, 0, 0, clampedScale, 0, 0);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
 

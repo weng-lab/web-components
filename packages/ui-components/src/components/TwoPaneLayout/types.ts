@@ -15,8 +15,10 @@ export type TwoPanePlotConfig = {
   tabTitle: string;
   icon?: TabOwnProps["icon"];
   plotComponent: React.ReactNode;
-  onDownloadSVG?: () => void;
-  onDownloadPNG?: () => void;
+  // May return a Promise: DownloadModal awaits it to keep the download icon showing a loading
+  // spinner for as long as the export actually takes (large exports can take a noticeable beat).
+  onDownloadSVG?: () => void | Promise<void>;
+  onDownloadPNG?: () => void | Promise<void>;
   dataDownloadLinks?: DataDownloadLink[];
 };
 
