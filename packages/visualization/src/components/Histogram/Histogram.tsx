@@ -6,7 +6,7 @@ import { line } from '@visx/shape';
 import { curveBasis } from '@visx/curve';
 import { motion } from 'framer-motion';
 import { Text } from '@visx/text';
-import { bin as d3bin, range } from '@visx/vendor/d3-array';
+import { bin as d3bin, range, tickStep } from '@visx/vendor/d3-array';
 import { downloadAsSVG, downloadSVGAsPNG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { kernelDensityEstimator, gaussian, scottRule } from '../ViolinPlot/helpers';
@@ -18,6 +18,19 @@ import HistogramBar from './HistogramBar';
 const DEFAULT_COLOR = '#4c78a8';
 
 const margin = { top: 40, right: 30, bottom: 80, left: 80 };
+
+// d3's default tick step for a small domain (e.g. 0-4) lands on a fraction (0.5), which then
+// renders as "0.0", "1.0", ... even though every value is a whole number. Snap to an
+// integer step instead so integer-only domains get integer-only tick labels.
+function integerTicks(min: number, max: number, count = 10): number[] {
+    if (min === max) return [min];
+    const step = Math.max(1, Math.ceil(tickStep(min, max, count)));
+    const start = Math.ceil(min / step) * step;
+    const stop = Math.floor(max / step) * step;
+    return range(start, stop + step, step);
+}
+
+const formatIntegerTick = (v: { valueOf(): number }) => `${v.valueOf()}`;
 
 function isSeriesData(data: number[] | HistogramSeries[]): data is HistogramSeries[] {
     return data.length > 0 && typeof data[0] === 'object' && 'values' in (data[0] as object);
@@ -52,6 +65,10 @@ const Histogram = ({
     }, [data, color]);
 
     const allValues = useMemo(() => series.flatMap((s) => s.values), [series]);
+    const isIntegerData = useMemo(
+        () => allValues.length > 0 && allValues.every(Number.isInteger),
+        [allValues]
+    );
 
     const xMax = Math.max(width - margin.left - margin.right, 0);
     const yMax = Math.max(height - margin.top - margin.bottom, 0);
@@ -59,7 +76,6 @@ const Histogram = ({
     const bins: HistogramBin[] = useMemo(() => {
         if (allValues.length === 0) return [];
 
-        const isIntegerData = allValues.every(Number.isInteger);
         const dataMin = Math.min(...allValues);
         const dataMax = Math.max(...allValues);
         const integerValueCount = dataMax - dataMin + 1;
@@ -95,7 +111,7 @@ const Histogram = ({
                 count: seriesBins[si][i]?.length ?? 0,
             })),
         }));
-    }, [allValues, series, thresholds]);
+    }, [allValues, series, thresholds, isIntegerData]);
 
     const kdePoints = useMemo(() => {
         if (!densityLine || bins.length === 0) return [];
@@ -134,6 +150,14 @@ const Histogram = ({
             nice: true,
         });
     }, [bins, kdePoints, yMax]);
+
+    const xTickValues = useMemo(() => {
+        if (bins.length === 0 || !isIntegerData) return undefined;
+        return integerTicks(bins[0].x0, bins[bins.length - 1].x1);
+    }, [bins, isIntegerData]);
+
+    // Bin counts are always whole numbers, so the count axis never needs decimal ticks.
+    const yTickValues = useMemo(() => integerTicks(0, yScale.domain()[1]), [yScale]);
 
     const lineGenerator = useMemo(
         () => line<{ x: number; y: number }>()
@@ -201,6 +225,8 @@ const Histogram = ({
                     <AxisBottom
                         scale={xScale}
                         top={yMax}
+                        tickValues={xTickValues}
+                        tickFormat={isIntegerData ? formatIntegerTick : undefined}
                         label={xLabel}
                         labelProps={{
                             fontSize: 12,
@@ -218,6 +244,8 @@ const Histogram = ({
                     />
                     <AxisLeft
                         scale={yScale}
+                        tickValues={yTickValues}
+                        tickFormat={formatIntegerTick}
                         label={yLabel}
                         labelProps={{
                             fontSize: 12,
