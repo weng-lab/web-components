@@ -1,5 +1,5 @@
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { Line, Point, TransformMatrix } from "./types";
+import { Line, Point, PointShape, TransformMatrix } from "./types";
 
 //rescale x and y scales when zooming
 //converts to pixel values before applying transformations
@@ -63,16 +63,104 @@ export const getTicks = (
     return Array.from({ length: total }, (_, i) => parseFloat((min + i * step).toPrecision(10)));
 };
 
-export function getTrianglePoints(cx: number, cy: number, r: number) {
-    // equilateral triangle centered at cx, cy
-    const height = r * Math.sqrt(3);
+/**
+ * Each shape is sized to cover the same area as a circle of the same `r`, rather than to the same
+ * width. Without that, a shape encoding doubles as an unintended size encoding - an equilateral
+ * triangle drawn to a circle's radius carries about 40% of its ink, so one category reads as
+ * consistently fainter than another for no reason present in the data.
+ *
+ * Each constant below solves `area(shape) = πr²` for that shape's defining dimension:
+ *
+ *   square    half-side h,       4h² = πr²           ->  h = √π / 2        ≈ 0.886
+ *   triangle  circumradius R,    (3√3/4)R² = πr²     ->  R = √(4π/3√3)    ≈ 1.555
+ *   cross     half-span a, arms a/3 wide, (20/9)a² = πr²  ->  a = √(9π/20) ≈ 1.189
+ *
+ * The diamond, the inverted triangle and the X need no constants of their own: each is a
+ * rotation or a reflection of one of the above, and neither operation changes area.
+ */
+const SQUARE_HALF_SIDE = Math.sqrt(Math.PI) / 2;
+const TRIANGLE_CIRCUMRADIUS = Math.sqrt((4 * Math.PI) / (3 * Math.sqrt(3)));
+const CROSS_HALF_SPAN = Math.sqrt((9 * Math.PI) / 20);
+const CROSS_HALF_WIDTH = CROSS_HALF_SPAN / 3;
 
-    const p1 = `${cx},${cy - (2 / 3) * height}`;
-    const p2 = `${cx - r},${cy + (1 / 3) * height}`;
-    const p3 = `${cx + r},${cy + (1 / 3) * height}`;
+type UnitVertices = readonly (readonly [number, number])[];
 
-    return `${p1} ${p2} ${p3}`;
-}
+/** Apex up, the three vertices sitting on the circumscribed circle. */
+const TRIANGLE_VERTICES: UnitVertices = [
+    [0, -TRIANGLE_CIRCUMRADIUS],
+    [(TRIANGLE_CIRCUMRADIUS * Math.sqrt(3)) / 2, TRIANGLE_CIRCUMRADIUS / 2],
+    [-(TRIANGLE_CIRCUMRADIUS * Math.sqrt(3)) / 2, TRIANGLE_CIRCUMRADIUS / 2],
+];
+
+const SQUARE_VERTICES: UnitVertices = [
+    [-SQUARE_HALF_SIDE, -SQUARE_HALF_SIDE],
+    [SQUARE_HALF_SIDE, -SQUARE_HALF_SIDE],
+    [SQUARE_HALF_SIDE, SQUARE_HALF_SIDE],
+    [-SQUARE_HALF_SIDE, SQUARE_HALF_SIDE],
+];
+
+/** A plus sign, traced clockwise from the top-left corner of the upper arm. */
+const CROSS_VERTICES: UnitVertices = [
+    [-CROSS_HALF_WIDTH, -CROSS_HALF_SPAN],
+    [CROSS_HALF_WIDTH, -CROSS_HALF_SPAN],
+    [CROSS_HALF_WIDTH, -CROSS_HALF_WIDTH],
+    [CROSS_HALF_SPAN, -CROSS_HALF_WIDTH],
+    [CROSS_HALF_SPAN, CROSS_HALF_WIDTH],
+    [CROSS_HALF_WIDTH, CROSS_HALF_WIDTH],
+    [CROSS_HALF_WIDTH, CROSS_HALF_SPAN],
+    [-CROSS_HALF_WIDTH, CROSS_HALF_SPAN],
+    [-CROSS_HALF_WIDTH, CROSS_HALF_WIDTH],
+    [-CROSS_HALF_SPAN, CROSS_HALF_WIDTH],
+    [-CROSS_HALF_SPAN, -CROSS_HALF_WIDTH],
+    [-CROSS_HALF_WIDTH, -CROSS_HALF_WIDTH],
+];
+
+/** Turns a vertex list about the origin. Area is unchanged, so the normalisation carries over. */
+const rotate = (vertices: UnitVertices, radians: number): UnitVertices => {
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    return vertices.map(([x, y]) => [x * cos - y * sin, x * sin + y * cos]);
+};
+
+/** Mirrors a vertex list about the x axis, which likewise leaves area alone. */
+const flipVertically = (vertices: UnitVertices): UnitVertices => vertices.map(([x, y]) => [x, -y]);
+
+/**
+ * Vertices of each shape at r = 1, centred on the origin, in the y-down coordinates both canvas
+ * and SVG use - so one set of vertices drives both renderers and they cannot drift apart.
+ */
+const UNIT_VERTICES: Record<Exclude<PointShape, "circle">, UnitVertices> = {
+    triangle: TRIANGLE_VERTICES,
+    triangleDown: flipVertically(TRIANGLE_VERTICES),
+    square: SQUARE_VERTICES,
+    // A square stood on its corner - which is exactly the half-diagonal √(π/2) the area solves to.
+    diamond: rotate(SQUARE_VERTICES, Math.PI / 4),
+    cross: CROSS_VERTICES,
+    x: rotate(CROSS_VERTICES, Math.PI / 4),
+};
+
+/**
+ * The polygon a shape is drawn as, centred on (cx, cy) at radius r, or null for a circle - which
+ * has no vertices and is drawn as an arc by whichever renderer asked.
+ */
+export const getShapeVertices = (
+    shape: PointShape | undefined,
+    cx: number,
+    cy: number,
+    r: number
+): [number, number][] | null => {
+    if (!shape || shape === "circle") return null;
+    // Guards an unknown shape from a JS caller, which would otherwise throw rather than degrade.
+    const unit = UNIT_VERTICES[shape];
+    if (!unit) return null;
+    return unit.map(([x, y]) => [cx + x * r, cy + y * r]);
+};
+
+/** The same polygon as an SVG `points` string, or null for a circle. */
+export const getShapePoints = (shape: PointShape | undefined, cx: number, cy: number, r: number) => {
+    const vertices = getShapeVertices(shape, cx, cy, r);
+    return vertices ? vertices.map(([x, y]) => `${x},${y}`).join(" ") : null;
+};
 
 export const getPointExtents = <T extends object>(pointData: Point<T>[]) => {
     if (pointData.length === 0) {
@@ -187,24 +275,34 @@ export const partitionPointsByHover = <T extends object>(
     hovered: pointData.filter((point) => hoveredPointKeys.has(`${point.x},${point.y}`)),
 });
 
+/** How a hovered point is set apart from the rest. */
+export type HoverStyle = {
+    /** Radius added at full hover, in pixels. */
+    growth: number;
+    /** Color of the ring drawn around a hovered point. */
+    stroke: string;
+};
+
+export const DEFAULT_HOVER_STYLE: HoverStyle = { growth: 2, stroke: "black" };
+
 export const drawCanvasPoint = <T extends object>(
     context: CanvasRenderingContext2D,
     point: Point<T>,
     x: number,
     y: number,
     /** How far into its hover growth this point is: 0 at rest, 1 fully hovered. */
-    hoverAmount: number
+    hoverAmount: number,
+    hoverStyle: HoverStyle = DEFAULT_HOVER_STYLE
 ) => {
-    const size = (point.r || 3) + 2 * hoverAmount;
+    const size = (point.r || 3) + hoverStyle.growth * hoverAmount;
     context.beginPath();
 
-    if (!point.shape || point.shape === "circle") {
-        context.arc(x, y, size, 0, Math.PI * 2);
-    } else if (point.shape === "triangle") {
-        context.moveTo(x, y - size);
-        context.lineTo(x - size, y + size);
-        context.lineTo(x + size, y + size);
+    const vertices = getShapeVertices(point.shape, x, y, size);
+    if (vertices) {
+        vertices.forEach(([vx, vy], index) => (index === 0 ? context.moveTo(vx, vy) : context.lineTo(vx, vy)));
         context.closePath();
+    } else {
+        context.arc(x, y, size, 0, Math.PI * 2);
     }
 
     context.fillStyle = point.color ? point.color : "black";
@@ -214,9 +312,9 @@ export const drawCanvasPoint = <T extends object>(
     if (hoverAmount > 0 || point.stroke) {
         context.lineWidth = 1;
         if (hoverAmount > 0) {
-            // Fade the hover ring in alongside the growth. Snapping it to full black on the
+            // Fade the hover ring in alongside the growth. Snapping it to full opacity on the
             // first frame reads as a flicker against a point that is still growing.
-            context.strokeStyle = "black";
+            context.strokeStyle = hoverStyle.stroke;
             context.globalAlpha = (point.opacity ?? 1) * hoverAmount;
         } else {
             context.strokeStyle = point.stroke!;

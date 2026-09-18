@@ -1,8 +1,27 @@
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom";
-import { ReactElement } from "react";
+import { CSSProperties, ReactElement } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 import { ManualSizeProps } from '../../responsive';
+
+/**
+ * Shapes a point can be drawn as, for encoding a categorical field alongside color.
+ *
+ * Seven, and that is close to the ceiling: glyphs stop being told apart at the few pixels a
+ * scatter point occupies, so a field with more levels than this wants a facet or a second plot
+ * rather than more shapes.
+ *
+ * Ordered most to least distinct, so taking the first N gives the most legible set of that size -
+ * `POINT_SHAPES[index]` against a field's sorted values is the intended use. The last two are
+ * each a rotation of an earlier shape (`triangleDown` of `triangle`, `x` of `cross`), so a field
+ * that reaches them is one worth checking by eye.
+ *
+ * Exported as an array so a consumer can build a shape scale over it the way it would a color
+ * one, rather than hardcoding the names.
+ */
+export const POINT_SHAPES = ["circle", "triangle", "square", "diamond", "cross", "triangleDown", "x"] as const;
+
+export type PointShape = (typeof POINT_SHAPES)[number];
 
 /**
     All information given to a point on the plot, including its coordinates(x and y), its radius, color, and opacity, and its metadata information
@@ -15,12 +34,15 @@ export type Point<T> = {
     x: number;
     y: number;
     /**
-     * Shape of the point
+     * Shape of the point, for encoding a categorical field alongside color.
+     *
+     * Every shape is drawn to the same area as a circle of the same `r`, so switching shape
+     * changes only the glyph and not how heavy the point reads.
+     *
      * @default
      * "circle"
-     * 
      */
-    shape?: "circle" | "triangle";
+    shape?: PointShape;
     /**
      * Radius of the point
      * @default
@@ -206,9 +228,26 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     hoveredPoints?: Point<T>[];
     /**
+     * Radius added to a hovered point, in pixels, eased in over the hover animation.
+     *
+     * Turn it down where points are dense enough that a growing point covers its neighbours, or
+     * to 0 to mark the hover with the ring alone.
+     *
+     * @default
+     * 2
+     */
+    hoverGrowth?: number;
+    /**
+     * Color of the ring drawn around a hovered point, faded in alongside the growth.
+     *
+     * @default
+     * "black"
+     */
+    hoverStroke?: string;
+    /**
      * Optional key to specify if you want to group your points.
      * Must be a key of type Point, or an existing key already in meta data
-     * 
+     *
      * If anchor is specified, all grouped points will increase in size on hover of any point in said group
      */
     groupPointsAnchor?: keyof Point<T> | keyof T;
@@ -357,6 +396,13 @@ export type MapProps<T> = {
 export type TooltipProps<T> = {
     tooltipBody?: (point: Point<T>) => ReactElement;
     tooltipData: Point<T>;
+    /**
+     * Cursor position in viewport coordinates (clientX/clientY, not pageX/pageY): the tooltip is
+     * placed against the viewport so that it can never extend the document's scrollable area.
+     */
+    x: number;
+    y: number;
+    style?: CSSProperties;
 }
 
 export type ControlButtonsProps = {

@@ -4,6 +4,7 @@ import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { Point, ZoomType } from "../types";
 import { rescaleX, rescaleY } from "../helpers";
 import { useStableCallback } from "../../../hooks";
+import type { PlotTooltipRef } from "../../../tooltip";
 
 type UseHoverTooltipProps<T extends object> = {
     pointData: Point<T>[];
@@ -11,6 +12,15 @@ type UseHoverTooltipProps<T extends object> = {
     xScale: ScaleLinear<number, number, never>;
     yScale: ScaleLinear<number, number, never>;
     onHoveredPointChange?: (point: Point<T> | null) => void;
+    /**
+     * The plot's tooltip, driven directly rather than through state.
+     *
+     * The pointer position is the tooltip's business alone, and holding it here would re-render
+     * the whole plot on every mousemove across it - thousands of points and every axis - to move
+     * a box that renders itself. Only the hovered point is state, and that changes on entering
+     * and leaving a point rather than on every move.
+     */
+    tooltipRef: PlotTooltipRef<Point<T>>;
 };
 
 type TransformedPointCache<T extends object> = {
@@ -28,11 +38,9 @@ export const useHoverTooltip = <T extends object>({
     xScale,
     yScale,
     onHoveredPointChange,
+    tooltipRef,
 }: UseHoverTooltipProps<T>) => {
     const [tooltipData, setTooltipData] = useState<Point<T> | null>(null);
-    const [tooltipOpen, setTooltipOpen] = useState(false);
-    const [mouseX, setMouseX] = useState(0);
-    const [mouseY, setMouseY] = useState(0);
     const transformedPointCacheRef = useRef<TransformedPointCache<T> | null>(null);
 
     const hoveredPoint = useMemo(
@@ -64,13 +72,10 @@ export const useHoverTooltip = <T extends object>({
 
     const handleMouseMove = useCallback((event: React.MouseEvent<SVGElement>, zoom: ZoomType) => {
         if (zoom.isDragging) {
-            setTooltipOpen(false);
+            tooltipRef.current?.hide();
             setTooltipData(null);
             return;
         }
-
-        setMouseX(event.pageX);
-        setMouseY(event.pageY);
 
         const point = localPoint(event.currentTarget, event);
         if (!point) return;
@@ -117,14 +122,18 @@ export const useHoverTooltip = <T extends object>({
             Math.abs(adjustedY - curr.y) < threshold
         ))?.point ?? null;
 
+        // React bails out when the point is unchanged, so this only re-renders the plot when the
+        // cursor enters or leaves one. The tooltip follows the cursor through its own ref
+        // instead, which re-renders nothing but the tooltip.
         setTooltipData(nextHoveredPoint);
-        setTooltipOpen(Boolean(nextHoveredPoint));
-    }, [margin.left, margin.top, pointData, xScale, yScale]);
+        if (nextHoveredPoint) tooltipRef.current?.show(nextHoveredPoint, event);
+        else tooltipRef.current?.hide();
+    }, [margin.left, margin.top, pointData, xScale, yScale, tooltipRef]);
 
     const handleMouseLeave = useCallback(() => {
-        setTooltipOpen(false);
+        tooltipRef.current?.hide();
         setTooltipData(null);
-    }, []);
+    }, [tooltipRef]);
 
-    return { hoveredPoint, tooltipData, tooltipOpen, mouseX, mouseY, handleMouseMove, handleMouseLeave };
+    return { hoveredPoint, handleMouseMove, handleMouseLeave };
 };

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
 import ScatterPlotSync from './ScatterPlotSync';
 import { getSharedDomains } from './helpers';
-import { MiniMapProps } from './types';
+import { MiniMapProps, POINT_SHAPES, PointShape } from './types';
 
 const meta = {
     title: 'visualization/ScatterPlot',
@@ -27,7 +27,8 @@ type Point = {
     x: number;
     y: number;
     color: string;
-    shape?: "circle" | "triangle";
+    shape?: PointShape;
+    r?: number;
 };
 
 export default meta;
@@ -77,6 +78,22 @@ const shapeData: Point[] = [
     { x: 3, y: 4, color: 'blue', shape: "triangle" },
     { x: 5, y: 6, color: 'green' },
 ];
+
+/**
+ * Every shape at a run of radii, one shape per row. All one colour on purpose: shape is the only
+ * thing varying, so a column should read as evenly weighted down the rows rather than the
+ * triangles and crosses looking lighter than the circles - each is drawn to the same area as a
+ * circle of the same r.
+ */
+const shapeScaleData: Point[] = POINT_SHAPES.flatMap((shape, row) =>
+    [3, 5, 7, 9, 11].map((r, column) => ({
+        x: column,
+        y: POINT_SHAPES.length - row,
+        r,
+        shape,
+        color: '#2541b2',
+    }))
+);
 
 // Mock for the map prop
 const miniMap: MiniMapProps = {
@@ -246,6 +263,44 @@ export const HoverMultiplePoints: Story = {
                 selectionType: "pan"
             }
         },
+    }
+};
+
+/**
+ * All five shapes, each row one shape across a run of radii. Hovering any point grows it and
+ * rings it in the shape it already has.
+ */
+export const PointShapes: Story = {
+    args: {
+        pointData: shapeScaleData,
+        loading: false,
+        leftAxisLabel: "Shape",
+        bottomAxisLabel: "Radius",
+        initialState: {
+            controls: {
+                selectionType: "pan"
+            }
+        }
+    }
+};
+
+/**
+ * Hover styling turned down from the default (+2px, black) to a subtler grey ring, for plots
+ * dense enough that a growing point covers its neighbours.
+ */
+export const CustomHoverStyle: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        hoverGrowth: 1,
+        hoverStroke: "#555555",
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        initialState: {
+            controls: {
+                selectionType: "pan"
+            }
+        }
     }
 };
 
