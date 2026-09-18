@@ -59,9 +59,23 @@ const Histogram = ({
     const bins: HistogramBin[] = useMemo(() => {
         if (allValues.length === 0) return [];
 
-        const binner = Array.isArray(thresholds)
-            ? d3bin().thresholds(thresholds)
-            : d3bin().thresholds(thresholds ?? 20);
+        const isIntegerData = allValues.every(Number.isInteger);
+        const dataMin = Math.min(...allValues);
+        const dataMax = Math.max(...allValues);
+        const integerValueCount = dataMax - dataMin + 1;
+
+        let binner;
+        if (Array.isArray(thresholds)) {
+            binner = d3bin().thresholds(thresholds);
+        } else if (isIntegerData && integerValueCount <= (thresholds ?? 20)) {
+            // Requesting ~20 "nice" thresholds over a small integer range (e.g. 0-3) makes d3
+            // pick a fractional step (e.g. 0.2), splintering each integer into its own narrow,
+            // gapped bin. Snap to one bin per integer value instead.
+            const innerEdges = range(dataMin + 1, dataMax + 1);
+            binner = d3bin().domain([dataMin, dataMax + 1]).thresholds(innerEdges);
+        } else {
+            binner = d3bin().thresholds(thresholds ?? 20);
+        }
         const allBins = binner(allValues);
 
         const domainX0 = allBins[0]?.x0 ?? 0;
