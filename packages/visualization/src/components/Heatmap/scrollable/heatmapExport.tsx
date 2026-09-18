@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import type { ColumnDatum } from "../types";
-import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS } from "../../../utility";
+import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS, downloadBlob } from "../../../utility";
 import type { HeatmapLayout } from "../heatmapLayout";
 import { LEGEND_GAP } from "../heatmapLayout";
 import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, yAxisTickLabelProps } from "../heatmapAxisProps";
@@ -43,27 +43,28 @@ const appendClone = (exportSvg: SVGSVGElement, source: SVGSVGElement, x: number,
   exportSvg.appendChild(group);
 };
 
-// Rasterizes the full (unwindowed) cell grid onto an off-DOM canvas using the same paint
-// routine the live scrollable grid and minimap use for their own canvases (drawHeatmapCells),
-// and returns it as a PNG data URL sized to embed directly into the export SVG. This is the key
-// difference from every other layer here: a large grid (e.g. 1000x1000 = 1M cells) rendered as
-// individual SVG shapes via React would mean 1M DOM nodes built synchronously and then
+// Resolution is capped (never upscaled) so a canvas can't exceed what browsers will reliably
+// allocate - past that, some browsers just hand back a blank canvas instead of erroring.
+function computeExportScale(width: number, height: number): number {
+  const desiredScale = window.devicePixelRatio || 2;
+  return Math.min(
+    desiredScale,
+    MAX_CANVAS_EXPORT_DIMENSION / width,
+    MAX_CANVAS_EXPORT_DIMENSION / height,
+    Math.sqrt(MAX_CANVAS_EXPORT_PIXELS / (width * height))
+  );
+}
+
+// Rasterizes the full (unwindowed) cell grid onto a canvas using the same paint routine the
+// live scrollable grid and minimap use for their own canvases (drawHeatmapCells). This is the
+// key difference from every other layer here: a large grid (e.g. 1000x1000 = 1M cells) rendered
+// as individual SVG shapes via React would mean 1M DOM nodes built synchronously and then
 // serialized into a multi-hundred-MB XML string - that's what used to hang/crash the tab.
-// Painting into a canvas instead collapses that to a bounded number of fillRect calls plus one
-// small PNG blob, which is exactly how the minimap already handles full-dataset draws.
-// Resolution is capped (never upscaled) so the canvas itself can't exceed what browsers will
-// reliably allocate - past that, some browsers just hand back a blank canvas instead of erroring.
-function renderCellsToDataURL(o: ScrollableExportOptions): string | null {
+// Painting into a canvas instead collapses that to a bounded number of fillRect calls, which is
+// exactly how the minimap already handles full-dataset draws.
+function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasElement | null {
   const { xMax, yMax, canvasCellParams, numRows } = o.layout;
   if (xMax <= 0 || yMax <= 0) return null;
-
-  const desiredScale = window.devicePixelRatio || 2;
-  const scale = Math.min(
-    desiredScale,
-    MAX_CANVAS_EXPORT_DIMENSION / xMax,
-    MAX_CANVAS_EXPORT_DIMENSION / yMax,
-    Math.sqrt(MAX_CANVAS_EXPORT_PIXELS / (xMax * yMax))
-  );
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(xMax * scale));
@@ -74,7 +75,17 @@ function renderCellsToDataURL(o: ScrollableExportOptions): string | null {
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const range = { colStart: 0, colEnd: Math.max(0, o.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
   drawHeatmapCells(ctx, canvasCellParams, range, null);
-  return canvas.toDataURL("image/png");
+  return canvas;
+}
+
+// Only used to embed the cell layer in an actual downloadable .svg file (see
+// buildScrollableExportSVG) - the PNG path (downloadScrollableHeatmapPNG below) draws the
+// rasterized canvas directly onto the output canvas instead, so it never needs this as a string.
+function renderCellsToDataURL(o: ScrollableExportOptions): string | null {
+  const { xMax, yMax } = o.layout;
+  if (xMax <= 0 || yMax <= 0) return null;
+  const canvas = rasterizeCells(o, computeExportScale(xMax, yMax));
+  return canvas ? canvas.toDataURL("image/png") : null;
 }
 
 const appendCellsImage = (exportSvg: SVGSVGElement, dataUrl: string, x: number, y: number, width: number, height: number) => {
@@ -98,7 +109,7 @@ const appendCellsImage = (exportSvg: SVGSVGElement, dataUrl: string, x: number, 
 // purely to snapshot into the export SVG below. The cell layer is handled separately (see
 // renderCellsToDataURL above) since it doesn't have this problem's flip side: rendering it fresh
 // as SVG shapes is exactly what's too expensive at full-grid scale.
-export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElement | null {
+export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCells = true }: { includeCells?: boolean } = {}): SVGSVGElement | null {
   const { layout } = o;
   const {
     marg, xMax, yMax, xScale, yScale, numRows, xTickValues, yTickValues, yTickLabelWidth, xTickLabelHeight,
@@ -109,8 +120,10 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElem
   exportSvg.setAttribute("width", String(marg.left + xMax + marg.right));
   exportSvg.setAttribute("height", String(marg.top + yMax + marg.bottom));
 
-  const cellsDataUrl = renderCellsToDataURL(o);
-  if (cellsDataUrl) appendCellsImage(exportSvg, cellsDataUrl, marg.left, marg.top, xMax, yMax);
+  if (includeCells) {
+    const cellsDataUrl = renderCellsToDataURL(o);
+    if (cellsDataUrl) appendCellsImage(exportSvg, cellsDataUrl, marg.left, marg.top, xMax, yMax);
+  }
 
   let fullRowAxis: SVGSVGElement | null = null;
   let fullColAxis: SVGSVGElement | null = null;
@@ -158,6 +171,56 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions): SVGSVGElem
   if (o.xLabel) appendTitle(exportSvg, o.xLabel, marg.left + xMax / 2, marg.top + yMax + xTickLabelHeight + xTitleHeight / 2, false);
 
   return exportSvg;
+}
+
+// Renders a scrollable heatmap straight to a downloadable PNG in a single raster pass: the cell
+// grid is drawn once (rasterizeCells) directly onto the output canvas, and only the much smaller
+// axes/legend/titles are round-tripped through SVG-to-image to rasterize on top of it. This
+// deliberately avoids buildScrollableExportSVG's normal cells-as-embedded-image path (used for
+// the actual .svg download, where a raster layer has to be embedded as a data URL to produce a
+// valid standalone file) - base64-encoding a full-resolution cell canvas into an XML string,
+// then decoding that string back into an image to redraw onto a second full-size canvas, doubles
+// both the memory footprint and the encode/decode work for no benefit here, and was enough to
+// crash the tab on a large export. No DOM attachment is needed either: unlike downloadSVGAsPNG,
+// nothing here reads clientWidth/clientHeight - the output size comes straight from the layout.
+export function downloadScrollableHeatmapPNG(o: ScrollableExportOptions, fileName: string): void {
+  const { marg, xMax, yMax } = o.layout;
+  if (xMax <= 0 || yMax <= 0) return;
+
+  const fullWidth = marg.left + xMax + marg.right;
+  const fullHeight = marg.top + yMax + marg.bottom;
+  const scale = computeExportScale(fullWidth, fullHeight);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(fullWidth * scale));
+  canvas.height = Math.max(1, Math.round(fullHeight * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const cellsCanvas = rasterizeCells(o, scale);
+  if (cellsCanvas) ctx.drawImage(cellsCanvas, marg.left * scale, marg.top * scale);
+
+  const finish = (blob: Blob | null) => {
+    if (blob) downloadBlob(blob, fileName);
+  };
+
+  const axesSvg = buildScrollableExportSVG(o, { includeCells: false });
+  if (!axesSvg) {
+    canvas.toBlob(finish, "image/png", 1);
+    return;
+  }
+
+  const svgString = new XMLSerializer().serializeToString(axesSvg);
+  const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(finish, "image/png", 1);
+  };
+  img.onerror = () => URL.revokeObjectURL(url);
+  img.src = url;
 }
 
 // downloadSVGAsPNG reads the element's layout box asynchronously (after its image loads), so

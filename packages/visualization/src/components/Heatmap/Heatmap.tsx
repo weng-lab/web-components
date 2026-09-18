@@ -4,7 +4,7 @@ import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { makeTickFormat, getXAxisTickLabelProps } from "./heatmapAxisProps";
 import { useHeatmapLayout } from "./heatmapLayout";
-import { withOffscreenExportSVG } from "./scrollable/heatmapExport";
+import { withOffscreenExportSVG, downloadScrollableHeatmapPNG } from "./scrollable/heatmapExport";
 import HeatmapScrollableGrid from "./scrollable/HeatmapScrollableGrid";
 import HeatmapStaticSvg from "./HeatmapStaticSvg";
 
@@ -55,46 +55,23 @@ const Heatmap = ({
   });
 
   useImperativeHandle(ref, () => ({
-    // Both methods return a Promise that resolves once the file has actually been handed to the
-    // browser, and both defer their real work a frame via requestAnimationFrame - for a large
-    // scrollable heatmap that work includes a synchronous full-grid canvas rasterization
-    // (see heatmapExport.tsx) that can take a noticeable beat. Without the deferral, a caller
-    // that flips on a loading spinner and then immediately calls this would never see it painted:
-    // the spinner's re-render can't reach the screen until this synchronous work finishes and the
-    // browser gets a chance to paint, same reasoning as the minimap's own rAF-deferred full-dataset
-    // draw (HeatmapMiniMap.tsx).
-    downloadSVG: () =>
-      new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          if (isScrollable) {
-            withOffscreenExportSVG(buildExportOptions(), (svg, onDone) => {
-              downloadAsSVG(svg, downloadFileName ?? "heatmap.svg");
-              onDone();
-              resolve();
-            });
-          } else {
-            if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? "heatmap.svg");
-            resolve();
-          }
+    downloadSVG: () => {
+      if (isScrollable) {
+        withOffscreenExportSVG(buildExportOptions(), (svg, onDone) => {
+          downloadAsSVG(svg, downloadFileName ?? "heatmap.svg");
+          onDone();
         });
-      }),
-    downloadPNG: () =>
-      new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          if (isScrollable) {
-            withOffscreenExportSVG(buildExportOptions(), (svg, onDone) => {
-              downloadSVGAsPNG(svg, downloadFileName ?? "heatmap.png", undefined, () => {
-                onDone();
-                resolve();
-              });
-            });
-          } else if (svgRef.current) {
-            downloadSVGAsPNG(svgRef.current, downloadFileName ?? "heatmap.png", undefined, () => resolve());
-          } else {
-            resolve();
-          }
-        });
-      }),
+      } else if (svgRef.current) {
+        downloadAsSVG(svgRef.current, downloadFileName ?? "heatmap.svg");
+      }
+    },
+    downloadPNG: () => {
+      if (isScrollable) {
+        downloadScrollableHeatmapPNG(buildExportOptions(), downloadFileName ?? "heatmap.png");
+      } else if (svgRef.current) {
+        downloadSVGAsPNG(svgRef.current, downloadFileName ?? "heatmap.png");
+      }
+    },
   }));
   // No deps array: buildScrollableExportSVG (and the plain closures above) now render the cells
   // and both axes fresh on every export (see its comment), reading a long list of render-scoped
