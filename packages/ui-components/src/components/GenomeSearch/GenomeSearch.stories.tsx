@@ -146,6 +146,47 @@ export const CustomStaticList: Story = {
   },
 };
 
+/**
+ * `onResultSelect` reports a result as it is chosen, rather than on a second click of the button.
+ * Where that leaves the button with nothing to do, a `slots.button` that renders nothing takes
+ * it off the row.
+ */
+export const SelectWithoutSubmitting: Story = {
+  args: {
+    ...baseArgs,
+    queries: ["Gene"],
+    geneVersion: 49,
+    sx: { width: 300 },
+    slots: { button: () => null },
+  },
+  render: (args) => {
+    const [selected, setSelected] = useState<Result | null>(null);
+    const [calls, setCalls] = useState(0);
+
+    return (
+      <Stack maxWidth={400} spacing={2}>
+        <GenomeSearch
+          {...args}
+          onSearchSubmit={undefined}
+          onResultSelect={(result) => {
+            setSelected(result);
+            setCalls((count) => count + 1);
+          }}
+        />
+        <Typography>
+          {selected ? `Selected ${selected.title}` : "Nothing selected"} — onResultSelect fired{" "}
+          {calls} {calls === 1 ? "time" : "times"}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Picking the same result twice, by clicking it and then pressing Enter, leaves the count at
+          one. Emptying the input reports null, which is why this story shows what it was told
+          rather than only the last result it recognised.
+        </Typography>
+      </Stack>
+    );
+  },
+};
+
 export const GencodeVersions: Story = {
   args: {
     ...baseArgs,
