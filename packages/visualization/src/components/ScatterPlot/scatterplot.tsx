@@ -1,17 +1,17 @@
-import React, { useCallback, useImperativeHandle, useMemo } from 'react';
-import { ChartProps, ZoomType } from './types';
-import { Tooltip as VisxTooltip, TooltipProps, Portal, defaultStyles as visxTooltipStyles } from '@visx/tooltip';
+import React, { useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { ChartProps, Point, ZoomType } from './types';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
 import { IconButton, Stack, Tooltip, useTheme } from '@mui/material';
 import { HighlightAlt } from '@mui/icons-material';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
+import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import { getDomains, getPointExtents, isSameTransform } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
-import ScatterTooltip from './tooltip';
+import DefaultTooltipBody from './tooltip';
 import { useSelectionMode } from './hooks/useSelectionMode';
 import { useMiniMapToggle } from './hooks/useMiniMapToggle';
 import { useHoverTooltip } from './hooks/useHoverTooltip';
@@ -19,32 +19,11 @@ import { useCrosshair } from './hooks/useCrosshair';
 
 const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
 
-/**
- * The point tooltip is portalled to document.body, so it leaves the plot's stacking
- * context and cannot be layered against the plot's own overlays by DOM order alone.
- * visx ships no z-index of its own, which leaves it below the controls and the minimap
- * toggle (z-index 10) - those sit in the root stacking context, so they win against an
- * auto z-index no matter where the portal lands. Lifting the tooltip to the theme's
- * tooltip layer keeps it above them, and matches the MUI tooltips on the same controls.
- */
-const useTooltipStyle = () => {
-    const theme = useTheme();
-    return useMemo(
-        () => ({ ...visxTooltipStyles, zIndex: theme.zIndex.tooltip }),
-        [theme.zIndex.tooltip]
-    );
-};
-
 const ScatterPlot = <T extends object, S extends boolean | undefined = undefined, Z extends boolean | undefined = undefined>(
     props: ChartProps<T, S, Z>
 ) => {
-    /**
- * Hacky workaround for complex type compatability issues. Hopefully this will fix itself when ugrading to React 19 - Jonathan 12/11/24
- * @todo remove this when possible
- */
-    const VisTooltip = VisxTooltip as unknown as React.FC<TooltipProps>;
-
-    const tooltipStyle = useTooltipStyle();
+    const theme = useTheme();
+    const tooltipRef = useRef<PlotTooltipHandle<Point<T>>>(null);
 
     const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
@@ -94,14 +73,14 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         });
     }, [boundedHeight, yDomainMin, yDomainMax]);
 
-    const { hoveredPoint, tooltipData, tooltipOpen, mouseX, mouseY, handleMouseMove, handleMouseLeave } =
-        useHoverTooltip({
-            pointData: props.pointData,
-            margin: MARGIN,
-            xScale,
-            yScale,
-            onHoveredPointChange: props.onHoveredPointChange,
-        });
+    const { hoveredPoint, handleMouseMove, handleMouseLeave } = useHoverTooltip({
+        pointData: props.pointData,
+        margin: MARGIN,
+        xScale,
+        yScale,
+        onHoveredPointChange: props.onHoveredPointChange,
+        tooltipRef,
+    });
 
     const crosshairEnabled = props.crosshair ?? false;
 
@@ -201,6 +180,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     groupPointsAnchor={props.groupPointsAnchor}
                     hoveredPoint={hoveredPoint}
                     hoveredPoints={props.hoveredPoints}
+                    hoverGrowth={props.hoverGrowth}
+                    hoverStroke={props.hoverStroke}
                     handleMouseMove={handlePointerMove}
                     handleMouseLeave={handlePointerLeave}
                     onDisplayedPointsChange={props.onDisplayedPointsChange}
@@ -245,12 +226,16 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         crosshair={crosshair}
                     />
                 )}
-                {!props.disableTooltip && tooltipOpen && tooltipData && (
-                    <Portal>
-                        <VisTooltip left={mouseX + 10} top={mouseY} style={tooltipStyle}>
-                            <ScatterTooltip tooltipBody={props.tooltipBody} tooltipData={tooltipData} />
-                        </VisTooltip>
-                    </Portal>
+                {!props.disableTooltip && (
+                    // Above the controls and the minimap toggle, which sit at z-index 10 in the
+                    // root stacking context and would otherwise win against the portalled
+                    // tooltip's auto z-index. The theme's tooltip layer also matches the MUI
+                    // tooltips on those same controls.
+                    <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+                        {(point) =>
+                            props.tooltipBody ? props.tooltipBody(point) : <DefaultTooltipBody point={point} />
+                        }
+                    </PlotTooltip>
                 )}
             </>
         )
