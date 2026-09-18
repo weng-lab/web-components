@@ -65,21 +65,24 @@ export function downloadDivAsSVG(
 }
 
 /**
+ * Triggers a browser download of an already-built blob via a throwaway <a download> click.
+ */
+export function downloadBlob(blob: Blob, fileName: string) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+/**
  * Downloads an SVG element as an .svg file
  */
 export function downloadAsSVG(svgElement: SVGSVGElement, fileName = "chart.svg") {
     const serializer = new XMLSerializer();
     const svgString = serializer.serializeToString(svgElement);
-
-    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([svgString], { type: "image/svg+xml;charset=utf-8" }), fileName);
 }
 
 // Browsers silently produce a blank canvas (rather than throwing) once a canvas's pixel
@@ -134,14 +137,7 @@ export function downloadSVGAsPNG(svgElement: SVGSVGElement, fileName = "chart.pn
         URL.revokeObjectURL(url);
 
         canvas.toBlob((blob) => {
-            if (blob) {
-                const pngUrl = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = pngUrl;
-                link.download = fileName;
-                link.click();
-                URL.revokeObjectURL(pngUrl);
-            }
+            if (blob) downloadBlob(blob, fileName);
             onComplete?.(!!blob);
         }, "image/png",
             1, // max quality
