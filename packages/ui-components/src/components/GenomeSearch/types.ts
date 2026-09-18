@@ -29,7 +29,34 @@ type GenomeSearchOmittedProps =
 // Props for the GenomeSearch component
 export type GenomeSearchProps = Omit<Partial<AutocompleteBase>, GenomeSearchOmittedProps> & {
   assembly: "GRCh38" | "mm10";
-  onSearchSubmit: (result: Result) => void;
+
+  /**
+   * Called when the search is submitted: the button is clicked, or Enter is
+   * pressed on an input that exactly names a result.
+   *
+   * Optional, but provide this or `onResultSelect` - without either, choosing a
+   * result does nothing. Use this one where submitting is a commitment the reader
+   * should make deliberately, such as navigating away from the current page.
+   */
+  onSearchSubmit?: (result: Result) => void;
+
+  /**
+   * Called whenever the chosen result changes: an option is picked from the list,
+   * or Enter is pressed on an input that exactly names one. It does not fire again
+   * for a result that is already the chosen one.
+   *
+   * Use this to act on a choice as it is made, rather than on a second click of
+   * the button - reasonable when the result only changes something on the page,
+   * such as what a plot is colored by. Pair it with a `slots.button` that renders
+   * nothing if the button would then be a no-op.
+   *
+   * It also fires with `null` when the input is emptied, because Autocomplete reads
+   * an emptied input as clearing the value. That happens on the way to typing a new
+   * query, not only on the way to giving up, so a consumer that acts on `null` will
+   * tear down whatever it built and rebuild it a moment later. Ignore `null` unless
+   * an empty search really should mean nothing is chosen.
+   */
+  onResultSelect?: (result: Result | null) => void;
   defaultResults?: Result[];
   showiCREFlag?: boolean;
   geneVersion?: number | number[];

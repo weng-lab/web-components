@@ -16,7 +16,10 @@ import { useEntityAutocomplete } from "./useEntityAutocomplete";
  * The props extends the MUI Autocomplete props, so you are able to adjust that component's props as well.
  * You can also use the slots and slotProps to customize the search's internal components, such as the input, button and the bounding box.
  * To use, pass in a list of the queries you want to run, and the assembly i.e. GRCh38 or mm10.
- * You must also provide a function to call when a result is selected, which will run when the user clicks the button.
+ *
+ * Choosing a result is reported two ways, and you should handle at least one of them:
+ * `onResultSelect` fires as the choice is made, and `onSearchSubmit` when the button is
+ * clicked or Enter is pressed on an input that exactly names a result.
  * @param props - extends MUI AutocompleteProps and includes additional props specific to this component
  */
 function GenomeSearch({
@@ -28,6 +31,7 @@ function GenomeSearch({
   staticLists,
   graphqlUrl,
   onSearchSubmit,
+  onResultSelect,
   defaultResults = [],
   style,
   sx,
@@ -118,11 +122,28 @@ function GenomeSearch({
     };
   }, [data, defaultResults, queries, staticLists, inputValue]);
 
-  //Clear input on assembly change
+  // Clear input on assembly change. Not through selectResult: nothing was chosen here, so there is
+  // no choice to report - a consumer clearing its own state on assembly change already knows.
   useEffect(() => {
     setInputValue("");
     setSelection(null);
   }, [assembly]);
+
+  /**
+   * Records the chosen result, from wherever it was chosen, and reports it once.
+   *
+   * Every path that changes the selection goes through here so that `onResultSelect` cannot come to
+   * mean something different depending on whether the reader clicked an option or pressed Enter.
+   */
+  const selectResult = useCallback(
+    (result: Result | null) => {
+      setSelection(result);
+      setInputValue(result?.title || ""); //needed so that the matching to inputValue works on enter press after selection
+      // Only on a change: Enter on an option already chosen would otherwise report it a second time.
+      if (!isSameResult(selection, result)) onResultSelect?.(result);
+    },
+    [onResultSelect, selection]
+  );
 
   // Handle submit
   const onSubmit = useCallback(() => {
@@ -135,17 +156,16 @@ function GenomeSearch({
       if (event.key === "Enter") {
         const exactMatch = data?.find((x) => x.title?.toLowerCase() === inputValue.toLowerCase());
         if (exactMatch) {
-          setSelection(exactMatch);
+          selectResult(exactMatch);
           if (onSearchSubmit) onSearchSubmit(exactMatch);
         }
       }
     },
-    [data, inputValue, onSearchSubmit]
+    [data, inputValue, onSearchSubmit, selectResult]
   );
 
   const onChange = (_event: React.SyntheticEvent<Element, Event>, newValue: Result | null) => {
-    setSelection(newValue);
-    setInputValue(newValue?.title || ""); //needed so that the matching to inputValue works on enter press after selection
+    selectResult(newValue);
   };
 
   return (
@@ -183,6 +203,14 @@ function GenomeSearch({
       </ButtonSlot>
     </BoxSlot>
   );
+}
+
+/**
+ * Whether two results stand for the same thing - the same test `isOptionEqualToValue` gives the
+ * Autocomplete for its own value, so what counts as a change cannot differ between the two.
+ */
+function isSameResult(a: Result | null, b: Result | null) {
+  return a === null || b === null ? a === b : a.title === b.title;
 }
 
 /**
