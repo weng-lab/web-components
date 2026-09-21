@@ -11,7 +11,7 @@ import {
   legacyCcreResultList,
   staticListResultList,
 } from "./utils";
-import { GenomeSearchProps, Result, ResultType } from "./types";
+import { GenomeSearchProps, Result, ResultType, StaticListOption } from "./types";
 
 export const DEFAULT_LIMIT = 3;
 
@@ -220,13 +220,28 @@ export function useEntityAutocomplete(
 
                 const typeLimit = getLimit(type);
                 const search = input.toLowerCase();
+
+                // Rank before slicing to `typeLimit` — a label match is a much stronger
+                // signal than a keyword match, so it must win a spot even when a weaker
+                // keyword match (e.g. "l" inside a keyword like "whole genome...") would
+                // otherwise fill the limit first by sitting earlier in `list`.
+                const matchRank = (option: StaticListOption): number => {
+                  const label = option.label.toLowerCase();
+                  if (label === search) return 0;
+                  if (label.startsWith(search)) return 1;
+                  if (label.includes(search)) return 2;
+                  const keywords = option.keywords?.map((k) => k.toLowerCase()) ?? [];
+                  if (keywords.some((k) => k.startsWith(search))) return 3;
+                  if (keywords.some((k) => k.includes(search))) return 4;
+                  return -1;
+                };
+
                 const filtered = list
-                  .filter(
-                    (option) =>
-                      option.label.toLowerCase().includes(search) ||
-                      option.keywords?.some((k) => k.toLowerCase().includes(search))
-                  )
-                  .slice(0, typeLimit);
+                  .map((option) => ({ option, rank: matchRank(option) }))
+                  .filter(({ rank }) => rank !== -1)
+                  .sort((a, b) => a.rank - b.rank)
+                  .slice(0, typeLimit)
+                  .map(({ option }) => option);
 
                 fetchPromises.push(Promise.resolve(staticListResultList(filtered, type)));
               });

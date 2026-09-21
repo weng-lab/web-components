@@ -1,6 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
 import GenomeSearch from "./GenomeSearch";
-import { GenomeSearchProps, Result, ResultType } from "./types";
+import { GenomeSearchProps, Result, ResultType, StaticListOption } from "./types";
 import { Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useState } from "react";
