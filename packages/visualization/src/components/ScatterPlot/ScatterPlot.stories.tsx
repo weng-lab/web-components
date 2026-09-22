@@ -751,3 +751,95 @@ export const FillsContainer: Story = {
         ),
     ],
 };
+
+// hoveredPoints handed over a window at a time, the way sweeping a colorbar hands them over. Each
+// mouse move shifts the window a little, so most of its points are still inside it afterwards:
+// they keep the growth they have reached, and only the points it has just taken in grow from
+// nothing. Sweep the bar quickly and the ring stays on the points under the window rather than
+// flickering as it moves.
+type ValuePoint = {
+    x: number;
+    y: number;
+    color: string;
+    metaData: { value: number };
+};
+
+const SWEEP_WINDOW = 0.15;
+
+const sweepData: ValuePoint[] = (() => {
+    // Seeded, so the points are the same on every load.
+    let seed = 7;
+    const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    return Array.from({ length: 1200 }, () => {
+        const x = random() * 100;
+        const y = random() * 60 + x * 0.3;
+        const value = Math.min(1, Math.max(0, x / 100 + (random() - 0.5) * 0.3));
+        return { x, y, color: `hsl(${240 - value * 240}, 70%, 50%)`, metaData: { value } };
+    });
+})();
+
+export const HoveredPointsSweep: Story = {
+    args: {
+        pointData: sweepData,
+        loading: false,
+    },
+    render: () => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [from, setFrom] = useState<number | null>(null);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const hoveredPoints = useMemo(
+            () =>
+                from === null
+                    ? undefined
+                    : sweepData.filter(({ metaData: { value } }) => value >= from && value <= from + SWEEP_WINDOW),
+            [from],
+        );
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 12 }}>
+                <div
+                    data-testid="sweep-bar"
+                    onMouseMove={(event) => {
+                        const { left, width } = event.currentTarget.getBoundingClientRect();
+                        const t = (event.clientX - left) / width;
+                        setFrom(Math.min(Math.max(t - SWEEP_WINDOW / 2, 0), 1 - SWEEP_WINDOW));
+                    }}
+                    onMouseLeave={() => setFrom(null)}
+                    style={{
+                        position: "relative",
+                        height: 16,
+                        borderRadius: 8,
+                        background:
+                            "linear-gradient(to right, hsl(240, 70%, 50%), hsl(180, 70%, 50%), hsl(120, 70%, 50%), hsl(60, 70%, 50%), hsl(0, 70%, 50%))",
+                    }}
+                >
+                    {from !== null && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: -3,
+                                bottom: -3,
+                                left: `${from * 100}%`,
+                                width: `${SWEEP_WINDOW * 100}%`,
+                                border: "2px solid #000",
+                                borderRadius: 4,
+                            }}
+                        />
+                    )}
+                </div>
+
+                <div style={{ flex: 1, minHeight: 0 }}>
+                    <ScatterPlot
+                        pointData={sweepData}
+                        loading={false}
+                        disableTooltip
+                        leftAxisLabel="Y-Axis Label"
+                        bottomAxisLabel="X-Axis Label"
+                        hoveredPoints={hoveredPoints}
+                    />
+                </div>
+            </div>
+        );
+    },
+};

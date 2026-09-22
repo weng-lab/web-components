@@ -63,6 +63,10 @@ const HOVER_GROW_MS = 120;
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
+/** How far into its growth a point is at `now`, having started at `start`: 0 at rest, 1 fully grown. */
+const hoverAmountAt = (start: number | undefined, now: number) =>
+    start === undefined ? 0 : easeOutCubic(Math.min(1, Math.max(0, (now - start) / HOVER_GROW_MS)));
+
 const ScatterPlotViewport = <T extends object>({
     width,
     height,
@@ -102,11 +106,14 @@ const ScatterPlotViewport = <T extends object>({
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     // Hover growth is driven straight onto the canvas through a ref. A redraw is ~0.3ms at
     // 3.4k points so the drawing is cheap, but a re-render per frame would not be.
-    const hoverAmountRef = useRef(0);
-    const animatedKeysRef = useRef<Set<string> | null>(null);
-    // When the current hover began, so its growth can be resumed rather than restarted if the
-    // effect driving it is re-run partway through.
-    const hoverStartedAtRef = useRef(0);
+    //
+    // Timed per point, by the same key as hoveredPointKeys: when each hovered point began to grow.
+    // A point that stays hovered while the set around it changes - a window swept along a
+    // colorbar, one group handed over for an overlapping one - carries on from where it had got
+    // to, and only the points new to the set grow in from nothing. One timer for the whole set
+    // restarted every point on every change, so a sweep never let any of them finish growing.
+    // Held in a ref so an effect re-run partway through resumes the growth rather than restarting it.
+    const hoverStartsRef = useRef<Map<string, number>>(new Map());
 
     // Animation state — viewport owns what it renders
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(animation));
@@ -233,7 +240,9 @@ const ScatterPlotViewport = <T extends object>({
     const drawPoints = useCallback((
         xST: ScaleLinear<number, number, never>,
         yST: ScaleLinear<number, number, never>,
-        canvas: HTMLCanvasElement
+        canvas: HTMLCanvasElement,
+        /** The frame's time, which every hovered point's growth is measured to. */
+        now: number
     ) => {
         const context = canvas.getContext('2d');
         if (!context) return;
@@ -258,61 +267,54 @@ const ScatterPlotViewport = <T extends object>({
         }
 
         const { nonHovered, hovered } = partitionPointsByHover(pointData, hoveredPointKeys);
+        const starts = hoverStartsRef.current;
 
-        const drawRenderedPoint = (point: Point<T>, isHovered: boolean) => {
+        const drawRenderedPoint = (point: Point<T>, hoverAmount: number) => {
             const transformedX = xST(point.x);
             const transformedY = yST(point.y);
             if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
-            drawCanvasPoint(context, point, transformedX, transformedY, isHovered ? hoverAmountRef.current : 0, hoverStyle);
+            drawCanvasPoint(context, point, transformedX, transformedY, hoverAmount, hoverStyle);
         };
 
-        nonHovered.forEach((point) => drawRenderedPoint(point, false));
-        hovered.forEach((point) => drawRenderedPoint(point, true));
+        nonHovered.forEach((point) => drawRenderedPoint(point, 0));
+        hovered.forEach((point) => drawRenderedPoint(point, hoverAmountAt(starts.get(`${point.x},${point.y}`), now)));
     }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient, hoverStyle]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || showPointAnimation) return;
 
-        // Leaving is instant: drop the growth and repaint once.
-        if (hoveredPointKeys.size === 0) {
-            animatedKeysRef.current = null;
-            hoverAmountRef.current = 0;
-            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+        // Bring the start times in line with what is hovered now. A point still hovered keeps its
+        // start; a point newly hovered starts growing now; a point no longer hovered is dropped,
+        // so leaving stays instant. Running it again changes nothing, which is what lets this
+        // effect's other triggers - pan, zoom, new pointData - carry on from the sizes the points
+        // have already reached rather than snapping them back to zero.
+        const now = performance.now();
+        const starts = hoverStartsRef.current;
+        for (const key of starts.keys()) {
+            if (!hoveredPointKeys.has(key)) starts.delete(key);
+        }
+        let latestStart = -Infinity;
+        for (const key of hoveredPointKeys) {
+            if (!starts.has(key)) starts.set(key, now);
+            latestStart = Math.max(latestStart, starts.get(key)!);
+        }
+
+        // Nothing still growing - no hover at all, or every hovered point fully grown: repaint
+        // once without scheduling a frame, so a pan over a hovered point does not queue one per move.
+        const grownAt = latestStart + HOVER_GROW_MS;
+        if (now >= grownAt) {
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas, now);
             return;
         }
 
-        // Only a change of hovered set starts the growth. This effect also runs on pan, zoom and
-        // data changes, which should carry on from the size the points have already reached
-        // rather than snapping them back to zero.
-        const sameHover = animatedKeysRef.current === hoveredPointKeys;
-        if (!sameHover) {
-            animatedKeysRef.current = hoveredPointKeys;
-            hoverStartedAtRef.current = performance.now();
-            hoverAmountRef.current = 0;
-        }
-
-        const startedAt = hoverStartedAtRef.current;
-
-        // Already fully grown: repaint at full size without scheduling a frame, so a pan over a
-        // hovered point does not queue one per move.
-        if (sameHover && performance.now() - startedAt >= HOVER_GROW_MS) {
-            hoverAmountRef.current = 1;
-            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
-            return;
-        }
-
-        // Timed from when this hover began rather than from now, so an animation interrupted
-        // partway - by new pointData arriving under the cursor, most often - resumes where it
-        // left off instead of restarting. Before this was kept in a ref, the cleanup below
-        // cancelled the frame and the sameHover branch above returned without scheduling
-        // another, leaving the point frozen at whatever growth it had reached: on the first
-        // frame, none at all, drawn with a ring at a tenth of its opacity.
+        // Until the newest point has grown. Each frame is drawn at its own time and the loop only
+        // stops after a frame drawn at or past grownAt, so the last one leaves every point at its
+        // full size rather than a frame short of it.
         let frame = requestAnimationFrame(function step() {
-            const t = Math.min(1, (performance.now() - startedAt) / HOVER_GROW_MS);
-            hoverAmountRef.current = easeOutCubic(t);
-            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
-            if (t < 1) frame = requestAnimationFrame(step);
+            const time = performance.now();
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas, time);
+            if (time < grownAt) frame = requestAnimationFrame(step);
         });
 
         return () => cancelAnimationFrame(frame);
