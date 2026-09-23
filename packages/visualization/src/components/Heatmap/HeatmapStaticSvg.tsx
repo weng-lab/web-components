@@ -1,13 +1,13 @@
-import { type ReactElement, type RefObject } from "react";
+import { useMemo, type ReactElement, type RefObject } from "react";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import type { ColumnDatum, HeatmapCellId } from "./types";
-import type { AnimationType } from "../../utility";
+import { measureTextWidth, type AnimationType } from "../../utility";
 import type { AnyBin } from "./HeatmapCells";
 import HeatmapCells from "./HeatmapCells";
 import { heatmapCellStyles } from "./HeatmapCell";
 import HeatmapLegend from "./HeatmapLegend";
-import { xAxisLabelProps, yAxisTickLabelProps, yAxisLabelProps, type getXAxisTickLabelProps } from "./heatmapAxisProps";
-import { LEGEND_GAP, AXIS_LABEL_GAP, type HeatmapLayout } from "./heatmapLayout";
+import { xAxisLabelProps, yAxisTickLabelProps, yAxisLabelProps, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, type getXAxisTickLabelProps } from "./heatmapAxisProps";
+import { LEGEND_GAP, AXIS_LABEL_GAP, TICK_LABEL_WIDTH_SAFETY_FACTOR, type HeatmapLayout } from "./heatmapLayout";
 
 export interface HeatmapStaticSvgProps {
   svgRef: RefObject<SVGSVGElement | null>;
@@ -40,6 +40,21 @@ const HeatmapStaticSvg = ({
     binWidth, binHeight, numRows, xTickValues, yTickValues, colLabelHeight, maxRowNameWidth, legendWidth,
   } = layout;
 
+  // The title defaults to centered over the plot area (xMax), matching the tick labels it sits
+  // below - but with few enough columns, xMax can be much narrower than the title itself, which
+  // would otherwise run the title's overhanging half off the SVG's fixed-size canvas. Clamping
+  // its center into [titleWidth/2, parentWidth - titleWidth/2] keeps the default (title fits)
+  // behavior unchanged and only pulls it back into bounds when it wouldn't otherwise fit.
+  const xAxisTitleLabelProps = useMemo(() => {
+    if (!xLabel) return xAxisLabelProps;
+    const titleWidth = measureTextWidth(xLabel, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY) * TICK_LABEL_WIDTH_SAFETY_FACTOR;
+    const defaultCenter = marg.left + xMax / 2;
+    const center = titleWidth >= parentWidth
+      ? parentWidth / 2
+      : Math.min(Math.max(defaultCenter, titleWidth / 2), parentWidth - titleWidth / 2);
+    return { ...xAxisLabelProps, x: center - marg.left };
+  }, [xLabel, marg.left, xMax, parentWidth]);
+
   return (
     <svg width={parentWidth} height={parentHeight} ref={svgRef}>
       {/* Inside the <svg> so cell hover styling survives the SVG/PNG download serialization */}
@@ -71,7 +86,7 @@ const HeatmapStaticSvg = ({
           tickLabelProps={xAxisTickLabelProps}
           label={xLabel ?? ""}
           labelOffset={colLabelHeight + AXIS_LABEL_GAP}
-          labelProps={xAxisLabelProps}
+          labelProps={xAxisTitleLabelProps}
         />
         <AxisLeft
           scale={yScale}
