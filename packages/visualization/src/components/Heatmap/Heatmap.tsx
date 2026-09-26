@@ -32,6 +32,9 @@ const Heatmap = ({
   cellHeight,
   scrollToSelection,
   showMiniMap = false,
+  renderLegend,
+  legendWidth,
+  highlightRange,
 }: HeatmapProps) => {
   const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width, height });
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -41,7 +44,7 @@ const Heatmap = ({
   const layout = useHeatmapLayout({
     data, colorDomain, colors, xLabelOrientation, margin, showLegend, isScrollable,
     cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
-    selectedCells, deselectedColor,
+    selectedCells, deselectedColor, highlightRange, legendWidth,
   });
   const { allColNames, allRowNames, numRows } = layout;
 
@@ -88,6 +91,7 @@ const Heatmap = ({
           data={data}
           showMiniMap={showMiniMap}
           showLegend={showLegend}
+          renderLegend={renderLegend}
           xLabel={xLabel}
           yLabel={yLabel}
           tooltipBody={tooltipBody}
@@ -115,6 +119,7 @@ const Heatmap = ({
           xLabel={xLabel}
           yLabel={yLabel}
           showLegend={showLegend}
+          renderLegend={renderLegend}
           xAxisTickFormat={xAxisTickFormat}
           yAxisTickFormat={yAxisTickFormat}
           xAxisTickLabelProps={xAxisTickLabelProps}

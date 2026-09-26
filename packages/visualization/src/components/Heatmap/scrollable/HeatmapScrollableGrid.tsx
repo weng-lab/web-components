@@ -1,6 +1,6 @@
-import { useCallback, useId, useRef, useState, type ReactElement, type RefObject } from "react";
+import { useCallback, useId, useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 import { AxisLeft, AxisBottom } from "@visx/axis";
-import type { ColumnDatum, HeatmapCellId } from "../types";
+import type { ColumnDatum, HeatmapCellId, HeatmapLegendFrame } from "../types";
 import type { AnyBin } from "../HeatmapCells";
 import HeatmapLegend from "../HeatmapLegend";
 import HeatmapMiniMap from "./HeatmapMiniMap";
@@ -19,6 +19,7 @@ export interface HeatmapScrollableGridProps {
   data: ColumnDatum[];
   showMiniMap: boolean;
   showLegend: boolean;
+  renderLegend?: (frame: HeatmapLegendFrame) => ReactNode;
   xLabel?: string;
   yLabel?: string;
   tooltipBody?: (bin: AnyBin) => ReactElement;
@@ -31,7 +32,7 @@ export interface HeatmapScrollableGridProps {
 }
 
 const HeatmapScrollableGrid = ({
-  legendSvgRef, layout, data, showMiniMap, showLegend, xLabel, yLabel, tooltipBody, onClick,
+  legendSvgRef, layout, data, showMiniMap, showLegend, renderLegend, xLabel, yLabel, tooltipBody, onClick,
   selectedCells, scrollToSelection, xAxisTickFormat, yAxisTickFormat, xAxisTickLabelProps,
 }: HeatmapScrollableGridProps) => {
   const {
@@ -65,6 +66,21 @@ const HeatmapScrollableGrid = ({
   const [isMiniMapExpanded, setIsMiniMapExpanded] = useState(false);
   const miniMapContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // The caller's legend or the built-in one, standing up beside the grid or lying across the
+  // expanded minimap.
+  const legend = (frame: HeatmapLegendFrame) =>
+    renderLegend ? (
+      renderLegend(frame)
+    ) : (
+      <HeatmapLegend
+        colors={stableColors}
+        minValue={minValue}
+        maxValue={maxValue}
+        length={frame.orientation === "vertical" ? frame.height : frame.width}
+        orientation={frame.orientation}
+      />
+    );
+
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column" }}>
@@ -82,6 +98,7 @@ const HeatmapScrollableGrid = ({
               height={MINI_MAP_HEIGHT}
               onNavigate={handleMiniMapNavigate}
               onCanvasClick={() => setIsMiniMapExpanded(true)}
+              paused={isMiniMapExpanded}
             />
           </div>
         )}
@@ -194,12 +211,7 @@ const HeatmapScrollableGrid = ({
           {showLegend && (
             <div style={{ gridColumn: 4, gridRow: 2, width: legendWidth, marginLeft: LEGEND_GAP, height: viewportHeight }}>
               <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
-                <HeatmapLegend
-                  colors={stableColors}
-                  minValue={minValue}
-                  maxValue={maxValue}
-                  height={viewportHeight}
-                />
+                {legend({ width: legendWidth, height: viewportHeight, orientation: "vertical" })}
               </svg>
             </div>
           )}
@@ -217,6 +229,7 @@ const HeatmapScrollableGrid = ({
           scrollLeft={axisScrollPos.left}
           scrollTop={axisScrollPos.top}
           onNavigate={handleMiniMapNavigate}
+          legend={showLegend ? legend : undefined}
         />
       )}
     </>

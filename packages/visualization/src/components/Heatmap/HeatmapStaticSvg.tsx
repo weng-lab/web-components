@@ -1,6 +1,6 @@
-import { type ReactElement, type RefObject } from "react";
+import { type ReactElement, type ReactNode, type RefObject } from "react";
 import { AxisLeft, AxisBottom } from "@visx/axis";
-import type { ColumnDatum, HeatmapCellId } from "./types";
+import type { ColumnDatum, HeatmapCellId, HeatmapLegendFrame } from "./types";
 import type { AnimationType } from "../../utility";
 import type { AnyBin } from "./HeatmapCells";
 import HeatmapCells from "./HeatmapCells";
@@ -25,6 +25,7 @@ export interface HeatmapStaticSvgProps {
   xLabel?: string;
   yLabel?: string;
   showLegend: boolean;
+  renderLegend?: (frame: HeatmapLegendFrame) => ReactNode;
   xAxisTickFormat: (d: number | { valueOf(): number }) => string;
   yAxisTickFormat: (d: number | { valueOf(): number }) => string;
   xAxisTickLabelProps: ReturnType<typeof getXAxisTickLabelProps>;
@@ -32,12 +33,13 @@ export interface HeatmapStaticSvgProps {
 
 const HeatmapStaticSvg = ({
   svgRef, layout, parentWidth, parentHeight, data, gap, isRect, animationType, tooltipBody,
-  onClick, selectedCells, deselectedColor, xLabel, yLabel, showLegend,
+  onClick, selectedCells, deselectedColor, xLabel, yLabel, showLegend, renderLegend,
   xAxisTickFormat, yAxisTickFormat, xAxisTickLabelProps,
 }: HeatmapStaticSvgProps) => {
   const {
     marg, xMax, yMax, xScale, yScale, cellYScale, stableColors, minValue, maxValue,
     binWidth, binHeight, numRows, xTickValues, yTickValues, colLabelHeight, maxRowNameWidth, legendWidth,
+    highlightRange,
   } = layout;
 
   return (
@@ -61,6 +63,7 @@ const HeatmapStaticSvg = ({
           onClick={onClick}
           selectedCells={selectedCells}
           deselectedColor={deselectedColor}
+          highlightRange={highlightRange}
         />
         <AxisBottom
           top={yMax}
@@ -85,12 +88,16 @@ const HeatmapStaticSvg = ({
         />
         {showLegend && (
           <g transform={`translate(${xMax + LEGEND_GAP}, 0)`}>
-            <HeatmapLegend
-              colors={stableColors}
-              minValue={minValue}
-              maxValue={maxValue}
-              height={yMax}
-            />
+            {renderLegend ? (
+              renderLegend({ width: legendWidth, height: yMax, orientation: "vertical" })
+            ) : (
+              <HeatmapLegend
+                colors={stableColors}
+                minValue={minValue}
+                maxValue={maxValue}
+                length={yMax}
+              />
+            )}
           </g>
         )}
       </g>

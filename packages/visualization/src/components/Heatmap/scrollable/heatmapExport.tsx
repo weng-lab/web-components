@@ -74,7 +74,8 @@ function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasEl
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const range = { colStart: 0, colEnd: Math.max(0, o.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
-  drawHeatmapCells(ctx, canvasCellParams, range, null);
+  // A highlight is a passing hover over the legend, not part of the figure.
+  drawHeatmapCells(ctx, { ...canvasCellParams, highlightRange: null }, range, null);
   return canvas;
 }
 

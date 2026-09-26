@@ -5,7 +5,7 @@ import type { ColumnDatum, RowDatum, HeatmapCellId } from "./types";
 import HeatmapCell from "./HeatmapCell";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { useStableCallback } from "../../hooks";
-import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale, resolveCellAppearance } from "./heatmapCellAppearance";
+import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
 import { getBins } from "./heatmapLayout";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
@@ -30,12 +30,14 @@ export interface HeatmapCellsProps {
   onClick?: (bin: AnyBin) => void;
   selectedCells?: HeatmapCellId[];
   deselectedColor?: string;
+  /** See HeatmapProps.highlightRange. */
+  highlightRange?: [number, number] | null;
 }
 
 const HeatmapCells = memo(function HeatmapCells({
   data, xScale, yScale, colors, minValue = 0, maxValue, gap,
   isRect, binWidth, binHeight, animationType,
-  tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR,
+  tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR, highlightRange,
 }: HeatmapCellsProps) {
   const colorScale = useMemo(
     () => getHeatmapColorScale(colors, [minValue, maxValue]),
@@ -73,7 +75,8 @@ const HeatmapCells = memo(function HeatmapCells({
           heatmap.map((heatmapBins, colIndex) =>
             heatmapBins.map((bin) => {
               const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey(bin));
-              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, isDeselected, deselectedColor);
+              const isDimmed = isOutsideRange(bin.count, highlightRange);
+              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, isDeselected, deselectedColor, isDimmed);
               return (
                 <HeatmapCell
                   key={`heatmap-cell-${bin.row}-${bin.column}`}

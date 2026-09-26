@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Group } from "@visx/group";
 import { scaleLinear } from "@visx/scale";
 import { measureTextWidth } from "../../utility";
@@ -13,8 +14,13 @@ interface HeatmapLegendProps {
     colors: [string, string, ...string[]];
     minValue: number;
     maxValue: number;
-    height: number;
+    /** The bar's length: the column's height standing up beside the grid, the band's width lying across the minimap. */
+    length: number;
+    orientation?: "vertical" | "horizontal";
 }
+
+/** Room a lying-down legend takes: the bar, its ticks, and a line of labels under them. */
+export const HORIZONTAL_LEGEND_HEIGHT = BAR_WIDTH + TICK_WIDTH + LABEL_GAP + FONT_SIZE + 2;
 
 const formatTick = (value: number) =>
     value % 1 === 0 ? String(value) : value.toFixed(1);
@@ -41,27 +47,28 @@ export const getHeatmapLegendWidth = (minValue: number, maxValue: number): numbe
     return BAR_WIDTH + TICK_WIDTH + LABEL_GAP + maxLabelWidth * LABEL_WIDTH_SAFETY_FACTOR + RIGHT_PADDING;
 };
 
-const HeatmapLegend = ({ colors, minValue, maxValue, height }: HeatmapLegendProps) => {
-    const gradientId = "heatmap-legend-gradient";
-
+const HeatmapLegend = ({ colors, minValue, maxValue, length, orientation = "vertical" }: HeatmapLegendProps) => {
+    // Per instance: the expanded minimap draws a second legend while the first stays beside the grid.
+    const gradientId = `heatmap-legend-gradient-${useId().replace(/:/g, "")}`;
+    const horizontal = orientation === "horizontal";
     const tickValues = getTickValues(minValue, maxValue);
 
-    const yScale = scaleLinear<number>({
-        domain: [maxValue, minValue],
-        range: [0, height],
+    // Standing up, the bar reads top (max) to bottom (min); lying down, left (min) to right (max).
+    const scale = scaleLinear<number>({
+        domain: horizontal ? [minValue, maxValue] : [maxValue, minValue],
+        range: [0, length],
     });
 
     return (
         <Group>
             <defs>
-                {/* The bar reads top (max) to bottom (min), so the gradient stops run in reverse
-                    color order to match how colors map to values in the heatmap cells. */}
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradientId} x1="0" y1="0" x2={horizontal ? "1" : "0"} y2={horizontal ? "0" : "1"}>
                     {colors.map((_, i) => (
                         <stop
                             key={i}
                             offset={`${(i / (colors.length - 1)) * 100}%`}
-                            stopColor={colors[colors.length - 1 - i]}
+                            // Top to bottom standing up, so the stops run in reverse color order.
+                            stopColor={horizontal ? colors[i] : colors[colors.length - 1 - i]}
                         />
                     ))}
                 </linearGradient>
@@ -69,27 +76,30 @@ const HeatmapLegend = ({ colors, minValue, maxValue, height }: HeatmapLegendProp
             <rect
                 x={0}
                 y={0}
-                width={BAR_WIDTH}
-                height={height}
+                width={horizontal ? length : BAR_WIDTH}
+                height={horizontal ? BAR_WIDTH : length}
                 fill={`url(#${gradientId})`}
                 rx={2}
             />
             {tickValues.map((value, i) => {
-                const y = yScale(value);
+                const at = scale(value);
+                const [tickStart, tickEnd, labelAt] = [BAR_WIDTH, BAR_WIDTH + TICK_WIDTH, BAR_WIDTH + TICK_WIDTH + LABEL_GAP];
                 return (
                     <g key={i}>
                         <line
-                            x1={BAR_WIDTH}
-                            x2={BAR_WIDTH + TICK_WIDTH}
-                            y1={y}
-                            y2={y}
+                            x1={horizontal ? at : tickStart}
+                            x2={horizontal ? at : tickEnd}
+                            y1={horizontal ? tickStart : at}
+                            y2={horizontal ? tickEnd : at}
                             stroke="#4d4f52"
                             strokeWidth={1}
                         />
                         <text
-                            x={BAR_WIDTH + TICK_WIDTH + LABEL_GAP}
-                            y={y}
-                            dominantBaseline="middle"
+                            x={horizontal ? at : labelAt}
+                            y={horizontal ? labelAt : at}
+                            dominantBaseline={horizontal ? "hanging" : "middle"}
+                            // Lying down, the end labels keep inside the bar's ends rather than hang past them.
+                            textAnchor={!horizontal || i === 0 ? "start" : i === tickValues.length - 1 ? "end" : "middle"}
                             fontSize={FONT_SIZE}
                             fontFamily={FONT_FAMILY}
                             fill="#4d4f52"

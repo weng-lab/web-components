@@ -64,6 +64,7 @@ export interface HeatmapLayout {
   stableColors: [string, string, ...string[]];
   colorScale: (count: number) => string | undefined;
   canvasCellParams: CanvasCellParams;
+  highlightRange: [number, number] | null;
 }
 
 export interface UseHeatmapLayoutArgs {
@@ -83,12 +84,15 @@ export interface UseHeatmapLayoutArgs {
   isRect: boolean;
   selectedCells?: HeatmapCellId[];
   deselectedColor?: string;
+  highlightRange?: [number, number] | null;
+  /** A custom legend's width, in place of the built-in legend's. */
+  legendWidth?: number;
 }
 
 export function useHeatmapLayout({
   data, colorDomain, colors, xLabelOrientation, margin, showLegend, isScrollable,
   cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
-  selectedCells, deselectedColor,
+  selectedCells, deselectedColor, highlightRange, legendWidth: customLegendWidth,
 }: UseHeatmapLayoutArgs): HeatmapLayout {
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
   const allRowNames = useMemo(() => data[0]?.rows.map((r) => r.rowName) ?? [], [data]);
@@ -118,7 +122,8 @@ export function useHeatmapLayout({
     [colorsKey]
   );
 
-  const legendWidth = useMemo(() => getHeatmapLegendWidth(minValue, maxValue), [minValue, maxValue]);
+  const builtInLegendWidth = useMemo(() => getHeatmapLegendWidth(minValue, maxValue), [minValue, maxValue]);
+  const legendWidth = customLegendWidth ?? builtInLegendWidth;
   const defaultRight = showLegend ? legendWidth + LEGEND_GAP : 10;
   const defaultTop = 20;
   const labelBottomSpace = colLabelHeight + AXIS_LABEL_GAP + X_AXIS_TITLE_SPACE;
@@ -169,15 +174,22 @@ export function useHeatmapLayout({
     [selectedCells]
   );
 
+  // Kept by value, so a caller passing a fresh [min, max] literal on each render doesn't repaint.
+  const [highlightMin, highlightMax] = highlightRange ?? [];
+  const stableHighlightRange = useMemo<[number, number] | null>(
+    () => (highlightMin === undefined || highlightMax === undefined ? null : [highlightMin, highlightMax]),
+    [highlightMin, highlightMax]
+  );
+
   // Everything the canvas draw loop and hit-testing need to place/color a cell. Only changes when
-  // a prop that actually affects appearance/geometry changes - never on scroll or hover, so
+  // a prop that actually affects appearance/geometry changes - never on scroll or cell hover, so
   // drawCanvas (and, through it, handleGridScroll) keeps a stable identity across scroll events.
   const canvasCellParams: CanvasCellParams = useMemo(
     () => ({
-      data, numRows, xScale, cellYScale, colorScale, gap, isRect, binWidth, binHeight,
-      yMax, selectedKeys, deselectedColor: resolvedDeselectedColor,
+      data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight,
+      yMax, selectedKeys, deselectedColor: resolvedDeselectedColor, highlightRange: stableHighlightRange,
     }),
-    [data, numRows, xScale, cellYScale, colorScale, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor]
+    [data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor, stableHighlightRange]
   );
 
   return {
@@ -185,5 +197,6 @@ export function useHeatmapLayout({
     viewportWidth, viewportHeight, yTitleWidth, yTickLabelWidth, xTitleHeight, xTickLabelHeight,
     binWidth, binHeight, colLabelHeight, xTickLeftOverhangMax, maxRowNameWidth, legendWidth,
     xScale, yScale, cellYScale, xTickValues, yTickValues, stableColors, colorScale, canvasCellParams,
+    highlightRange: stableHighlightRange,
   };
 }

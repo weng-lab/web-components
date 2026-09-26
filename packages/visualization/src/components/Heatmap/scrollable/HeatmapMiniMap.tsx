@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { drawHeatmapCells, type CanvasCellParams } from "../HeatmapCanvasCells";
+import { drawHeatmapOverview, type CanvasCellParams } from "../HeatmapCanvasCells";
 
 export interface HeatmapMiniMapProps {
   canvasCellParams: CanvasCellParams;
@@ -16,6 +16,12 @@ export interface HeatmapMiniMapProps {
   /** Fires after each draw completes, so a caller (e.g. the expanded popup) can show its own
    * loading state for the full-dataset draw without this component needing to know about it. */
   onReady?: () => void;
+  /**
+   * Keeps the last drawing instead of redrawing, while this copy is out of sight - the inline
+   * minimap, under the expanded one. A sweep of the expanded minimap's legend would otherwise draw
+   * the whole grid twice per step. Redraws as soon as it is lifted.
+   */
+  paused?: boolean;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -33,6 +39,7 @@ const HeatmapMiniMap = ({
   onNavigate,
   onCanvasClick,
   onReady,
+  paused = false,
 }: HeatmapMiniMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scaleX = xMax > 0 ? width / xMax : 0;
@@ -46,7 +53,7 @@ const HeatmapMiniMap = ({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || scaleX <= 0 || scaleY <= 0) return;
+    if (!canvas || paused || scaleX <= 0 || scaleY <= 0) return;
     // The full-dataset draw below is synchronous and can take a while for large grids (the
     // minimap has no windowing, unlike the main grid). Deferring it a frame lets the surrounding
     // UI - the expanded popup's backdrop, border, and title bar - paint first, so opening the
@@ -54,20 +61,11 @@ const HeatmapMiniMap = ({
     const raf = requestAnimationFrame(() => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const dpr = window.devicePixelRatio || 1;
-      ctx.setTransform(dpr * scaleX, 0, 0, dpr * scaleY, 0, 0);
-      ctx.clearRect(0, 0, xMax, yMax);
-      const range = {
-        colStart: 0,
-        colEnd: Math.max(0, canvasCellParams.data.length - 1),
-        rowStart: 0,
-        rowEnd: Math.max(0, canvasCellParams.numRows - 1),
-      };
-      drawHeatmapCells(ctx, canvasCellParams, range, null);
+      drawHeatmapOverview(ctx, canvasCellParams);
       onReadyRef.current?.();
     });
     return () => cancelAnimationFrame(raf);
-  }, [canvasCellParams, xMax, yMax, scaleX, scaleY]);
+  }, [canvasCellParams, xMax, yMax, scaleX, scaleY, paused]);
 
   const navigateCentered = useCallback(
     (contentX: number, contentY: number) => {

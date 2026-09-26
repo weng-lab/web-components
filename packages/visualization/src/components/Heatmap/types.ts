@@ -1,4 +1,4 @@
-import { ReactElement } from "react";
+import { ReactElement, ReactNode } from "react";
 import { DownloadPlotHandle, AnimationType } from "../../utility";
 import { RectCell, CircleCell } from "@visx/heatmap";
 import { ManualSizeProps } from "../../responsive";
@@ -39,6 +39,23 @@ export type ColumnDatum<C extends object = Record<string, unknown>, R extends ob
  */
 export type HeatmapCellId = { row: number; column: number };
 
+/** Where renderLegend draws: the box it has, and which way its bar should run. */
+export type HeatmapLegendFrame = {
+  width: number;
+  height: number;
+  /**
+   * "vertical" in the column beside the grid; "horizontal" in the band across the top of the
+   * expanded minimap.
+   */
+  orientation: "vertical" | "horizontal";
+  /**
+   * Set in the expanded minimap, which sits above everything else on the page: its root element. A
+   * tooltip or other overlay the legend opens must portal into it to show above the minimap rather
+   * than behind it - MUI's `slotProps={{ popper: { container } }}`, say. Undefined beside the grid.
+   */
+  overlayContainer?: HTMLElement;
+};
+
 export type HeatmapProps<C extends object = Record<string, unknown>, R extends object = Record<string, unknown>> = ManualSizeProps & {
   data: ColumnDatum<C, R>[];
   //May need to pass in the optional type parameters here if the types are not properly inferred
@@ -50,7 +67,8 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    */
   colors: [string, string, ...string[]]
   /**
-   * Value range mapped across `colors`, evenly spaced. Defaults to [0, max value in data].
+   * Value range mapped across `colors`, evenly spaced. Defaults to [0, max value in data]. A count
+   * beyond either end takes that end's color.
    */
   colorDomain?: [number, number];
   xLabel?: string;
@@ -61,6 +79,26 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   margin?: { top: number; right: number; bottom: number; left: number };
   animationType?: AnimationType;
   showLegend?: boolean;
+  /**
+   * Replaces the built-in color legend. Return SVG content, drawn inside an <svg> the frame's size:
+   * - Beside the grid, vertical: a column `legendWidth` wide and as tall as the grid's visible
+   *   area. Downloads include it, just as they include the built-in legend.
+   * - Across the top of the expanded minimap, horizontal, while that is open - a second copy, so
+   *   nothing in it should assume it is the only one.
+   * Anything interactive in it works on screen in both, so a legend that sets highlightRange as it
+   * is swept lights up the expanded minimap too; anything that must not appear in a download
+   * belongs outside it.
+   */
+  renderLegend?: (frame: HeatmapLegendFrame) => ReactNode;
+  /** Width of the column renderLegend draws in. Defaults to the built-in legend's width. */
+  legendWidth?: number;
+  /**
+   * Counts to emphasize, as [min, max] inclusive - an open end is -Infinity or Infinity. Every other
+   * cell fades, so the cells in the range stand out wherever they are in the grid and minimap:
+   * what a legend hands the plot as it is swept. Downloads ignore it. Undefined or null draws every
+   * cell as normal.
+   */
+  highlightRange?: [number, number] | null;
   /**
    * Orientation of the x-axis (column) labels. Defaults to "vertical".
    */
