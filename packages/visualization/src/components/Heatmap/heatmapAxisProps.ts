@@ -42,3 +42,12 @@ export const yAxisLabelProps = {
   fontFamily: TICK_FONT_FAMILY,
   textAnchor: "middle" as const,
 };
+
+/**
+ * Tick label props that bold the labels of `marked` columns or rows - those holding the selection
+ * (see selectionMarks). A tick's value is its index plus a half, the middle of its cell.
+ */
+export const markTickLabels = <P extends object>(props: P, marked: Set<number>) =>
+  marked.size === 0
+    ? props
+    : (value: number | { valueOf(): number }) => ({ ...props, fontWeight: marked.has(Math.floor(+value)) ? 700 : 400 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { drawHeatmapOverview, type CanvasCellParams } from "../HeatmapCanvasCells";
+import { SELECTION_COLOR } from "../heatmapSelection";
 
 export interface HeatmapMiniMapProps {
   canvasCellParams: CanvasCellParams;
@@ -25,6 +26,10 @@ export interface HeatmapMiniMapProps {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+/** How far a selection mark reaches in from the minimap's edge, and how narrow one can get. */
+const MARK_DEPTH = 5;
+const MARK_MIN_WIDTH = 2;
 
 const HeatmapMiniMap = ({
   canvasCellParams,
@@ -110,6 +115,17 @@ const HeatmapMiniMap = ({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }, []);
 
+  const { columns, rows } = canvasCellParams.selectionMarks;
+  const numColumns = canvasCellParams.data.length;
+  const { numRows } = canvasCellParams;
+  // Cell i's run along an edge `size` pixels long holding `cells` of them, widened to be seen.
+  const markSpan = (i: number, cells: number, size: number) => {
+    const from = (i * size) / cells;
+    const run = size / cells;
+    const extra = Math.max(0, MARK_MIN_WIDTH - run) / 2;
+    return [from - extra, run + 2 * extra] as const;
+  };
+
   const rectLeft = clamp(scrollLeft * scaleX, 0, width);
   const rectTop = clamp(scrollTop * scaleY, 0, height);
   const rectWidth = Math.max(0, Math.min(viewportWidth * scaleX, width - rectLeft));
@@ -140,6 +156,32 @@ const HeatmapMiniMap = ({
           boxSizing: "border-box",
         }}
       />
+      {/*
+        The columns and rows holding the selection, marked along the top and left edges: a column
+        here is often under a pixel wide, too narrow to frame, and these are what find a selection in
+        a grid too large to scroll through. Above the viewport rectangle, whose border would otherwise
+        cover them just when the selection is in view.
+      */}
+      {(columns.size > 0 || rows.size > 0) && (
+        <svg
+          width={width}
+          height={height}
+          style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          aria-hidden
+        >
+          <g fill={SELECTION_COLOR}>
+            {[...columns].map((column) => {
+              const [x, w] = markSpan(column, numColumns, width);
+              return <rect key={`c${column}`} x={x} y={0} width={w} height={MARK_DEPTH} />;
+            })}
+            {/* Row 0 is at the bottom. */}
+            {[...rows].map((row) => {
+              const [y, h] = markSpan(numRows - 1 - row, numRows, height);
+              return <rect key={`r${row}`} x={0} y={y} width={MARK_DEPTH} height={h} />;
+            })}
+          </g>
+        </svg>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import type { ColumnDatum, HeatmapCellId } from "./types";
 import type { AnyBin } from "./HeatmapCells";
-import { DESELECTED_OPACITY, DIMMED_OPACITY, cellKey, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
+import { DIMMED_OPACITY, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
+import { selectedCellsIn, selectionFrame, type SelectionMarks } from "./heatmapSelection";
 
 /**
  * Everything the canvas draw loop and hit-testing need to place a cell exactly where the SVG
@@ -21,8 +22,10 @@ export interface CanvasCellParams {
   binWidth: number;
   binHeight: number;
   yMax: number;
+  /** The selected cells' keys, which the grid frames; null where nothing is selected. */
   selectedKeys: Set<string> | null;
-  deselectedColor: string;
+  /** The columns and rows holding the selection, which the minimap marks along its edges. */
+  selectionMarks: SelectionMarks;
   highlightRange: [number, number] | null;
 }
 
@@ -79,14 +82,14 @@ export function getVisibleRange(
   };
 }
 
-/** Paints the cells in `range` onto `ctx`, whose origin is already at content-space (0,0). */
+/** Paints the cells in `range` onto `ctx`, whose origin is already at content-space (0,0), and the selection's frame over them. */
 export function drawHeatmapCells(
   ctx: CanvasRenderingContext2D,
   params: CanvasCellParams,
   range: CanvasDrawRange,
   hoveredCell: HeatmapCellId | null
 ) {
-  const { data, colorScale, selectedKeys, deselectedColor, highlightRange } = params;
+  const { data, colorScale, selectedKeys, highlightRange } = params;
   // fillStyle/globalAlpha assignment forces the browser to re-parse the CSS color string even
   // when it's unchanged from the previous cell - skipping redundant writes matters at this scale
   // (this loop runs per-cell, up to hundreds of thousands of times for the minimap's full-dataset
@@ -103,9 +106,8 @@ export function drawHeatmapCells(
       if (!rowDatum) continue;
       const count = rowDatum.count;
       const color = count == null ? undefined : colorScale(count);
-      const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey({ row, column: col }));
       const isDimmed = isOutsideRange(count, highlightRange);
-      const { fill, fillOpacity } = resolveCellAppearance(count, color, isDeselected, deselectedColor, isDimmed);
+      const { fill, fillOpacity } = resolveCellAppearance(count, color, isDimmed);
       if (fillOpacity <= 0) continue;
 
       const geometry = getCellGeometry(params, col, row);
@@ -143,6 +145,21 @@ export function drawHeatmapCells(
     }
   }
   ctx.globalAlpha = 1;
+
+  if (selectedKeys) {
+    // Past the range by a cell, so the frame's line for a selected cell just outside it still shows.
+    const around = {
+      colStart: range.colStart - 1,
+      colEnd: range.colEnd + 1,
+      rowStart: range.rowStart - 1,
+      rowEnd: range.rowEnd + 1,
+    };
+    const bounds = { width: data.length * params.binWidth, height: params.yMax };
+    for (const { x, y, width, height, fill } of selectionFrame(selectedKeys, selectedCellsIn(selectedKeys, around), params, bounds)) {
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, width, height);
+    }
+  }
 }
 
 // Colors the overview reads out of colorScale, sampled across its domain: far fewer than the cells,
@@ -164,7 +181,6 @@ function parseColor(css: string): [number, number, number] {
 
 // Keyed on the identities the layout memoizes, so a sweep - which changes none of them - reuses them.
 const lutCache = new WeakMap<object, Uint8ClampedArray>();
-const selectionCache = new WeakMap<Set<string>, Uint8Array>();
 const countsCache = new WeakMap<ColumnDatum[], Float64Array>();
 
 function colorLut(params: CanvasCellParams): Uint8ClampedArray {
@@ -178,19 +194,6 @@ function colorLut(params: CanvasCellParams): Uint8ClampedArray {
   }
   lutCache.set(params.colorScale, lut);
   return lut;
-}
-
-/** selectedKeys as a flag per cell, column-major, so the overview's loop never builds a key string. */
-function selectionMask(selectedKeys: Set<string>, numRows: number, numColumns: number): Uint8Array {
-  const cached = selectionCache.get(selectedKeys);
-  if (cached && cached.length === numRows * numColumns) return cached;
-  const mask = new Uint8Array(numRows * numColumns);
-  selectedKeys.forEach((key) => {
-    const [row, column] = key.split("-").map(Number);
-    if (row < numRows && column < numColumns) mask[column * numRows + row] = 1;
-  });
-  selectionCache.set(selectedKeys, mask);
-  return mask;
 }
 
 /**
@@ -224,18 +227,17 @@ function flatCounts(data: ColumnDatum[], numRows: number): Float64Array {
  * full strength: averaged in with the faded cells around it, a single outlier among fourteen rows to a
  * pixel would vanish from the one view that shows the whole grid at once.
  *
- * Colors, selection and fading come out as drawHeatmapCells draws them; gaps and circles don't - each
- * cell is a solid square, which at a minimap's scale is a difference of shading.
+ * Colors and fading come out as drawHeatmapCells draws them; gaps and circles don't - each cell is a
+ * solid square, which at a minimap's scale is a difference of shading. Nor does the selection's
+ * frame, a column of which is a fraction of a pixel here: the minimap marks it along its edges.
  */
 export function renderHeatmapOverview(params: CanvasCellParams, width: number, height: number): ImageData | null {
-  const { data, numRows, selectedKeys, deselectedColor, highlightRange, minValue, maxValue } = params;
+  const { data, numRows, highlightRange, minValue, maxValue } = params;
   const numColumns = data.length;
   if (numColumns === 0 || numRows === 0 || width < 1 || height < 1) return null;
 
   const lut = colorLut(params);
   const counts = flatCounts(data, numRows);
-  const mask = selectedKeys ? selectionMask(selectedKeys, numRows, numColumns) : null;
-  const [deselectedR, deselectedG, deselectedB] = parseColor(deselectedColor);
   const span = maxValue - minValue;
   // With no range, every cell is inside it: nothing fades and nothing is singled out.
   const [low, high] = highlightRange ?? [-Infinity, Infinity];
@@ -267,14 +269,10 @@ export function renderHeatmapOverview(params: CanvasCellParams, width: number, h
           cells++;
           const count = counts[index];
           if (count !== count) continue; // NaN: transparent, as a null cell is drawn nowhere.
-          let cr: number, cg: number, cb: number, opacity: number;
-          if (mask !== null && mask[index] === 0) {
-            cr = deselectedR; cg = deselectedG; cb = deselectedB; opacity = DESELECTED_OPACITY;
-          } else {
-            // Held at the ends, as the color scale itself clamps.
-            const level = span > 0 ? Math.round(Math.min(Math.max((count - minValue) / span, 0), 1) * (OVERVIEW_LEVELS - 1)) * 3 : 0;
-            cr = lut[level]; cg = lut[level + 1]; cb = lut[level + 2]; opacity = 1;
-          }
+          // Held at the ends, as the color scale itself clamps.
+          const level = span > 0 ? Math.round(Math.min(Math.max((count - minValue) / span, 0), 1) * (OVERVIEW_LEVELS - 1)) * 3 : 0;
+          const cr = lut[level], cg = lut[level + 1], cb = lut[level + 2];
+          let opacity = 1;
           // isOutsideRange, inlined.
           if (count >= low && count <= high) {
             if (highlightRange) {
@@ -322,14 +320,14 @@ export function drawHeatmapOverview(ctx: CanvasRenderingContext2D, params: Canva
   if (!overview) return;
   if (overviewWidth === width && overviewHeight === height) {
     ctx.putImageData(overview, 0, 0);
-    return;
+  } else {
+    overviewScratch ??= document.createElement("canvas");
+    overviewScratch.width = overviewWidth;
+    overviewScratch.height = overviewHeight;
+    overviewScratch.getContext("2d")?.putImageData(overview, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(overviewScratch, 0, 0, width, height);
   }
-  overviewScratch ??= document.createElement("canvas");
-  overviewScratch.width = overviewWidth;
-  overviewScratch.height = overviewHeight;
-  overviewScratch.getContext("2d")?.putImageData(overview, 0, 0);
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(overviewScratch, 0, 0, width, height);
 }
 
 /** Content-space (post-scroll-offset) coordinates -> the cell under them, or null if none. */

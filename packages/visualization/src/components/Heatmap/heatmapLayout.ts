@@ -5,7 +5,8 @@ import type { ColumnDatum, HeatmapCellId } from "./types";
 import type { HeatmapProps } from "./types";
 import { measureTextWidth } from "../../utility";
 import { getHeatmapLegendWidth } from "./HeatmapLegend";
-import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale } from "./heatmapCellAppearance";
+import { cellKey, getHeatmapColorScale } from "./heatmapCellAppearance";
+import { selectionMarks as markSelection, type SelectionMarks } from "./heatmapSelection";
 import { type CanvasCellParams } from "./HeatmapCanvasCells";
 import { TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
 
@@ -65,6 +66,9 @@ export interface HeatmapLayout {
   colorScale: (count: number) => string | undefined;
   canvasCellParams: CanvasCellParams;
   highlightRange: [number, number] | null;
+  /** The selected cells' keys - see CanvasCellParams. */
+  selectedKeys: Set<string> | null;
+  selectionMarks: SelectionMarks;
 }
 
 export interface UseHeatmapLayoutArgs {
@@ -83,7 +87,6 @@ export interface UseHeatmapLayoutArgs {
   gap: number;
   isRect: boolean;
   selectedCells?: HeatmapCellId[];
-  deselectedColor?: string;
   highlightRange?: [number, number] | null;
   /** A custom legend's width, in place of the built-in legend's. */
   legendWidth?: number;
@@ -92,7 +95,7 @@ export interface UseHeatmapLayoutArgs {
 export function useHeatmapLayout({
   data, colorDomain, colors, xLabelOrientation, margin, showLegend, isScrollable,
   cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
-  selectedCells, deselectedColor, highlightRange, legendWidth: customLegendWidth,
+  selectedCells, highlightRange, legendWidth: customLegendWidth,
 }: UseHeatmapLayoutArgs): HeatmapLayout {
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
   const allRowNames = useMemo(() => data[0]?.rows.map((r) => r.rowName) ?? [], [data]);
@@ -164,7 +167,6 @@ export function useHeatmapLayout({
   const xTickValues = useMemo(() => data.map((_, i) => i + 0.5), [data]);
   const yTickValues = useMemo(() => data[0]?.rows.map((_, i) => i + 0.5) ?? [], [data]);
 
-  const resolvedDeselectedColor = deselectedColor ?? DEFAULT_DESELECTED_COLOR;
   const colorScale = useMemo(
     () => getHeatmapColorScale(stableColors, [minValue, maxValue]),
     [stableColors, minValue, maxValue]
@@ -172,6 +174,10 @@ export function useHeatmapLayout({
   const selectedKeys = useMemo(
     () => (selectedCells?.length ? new Set(selectedCells.map(cellKey)) : null),
     [selectedCells]
+  );
+  const selectionMarks = useMemo(
+    () => markSelection(selectedKeys, data.length, numRows),
+    [selectedKeys, data.length, numRows]
   );
 
   // Kept by value, so a caller passing a fresh [min, max] literal on each render doesn't repaint.
@@ -187,9 +193,9 @@ export function useHeatmapLayout({
   const canvasCellParams: CanvasCellParams = useMemo(
     () => ({
       data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight,
-      yMax, selectedKeys, deselectedColor: resolvedDeselectedColor, highlightRange: stableHighlightRange,
+      yMax, selectedKeys, selectionMarks, highlightRange: stableHighlightRange,
     }),
-    [data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor, stableHighlightRange]
+    [data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight, yMax, selectedKeys, selectionMarks, stableHighlightRange]
   );
 
   return {
@@ -197,6 +203,6 @@ export function useHeatmapLayout({
     viewportWidth, viewportHeight, yTitleWidth, yTickLabelWidth, xTitleHeight, xTickLabelHeight,
     binWidth, binHeight, colLabelHeight, xTickLeftOverhangMax, maxRowNameWidth, legendWidth,
     xScale, yScale, cellYScale, xTickValues, yTickValues, stableColors, colorScale, canvasCellParams,
-    highlightRange: stableHighlightRange,
+    highlightRange: stableHighlightRange, selectedKeys, selectionMarks,
   };
 }

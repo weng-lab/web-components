@@ -1,11 +1,11 @@
 import { HeatmapRect, HeatmapCircle, RectCell, CircleCell } from "@visx/heatmap";
 import { useMemo, useRef, memo, ReactElement } from "react";
 import type { AnimationType } from "../../utility";
-import type { ColumnDatum, RowDatum, HeatmapCellId } from "./types";
+import type { ColumnDatum, RowDatum } from "./types";
 import HeatmapCell from "./HeatmapCell";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { useStableCallback } from "../../hooks";
-import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
+import { getHeatmapColorScale, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
 import { getBins } from "./heatmapLayout";
 
 export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
@@ -28,8 +28,6 @@ export interface HeatmapCellsProps {
   animationType?: AnimationType;
   tooltipBody?: (bin: AnyBin) => ReactElement;
   onClick?: (bin: AnyBin) => void;
-  selectedCells?: HeatmapCellId[];
-  deselectedColor?: string;
   /** See HeatmapProps.highlightRange. */
   highlightRange?: [number, number] | null;
 }
@@ -37,18 +35,13 @@ export interface HeatmapCellsProps {
 const HeatmapCells = memo(function HeatmapCells({
   data, xScale, yScale, colors, minValue = 0, maxValue, gap,
   isRect, binWidth, binHeight, animationType,
-  tooltipBody, onClick, selectedCells, deselectedColor = DEFAULT_DESELECTED_COLOR, highlightRange,
+  tooltipBody, onClick, highlightRange,
 }: HeatmapCellsProps) {
   const colorScale = useMemo(
     () => getHeatmapColorScale(colors, [minValue, maxValue]),
     [colors, minValue, maxValue]
   );
   const radius = Math.min(binWidth, binHeight) / 2;
-
-  const selectedKeys = useMemo(
-    () => (selectedCells?.length ? new Set(selectedCells.map(cellKey)) : null),
-    [selectedCells]
-  );
 
   // The tooltip is a sibling of the grid and owns its own state, so moving the pointer around
   // never re-renders a cell. Cells reach it through this ref, which never changes identity.
@@ -74,9 +67,8 @@ const HeatmapCells = memo(function HeatmapCells({
         {(heatmap) =>
           heatmap.map((heatmapBins, colIndex) =>
             heatmapBins.map((bin) => {
-              const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey(bin));
               const isDimmed = isOutsideRange(bin.count, highlightRange);
-              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, isDeselected, deselectedColor, isDimmed);
+              const { fill, fillOpacity } = resolveCellAppearance(bin.count, bin.color, isDimmed);
               return (
                 <HeatmapCell
                   key={`heatmap-cell-${bin.row}-${bin.column}`}

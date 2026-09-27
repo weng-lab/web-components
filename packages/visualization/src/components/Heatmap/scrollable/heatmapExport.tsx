@@ -5,8 +5,9 @@ import type { ColumnDatum } from "../types";
 import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS, downloadBlob } from "../../../utility";
 import type { HeatmapLayout } from "../heatmapLayout";
 import { LEGEND_GAP } from "../heatmapLayout";
-import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, yAxisTickLabelProps } from "../heatmapAxisProps";
+import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, markTickLabels, yAxisTickLabelProps } from "../heatmapAxisProps";
 import { drawHeatmapCells } from "../HeatmapCanvasCells";
+import HeatmapSelectionPointers from "../HeatmapSelectionPointers";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const XLINK_NS = "http://www.w3.org/1999/xlink";
@@ -74,7 +75,8 @@ function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasEl
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const range = { colStart: 0, colEnd: Math.max(0, o.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
-  // A highlight is a passing hover over the legend, not part of the figure.
+  // A highlight is a passing hover over the legend, not part of the figure. A selection is kept -
+  // framed, with its axes marked below - as often the very thing a figure is made to show.
   drawHeatmapCells(ctx, { ...canvasCellParams, highlightRange: null }, range, null);
   return canvas;
 }
@@ -114,7 +116,7 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
   const { layout } = o;
   const {
     marg, xMax, yMax, xScale, yScale, numRows, xTickValues, yTickValues, yTickLabelWidth, xTickLabelHeight,
-    yTitleWidth, xTitleHeight,
+    yTitleWidth, xTitleHeight, selectionMarks,
   } = layout;
 
   const exportSvg = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
@@ -140,8 +142,9 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
               numTicks={numRows}
               tickValues={yTickValues}
               tickFormat={o.yAxisTickFormat}
-              tickLabelProps={yAxisTickLabelProps}
+              tickLabelProps={markTickLabels(yAxisTickLabelProps, selectionMarks.rows)}
             />
+            <HeatmapSelectionPointers axis="row" marked={selectionMarks.rows} scale={yScale} />
           </g>
         </svg>
         <svg width={xMax} height={xTickLabelHeight} ref={(el) => { fullColAxis = el; }}>
@@ -151,8 +154,9 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
             numTicks={o.data.length}
             tickFormat={o.xAxisTickFormat}
             tickValues={xTickValues}
-            tickLabelProps={o.xAxisTickLabelProps}
+            tickLabelProps={markTickLabels(o.xAxisTickLabelProps, selectionMarks.columns)}
           />
+          <HeatmapSelectionPointers axis="column" marked={selectionMarks.columns} scale={xScale} />
         </svg>
       </>
     );

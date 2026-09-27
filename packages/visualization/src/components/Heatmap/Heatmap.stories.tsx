@@ -106,8 +106,8 @@ export const LeftDiagonalXLabels: Story = {
     },
 };
 
-// Click cells to select them - every unselected cell dims to gray while selected cells keep
-// their gradient color. Click a selected cell again to remove it from the selection.
+// Click cells to select them - each is framed, and its row and column labels bold with a pointer at
+// the axis, while every cell keeps its color. Click a selected cell again to remove it.
 export const SelectableCells: Story = {
     args: {
         data: heatmapData,
@@ -229,6 +229,7 @@ export const ScrollToSelectionDemo: Story = {
                         cellHeight={18}
                         selectedCells={selectedCells}
                         scrollToSelection
+                        showMiniMap
                     />
                 </Box>
             </Stack>

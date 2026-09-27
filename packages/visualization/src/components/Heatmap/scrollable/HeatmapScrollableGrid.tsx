@@ -1,12 +1,13 @@
-import { useCallback, useId, useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
+import { useCallback, useId, useMemo, useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import type { ColumnDatum, HeatmapCellId, HeatmapLegendFrame } from "../types";
 import type { AnyBin } from "../HeatmapCells";
 import HeatmapLegend from "../HeatmapLegend";
+import HeatmapSelectionPointers from "../HeatmapSelectionPointers";
 import HeatmapMiniMap from "./HeatmapMiniMap";
 import HeatmapMiniMapPopup from "./HeatmapMiniMapPopup";
 import { PlotTooltip } from "../../../tooltip";
-import { TICK_FONT_FAMILY, AXIS_TITLE_FONT_SIZE, yAxisTickLabelProps, type getXAxisTickLabelProps } from "../heatmapAxisProps";
+import { TICK_FONT_FAMILY, AXIS_TITLE_FONT_SIZE, markTickLabels, yAxisTickLabelProps, type getXAxisTickLabelProps } from "../heatmapAxisProps";
 import { LEGEND_GAP, MINI_MAP_HEIGHT, type HeatmapLayout } from "../heatmapLayout";
 import { useHeatmapCanvasGrid } from "../hooks/useHeatmapCanvasGrid";
 import { useScrollToSelection } from "../hooks/useScrollToSelection";
@@ -39,7 +40,14 @@ const HeatmapScrollableGrid = ({
     numRows, marg, xMax, yMax, viewportWidth, viewportHeight, yTitleWidth, yTickLabelWidth,
     xTitleHeight, xTickLabelHeight, binWidth, xTickLeftOverhangMax, legendWidth,
     xScale, yScale, xTickValues, yTickValues, stableColors, minValue, maxValue, canvasCellParams,
+    selectionMarks,
   } = layout;
+  // Bold where a column or row holds the selection - see selectionMarks.
+  const markedXTickLabelProps = useMemo(
+    () => markTickLabels(xAxisTickLabelProps, selectionMarks.columns),
+    [xAxisTickLabelProps, selectionMarks]
+  );
+  const markedYTickLabelProps = useMemo(() => markTickLabels(yAxisTickLabelProps, selectionMarks.rows), [selectionMarks]);
 
   const {
     canvasRef, mainPaneRef, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
@@ -134,8 +142,9 @@ const HeatmapScrollableGrid = ({
                   numTicks={numRows}
                   tickValues={visibleYTickValues}
                   tickFormat={yAxisTickFormat}
-                  tickLabelProps={yAxisTickLabelProps}
+                  tickLabelProps={markedYTickLabelProps}
                 />
+                <HeatmapSelectionPointers axis="row" marked={selectionMarks.rows} scale={yScale} />
               </g>
             </svg>
           </div>
@@ -186,8 +195,9 @@ const HeatmapScrollableGrid = ({
                     numTicks={data.length}
                     tickFormat={xAxisTickFormat}
                     tickValues={visibleXTickValues}
-                    tickLabelProps={xAxisTickLabelProps}
+                    tickLabelProps={markedXTickLabelProps}
                   />
+                  <HeatmapSelectionPointers axis="column" marked={selectionMarks.columns} scale={xScale} />
                 </g>
               </g>
             </svg>

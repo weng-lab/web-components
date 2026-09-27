@@ -105,15 +105,14 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   xLabelOrientation?: "horizontal" | "vertical" | "leftDiagonal" | "rightDiagonal";
   /**
    * The currently selected cells, identified by the same row/column indices found on the bin
-   * passed to onClick (bin.row, bin.column). When non-empty, every cell not in this list renders
-   * as deselectedColor while selected cells keep their normal gradient color. Pass an empty array
-   * or undefined for no selection. Selection is controlled - use onClick to update it from the consumer.
+   * passed to onClick (bin.row, bin.column). Selected cells are framed, and the columns and rows
+   * they belong to are marked - bold labels, a pointer at the axis, a tick along the minimap's
+   * edge - while every cell keeps its own color, so the rest of the grid can still be read for
+   * what to select next. A whole selected column marks its column alone, and a single selected
+   * cell both its row and column. Pass an empty array or undefined for no selection. Selection is
+   * controlled - use onClick to update it from the consumer.
    */
   selectedCells?: HeatmapCellId[];
-  /**
-   * Fill color used for cells not in selectedCells. Defaults to a neutral gray.
-   */
-  deselectedColor?: string;
   /**
    * Fixed pixel width/height for each cell. Provide both to render cells at this exact size
    * instead of stretching them to fill the container. Once the data no longer fits in the

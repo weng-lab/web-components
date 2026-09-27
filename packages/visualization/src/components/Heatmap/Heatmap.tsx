@@ -27,7 +27,6 @@ const Heatmap = ({
   height,
   xLabelOrientation = "vertical",
   selectedCells,
-  deselectedColor,
   cellWidth,
   cellHeight,
   scrollToSelection,
@@ -44,7 +43,7 @@ const Heatmap = ({
   const layout = useHeatmapLayout({
     data, colorDomain, colors, xLabelOrientation, margin, showLegend, isScrollable,
     cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
-    selectedCells, deselectedColor, highlightRange, legendWidth,
+    selectedCells, highlightRange, legendWidth,
   });
   const { allColNames, allRowNames, numRows } = layout;
 
@@ -114,8 +113,6 @@ const Heatmap = ({
           animationType={animationType}
           tooltipBody={tooltipBody}
           onClick={onClick}
-          selectedCells={selectedCells}
-          deselectedColor={deselectedColor}
           xLabel={xLabel}
           yLabel={yLabel}
           showLegend={showLegend}
