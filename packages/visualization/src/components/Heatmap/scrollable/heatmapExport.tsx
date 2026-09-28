@@ -2,9 +2,9 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import type { ColumnDatum } from "../types";
-import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS, downloadBlob, measureTextWidth } from "../../../utility";
+import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS, downloadBlob } from "../../../utility";
 import type { HeatmapLayout } from "../heatmapLayout";
-import { LEGEND_GAP, TICK_LABEL_WIDTH_SAFETY_FACTOR } from "../heatmapLayout";
+import { LEGEND_GAP, xAxisTitleCenter } from "../heatmapLayout";
 import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, markTickLabels, yAxisTickLabelProps } from "../heatmapAxisProps";
 import { drawHeatmapCells } from "../HeatmapCanvasCells";
 import HeatmapSelectionPointers from "../HeatmapSelectionPointers";
@@ -154,21 +154,11 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
     appendClone(exportSvg, o.legendSvg, marg.left + xMax + LEGEND_GAP, marg.top);
   }
 
-  // The axis titles live in their own always-visible panes on screen (so scrolling can't
-  // carry them out of view) rather than as visx's built-in centered-on-the-full-axis label,
-  // so they're added here directly instead of being cloned from a live pane.
+  // On screen the titles sit in their own fixed panes, so there is nothing to clone: they're drawn here.
   if (o.yLabel) appendTitle(exportSvg, o.yLabel, yTitleWidth / 2, marg.top + yMax / 2, true);
   if (o.xLabel) {
-    const exportWidth = marg.left + xMax + marg.right;
-    const titleWidth = measureTextWidth(o.xLabel, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY) * TICK_LABEL_WIDTH_SAFETY_FACTOR;
-    // Same edge case as the live static/scrollable panes (see HeatmapStaticSvg,
-    // HeatmapScrollableGrid): with too few columns, xMax can be much narrower than the title -
-    // clamp its center into the exported canvas instead of letting half of it fall outside it.
-    const defaultCenter = marg.left + xMax / 2;
-    const xLabelCenter = titleWidth >= exportWidth
-      ? exportWidth / 2
-      : Math.min(Math.max(defaultCenter, titleWidth / 2), exportWidth - titleWidth / 2);
-    appendTitle(exportSvg, o.xLabel, xLabelCenter, marg.top + yMax + xTickLabelHeight + xTitleHeight / 2, false);
+    const center = xAxisTitleCenter(o.xLabel, marg.left + xMax / 2, marg.left + xMax + marg.right);
+    appendTitle(exportSvg, o.xLabel, center, marg.top + yMax + xTickLabelHeight + xTitleHeight / 2, false);
   }
 
   return exportSvg;

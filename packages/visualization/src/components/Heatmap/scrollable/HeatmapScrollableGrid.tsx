@@ -196,11 +196,8 @@ const HeatmapScrollableGrid = ({
               </g>
             </svg>
           </div>
-          {/* X-axis title: fixed in place (not scroll-synced) so it's always visible, centered on
-              the visible viewport rather than the full data range. overflow: visible lets a title
-              wider than the viewport (e.g. very few columns) spill symmetrically into the
-              y-tick-label and legend panes' columns - harmless since neither has content in this
-              row - rather than being clipped at the viewport's own edge. */}
+          {/* X-axis title: fixed in place and centered on the viewport. A title wider than a narrow
+              grid spills into the empty cells either side rather than being clipped. */}
           <div style={{ gridColumn: 3, gridRow: 4, width: viewportWidth, height: xTitleHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width={viewportWidth} height={xTitleHeight} style={{ overflow: "visible" }}>
               <text

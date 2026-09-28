@@ -1,15 +1,15 @@
 import { useMemo, type ReactElement, type ReactNode, type RefObject } from "react";
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import type { ColumnDatum, HeatmapLegendFrame } from "./types";
-import { measureTextWidth, type AnimationType } from "../../utility";
+import type { AnimationType } from "../../utility";
 import type { AnyBin } from "./HeatmapCells";
 import HeatmapCells from "./HeatmapCells";
 import { heatmapCellStyles } from "./HeatmapCell";
 import HeatmapLegend from "./HeatmapLegend";
 import HeatmapSelectionPointers from "./HeatmapSelectionPointers";
-import { xAxisLabelProps, yAxisTickLabelProps, yAxisLabelProps, markTickLabels, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, type getXAxisTickLabelProps } from "./heatmapAxisProps";
+import { xAxisLabelProps, yAxisTickLabelProps, yAxisLabelProps, markTickLabels, type getXAxisTickLabelProps } from "./heatmapAxisProps";
 import { selectedCellsIn, selectionFrame } from "./heatmapSelection";
-import { LEGEND_GAP, AXIS_LABEL_GAP, TICK_LABEL_WIDTH_SAFETY_FACTOR, type HeatmapLayout } from "./heatmapLayout";
+import { LEGEND_GAP, AXIS_LABEL_GAP, xAxisTitleCenter, type HeatmapLayout } from "./heatmapLayout";
 
 export interface HeatmapStaticSvgProps {
   svgRef: RefObject<SVGSVGElement | null>;
@@ -51,20 +51,13 @@ const HeatmapStaticSvg = ({
       )
     : [];
 
-  // The title defaults to centered over the plot area (xMax), matching the tick labels it sits
-  // below - but with few enough columns, xMax can be much narrower than the title itself, which
-  // would otherwise run the title's overhanging half off the SVG's fixed-size canvas. Clamping
-  // its center into [titleWidth/2, parentWidth - titleWidth/2] keeps the default (title fits)
-  // behavior unchanged and only pulls it back into bounds when it wouldn't otherwise fit.
-  const xAxisTitleLabelProps = useMemo(() => {
-    if (!xLabel) return xAxisLabelProps;
-    const titleWidth = measureTextWidth(xLabel, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY) * TICK_LABEL_WIDTH_SAFETY_FACTOR;
-    const defaultCenter = marg.left + xMax / 2;
-    const center = titleWidth >= parentWidth
-      ? parentWidth / 2
-      : Math.min(Math.max(defaultCenter, titleWidth / 2), parentWidth - titleWidth / 2);
-    return { ...xAxisLabelProps, x: center - marg.left };
-  }, [xLabel, marg.left, xMax, parentWidth]);
+  const xAxisTitleLabelProps = useMemo(
+    () =>
+      xLabel
+        ? { ...xAxisLabelProps, x: xAxisTitleCenter(xLabel, marg.left + xMax / 2, parentWidth) - marg.left }
+        : xAxisLabelProps,
+    [xLabel, marg.left, xMax, parentWidth]
+  );
 
   return (
     <svg width={parentWidth} height={parentHeight} ref={svgRef}>

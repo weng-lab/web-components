@@ -1,14 +1,13 @@
 import { useMemo, useCallback } from "react";
 import { scaleLinear } from "@visx/scale";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import type { ColumnDatum, HeatmapCellId } from "./types";
-import type { HeatmapProps } from "./types";
+import type { ColumnDatum, HeatmapCellId, HeatmapProps } from "./types";
 import { measureTextWidth } from "../../utility";
 import { getHeatmapLegendWidth } from "./HeatmapLegend";
 import { getHeatmapColorScale } from "./heatmapCellAppearance";
 import { cellKey, selectionMarks as markSelection, type SelectionMarks } from "./heatmapSelection";
 import { type CanvasCellParams } from "./HeatmapCanvasCells";
-import { TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
+import { AXIS_TITLE_FONT_SIZE, TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
 
 export const LEGEND_GAP = 16;
 // Extra breathing room between the tick labels and the axis title, beyond the space
@@ -25,6 +24,16 @@ export const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 export const MINI_MAP_HEIGHT = 50;
 
 export const getBins = (d: ColumnDatum) => d.rows;
+
+/**
+ * Where to center the x-axis title: at `plotCenter`, pulled in just enough to stay inside a canvas
+ * `canvasWidth` wide - which a plot of only a few columns can be narrower than the title.
+ */
+export function xAxisTitleCenter(title: string, plotCenter: number, canvasWidth: number): number {
+  const titleWidth = measureTextWidth(title, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY) * TICK_LABEL_WIDTH_SAFETY_FACTOR;
+  if (titleWidth >= canvasWidth) return canvasWidth / 2;
+  return Math.min(Math.max(plotCenter, titleWidth / 2), canvasWidth - titleWidth / 2);
+}
 
 export function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
   // Null counts are gaps in the data and don't participate in the max. reduce rather than
