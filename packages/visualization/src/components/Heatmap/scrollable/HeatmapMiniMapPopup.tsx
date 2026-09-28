@@ -3,21 +3,14 @@ import { createPortal } from "react-dom";
 import type { HeatmapLegendFrame } from "../types";
 import HeatmapMiniMap, { type HeatmapMiniMapProps } from "./HeatmapMiniMap";
 
-// The expanded minimap opens as a viewport-fixed modal sized off the screen, not the plot's own
-// (often much smaller) container - nearly the whole screen, but leaving a visible backdrop margin
-// so it still reads as a popup rather than a page navigation.
+// Nearly the whole screen, with enough backdrop showing that it reads as a popup.
 const MINI_MAP_POPUP_WIDTH_VW = 94;
 const MINI_MAP_POPUP_HEIGHT_VH = 90;
 const MINI_MAP_POPUP_PADDING = 16;
-// `position: fixed` only escapes to the viewport if every ancestor is un-transformed; a single
-// transform/filter/will-change/contain anywhere between the heatmap and <body> in a consuming
-// app re-scopes it to that ancestor instead, letting unrelated elements elsewhere on the page
-// stack above it regardless of z-index. Portaling straight to document.body below sidesteps
-// that; the max practical z-index on top of it is belt-and-suspenders against anything else on
-// the host page (app chrome, third-party widgets) that also claims a very high value.
+// Portaled to <body>, since a transformed ancestor would trap `position: fixed`, and stacked
+// above anything else the host page puts on top.
 const MINI_MAP_POPUP_Z_INDEX = 2147483647;
-// The legend's band across the top: room for a bar long enough to sweep along with some precision,
-// its end labels, and the built-in legend's ticks and labels under its bar.
+// The legend's band across the top: long enough to sweep with some precision.
 const LEGEND_BAND_WIDTH = 440;
 const LEGEND_BAND_HEIGHT = 40;
 const LEGEND_BAND_GAP = 12;
@@ -26,22 +19,16 @@ type MiniMapPassThroughProps = Omit<HeatmapMiniMapProps, "width" | "height" | "o
 
 export interface HeatmapMiniMapPopupProps extends MiniMapPassThroughProps {
   onClose: () => void;
-  /** The inline minimap's own container - counts as "inside" for the outside-click check below. */
+  /** The inline minimap's container, where a click doesn't count as outside the popup. */
   containerRef: RefObject<HTMLDivElement | null>;
-  /**
-   * Draws the plot's legend, lying down in a band across the top, so it can be read - and swept -
-   * against the whole grid at once. Omitted where the plot shows no legend.
-   */
+  /** Draws the plot's legend in a band across the top. Omitted where the plot shows no legend. */
   legend?: (frame: HeatmapLegendFrame) => ReactNode;
 }
 
 const HeatmapMiniMapPopup = ({ onClose, containerRef, legend, ...miniMapProps }: HeatmapMiniMapPopupProps) => {
-  // The popup itself lives outside containerRef in the tree (it's positioned relative to the
-  // plot's outer container, not the small inline minimap) - both refs count as "inside" here.
   const popupRef = useRef<HTMLDivElement | null>(null);
-  // The backdrop, which the legend's tooltips portal into so they show above the popup rather than
-  // behind it - nothing else on the page can, at this z-index. State rather than a ref, so the
-  // legend is drawn again with it once it exists.
+  // The legend's tooltips portal into the backdrop to show above the popup. State rather than a
+  // ref, so the legend re-renders once it exists.
   const [backdrop, setBackdrop] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -62,15 +49,9 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, legend, ...miniMapProps }:
     };
   }, [containerRef, onClose, backdrop]);
 
-  // The expanded minimap's canvas needs real pixel dimensions (for dpr scaling), but the popup
-  // itself is sized by CSS (vw/vh) against the viewport, which can change as the window resizes
-  // while the popup is open - ResizeObserver on the flex-filled area inside it is what actually
-  // measures that, rather than computing it from window.innerWidth/innerHeight up front.
+  // The canvas needs pixel dimensions; the popup is sized in vw/vh, so the area is measured as it resizes.
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-  // The minimap draws its entire dataset with no windowing, so for large grids the popup can sit
-  // blank for a noticeable moment after opening - a skeleton fills that gap instead of looking
-  // like the popup hung. Owned here (not inside HeatmapMiniMap) since only the expanded view is
-  // large/slow enough to warrant one; the small always-visible inline minimap doesn't need it.
+  // A spinner covers the first draw, which can take a moment on a large grid.
   const [isReady, setIsReady] = useState(false);
   const handleReady = useCallback(() => setIsReady(true), []);
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -115,8 +96,6 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, legend, ...miniMapProps }:
           overflow: "hidden",
         }}
       >
-        {/* A proper title bar, not just a close button floating in extra top padding - its
-            horizontal padding matches the body's below so the panel reads as evenly framed. */}
         <div
           style={{
             flexShrink: 0,
@@ -154,8 +133,7 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, legend, ...miniMapProps }:
         </div>
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: LEGEND_BAND_GAP, padding: MINI_MAP_POPUP_PADDING }}>
           {legend && (
-            // Above the map rather than beside it: the popup is wide and the grid stretched to fill
-            // it, so a band across the top costs it less than a column would, and reads first.
+            // Above the map rather than beside it: the popup is wide, so a band costs the map less.
             <svg
               width={legendBandWidth}
               height={LEGEND_BAND_HEIGHT}
@@ -170,11 +148,7 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, legend, ...miniMapProps }:
             </svg>
           )}
           <div ref={areaRef} style={{ flex: 1, minHeight: 0, position: "relative" }}>
-            {/* Rendered as soon as the popup mounts, independent of `size` - the area div is
-                already laid out by CSS (flex: 1) on this same paint, so the skeleton can fill it
-                immediately. Waiting on `size` (the async ResizeObserver round-trip) would leave a
-                blank gap before the skeleton itself shows up, which is exactly what it's meant to
-                cover. */}
+            {/* Not gated on `size`, so it shows on the first paint rather than after the measurement. */}
             {!isReady && (
               <div
                 aria-label="Loading minimap"
@@ -194,7 +168,7 @@ const HeatmapMiniMapPopup = ({ onClose, containerRef, legend, ...miniMapProps }:
                     height: 40,
                     borderRadius: "50%",
                     border: "4px solid #e5e5e5",
-                    // Matches the viewport-rectangle accent color HeatmapMiniMap itself uses.
+                    // The minimap's viewport-rectangle color.
                     borderTopColor: "#0d0f98",
                     animation: "heatmapMiniMapSpinnerRotate 0.8s linear infinite",
                   }}

@@ -1,6 +1,6 @@
 import { SELECTION_COLOR } from "./heatmapSelection";
 
-/** How far a pointer reaches from the grid, and half its width, in the space the axis draws its tick. */
+/** How far a pointer reaches from the grid, and half its width. */
 const POINTER_LENGTH = 6;
 const POINTER_HALF_WIDTH = 4;
 
@@ -13,11 +13,9 @@ interface HeatmapSelectionPointersProps {
 }
 
 /**
- * A small pointer where the tick is, at each column or row holding the selection: under the grid
- * pointing up at a column, left of it pointing right at a row. With the label beside it in bold, it
- * says what is selected without touching a cell's color, and stays legible where a narrow column's
- * slanted label alone would not. Drawn in the axis's own coordinates - from the grid's bottom edge
- * for columns, its left edge for rows - so it scrolls and exports with the axis.
+ * A pointer at the tick of each column or row holding the selection, pointing up at a column from
+ * below the grid and right at a row from its left. Drawn in the axis's coordinates, so it scrolls
+ * and exports with the axis.
  */
 const HeatmapSelectionPointers = ({ axis, marked, scale }: HeatmapSelectionPointersProps) => (
   <g fill={SELECTION_COLOR} pointerEvents="none">

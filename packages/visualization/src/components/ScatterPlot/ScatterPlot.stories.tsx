@@ -752,11 +752,8 @@ export const FillsContainer: Story = {
     ],
 };
 
-// hoveredPoints handed over a window at a time, the way sweeping a colorbar hands them over. Each
-// mouse move shifts the window a little, so most of its points are still inside it afterwards:
-// they keep the growth they have reached, and only the points it has just taken in grow from
-// nothing. Sweep the bar quickly and the ring stays on the points under the window rather than
-// flickering as it moves.
+// hoveredPoints set a window at a time, as a swept colorbar sets them. Points that stay in the window
+// keep their hover growth; only newly included ones grow in, so a quick sweep doesn't flicker.
 type ValuePoint = {
     x: number;
     y: number;

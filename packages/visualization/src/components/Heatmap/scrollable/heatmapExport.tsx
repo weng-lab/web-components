@@ -44,8 +44,7 @@ const appendClone = (exportSvg: SVGSVGElement, source: SVGSVGElement, x: number,
   exportSvg.appendChild(group);
 };
 
-// Resolution is capped (never upscaled) so a canvas can't exceed what browsers will reliably
-// allocate - past that, some browsers just hand back a blank canvas instead of erroring.
+// Capped at what browsers reliably allocate; past that, some return a blank canvas without erroring.
 function computeExportScale(width: number, height: number): number {
   const desiredScale = window.devicePixelRatio || 2;
   return Math.min(
@@ -56,13 +55,8 @@ function computeExportScale(width: number, height: number): number {
   );
 }
 
-// Rasterizes the full (unwindowed) cell grid onto a canvas using the same paint routine the
-// live scrollable grid and minimap use for their own canvases (drawHeatmapCells). This is the
-// key difference from every other layer here: a large grid (e.g. 1000x1000 = 1M cells) rendered
-// as individual SVG shapes via React would mean 1M DOM nodes built synchronously and then
-// serialized into a multi-hundred-MB XML string - that's what used to hang/crash the tab.
-// Painting into a canvas instead collapses that to a bounded number of fillRect calls, which is
-// exactly how the minimap already handles full-dataset draws.
+// The whole cell grid painted onto a canvas, as the live grid paints it. As SVG shapes, a large grid
+// would serialize into hundreds of MB and hang the tab.
 function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasElement | null {
   const { xMax, yMax, canvasCellParams, numRows } = o.layout;
   if (xMax <= 0 || yMax <= 0) return null;
@@ -75,15 +69,12 @@ function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasEl
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const range = { colStart: 0, colEnd: Math.max(0, o.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
-  // A highlight is a passing hover over the legend, not part of the figure. A selection is kept -
-  // framed, with its axes marked below - as often the very thing a figure is made to show.
+  // A highlight is a passing hover, not part of the figure; the selection is kept.
   drawHeatmapCells(ctx, { ...canvasCellParams, highlightRange: null }, range, null);
   return canvas;
 }
 
-// Only used to embed the cell layer in an actual downloadable .svg file (see
-// buildScrollableExportSVG) - the PNG path (downloadScrollableHeatmapPNG below) draws the
-// rasterized canvas directly onto the output canvas instead, so it never needs this as a string.
+// For the .svg download only; the PNG draws the canvas directly.
 function renderCellsToDataURL(o: ScrollableExportOptions): string | null {
   const { xMax, yMax } = o.layout;
   if (xMax <= 0 || yMax <= 0) return null;
@@ -98,20 +89,14 @@ const appendCellsImage = (exportSvg: SVGSVGElement, dataUrl: string, x: number, 
   image.setAttribute("width", String(width));
   image.setAttribute("height", String(height));
   image.setAttribute("preserveAspectRatio", "none");
-  // Both attributes are set for compatibility: xlink:href is what older SVG renderers (and some
-  // image editors) still expect, href is the modern SVG2/browser-native attribute.
+  // xlink:href for older SVG renderers and editors, href for SVG2.
   image.setAttributeNS(XLINK_NS, "href", dataUrl);
   image.setAttribute("href", dataUrl);
   exportSvg.appendChild(image);
 };
 
-// Builds a standalone, off-DOM <svg> at full content size for export. The on-screen row/column
-// axis panes (SVGs windowed to the visible tick range) only ever hold a slice of the full grid -
-// they can't just be cloned for export without capturing an incomplete/mispositioned snapshot -
-// so both are rendered fresh here in one detached tree, synchronously, full grid, no windowing,
-// purely to snapshot into the export SVG below. The cell layer is handled separately (see
-// renderCellsToDataURL above) since it doesn't have this problem's flip side: rendering it fresh
-// as SVG shapes is exactly what's too expensive at full-grid scale.
+// A standalone <svg> of the whole plot. The on-screen axis panes only hold the visible ticks, so the
+// axes are rendered afresh, in full, in a detached tree; the cells come in as an image.
 export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCells = true }: { includeCells?: boolean } = {}): SVGSVGElement | null {
   const { layout } = o;
   const {
@@ -178,16 +163,9 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
   return exportSvg;
 }
 
-// Renders a scrollable heatmap straight to a downloadable PNG in a single raster pass: the cell
-// grid is drawn once (rasterizeCells) directly onto the output canvas, and only the much smaller
-// axes/legend/titles are round-tripped through SVG-to-image to rasterize on top of it. This
-// deliberately avoids buildScrollableExportSVG's normal cells-as-embedded-image path (used for
-// the actual .svg download, where a raster layer has to be embedded as a data URL to produce a
-// valid standalone file) - base64-encoding a full-resolution cell canvas into an XML string,
-// then decoding that string back into an image to redraw onto a second full-size canvas, doubles
-// both the memory footprint and the encode/decode work for no benefit here, and was enough to
-// crash the tab on a large export. No DOM attachment is needed either: unlike downloadSVGAsPNG,
-// nothing here reads clientWidth/clientHeight - the output size comes straight from the layout.
+// The cells are painted straight onto the output canvas, with only the axes, legend and titles
+// going through SVG. Embedding the cells in the SVG as a data URL and decoding it back doubled the
+// memory, enough to crash the tab on a large export.
 export function downloadScrollableHeatmapPNG(o: ScrollableExportOptions, fileName: string): void {
   const { marg, xMax, yMax } = o.layout;
   if (xMax <= 0 || yMax <= 0) return;
@@ -228,12 +206,8 @@ export function downloadScrollableHeatmapPNG(o: ScrollableExportOptions, fileNam
   img.src = url;
 }
 
-// downloadSVGAsPNG reads the element's layout box asynchronously (after its image loads), so
-// an off-DOM export node has to stay attached (off-screen) until onComplete fires. The
-// off-screen positioning goes on a wrapper div, never on the <svg> itself - that svg is what
-// gets serialized and downloaded, so any inline style set directly on it (e.g. `left:
-// -99999px`) would be baked into the exported file, rendering everything pushed off-canvas
-// and out of view - the exact "blank image" bug this replaced.
+// Keeps the export <svg> attached off-screen until `run` is done with it. The offset goes on a
+// wrapper: set on the <svg> itself, it would be serialized into the file.
 export function withOffscreenExportSVG(o: ScrollableExportOptions, run: (svg: SVGSVGElement, onDone: () => void) => void): void {
   const svg = buildScrollableExportSVG(o);
   if (!svg) return;

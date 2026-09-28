@@ -39,19 +39,15 @@ export type ColumnDatum<C extends object = Record<string, unknown>, R extends ob
  */
 export type HeatmapCellId = { row: number; column: number };
 
-/** Where renderLegend draws: the box it has, and which way its bar should run. */
+/** The box renderLegend draws in, and which way its bar runs. */
 export type HeatmapLegendFrame = {
   width: number;
   height: number;
-  /**
-   * "vertical" in the column beside the grid; "horizontal" in the band across the top of the
-   * expanded minimap.
-   */
+  /** "vertical" beside the grid; "horizontal" across the top of the expanded minimap. */
   orientation: "vertical" | "horizontal";
   /**
-   * Set in the expanded minimap, which sits above everything else on the page: its root element. A
-   * tooltip or other overlay the legend opens must portal into it to show above the minimap rather
-   * than behind it - MUI's `slotProps={{ popper: { container } }}`, say. Undefined beside the grid.
+   * In the expanded minimap, the element a tooltip or other overlay must portal into to show above
+   * it - e.g. MUI's `slotProps={{ popper: { container } }}`. Undefined beside the grid.
    */
   overlayContainer?: HTMLElement;
 };
@@ -80,23 +76,16 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   animationType?: AnimationType;
   showLegend?: boolean;
   /**
-   * Replaces the built-in color legend. Return SVG content, drawn inside an <svg> the frame's size:
-   * - Beside the grid, vertical: a column `legendWidth` wide and as tall as the grid's visible
-   *   area. Downloads include it, just as they include the built-in legend.
-   * - Across the top of the expanded minimap, horizontal, while that is open - a second copy, so
-   *   nothing in it should assume it is the only one.
-   * Anything interactive in it works on screen in both, so a legend that sets highlightRange as it
-   * is swept lights up the expanded minimap too; anything that must not appear in a download
-   * belongs outside it.
+   * Replaces the built-in legend with SVG content drawn in the frame it's given: vertical beside
+   * the grid (`legendWidth` wide, and included in downloads), and horizontal across the expanded
+   * minimap while that is open. The two copies can be on screen at once, so ids must be unique.
    */
   renderLegend?: (frame: HeatmapLegendFrame) => ReactNode;
   /** Width of the column renderLegend draws in. Defaults to the built-in legend's width. */
   legendWidth?: number;
   /**
-   * Counts to emphasize, as [min, max] inclusive - an open end is -Infinity or Infinity. Every other
-   * cell fades, so the cells in the range stand out wherever they are in the grid and minimap:
-   * what a legend hands the plot as it is swept. Downloads ignore it. Undefined or null draws every
-   * cell as normal.
+   * Counts to emphasize, as [min, max] inclusive (use ±Infinity for an open end). Cells outside it
+   * fade in the grid and minimap; downloads ignore it. Null or undefined for none.
    */
   highlightRange?: [number, number] | null;
   /**
@@ -104,13 +93,10 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    */
   xLabelOrientation?: "horizontal" | "vertical" | "leftDiagonal" | "rightDiagonal";
   /**
-   * The currently selected cells, identified by the same row/column indices found on the bin
-   * passed to onClick (bin.row, bin.column). Selected cells are framed, and the columns and rows
-   * they belong to are marked - bold labels, a pointer at the axis, a tick along the minimap's
-   * edge - while every cell keeps its own color, so the rest of the grid can still be read for
-   * what to select next. A whole selected column marks its column alone, and a single selected
-   * cell both its row and column. Pass an empty array or undefined for no selection. Selection is
-   * controlled - use onClick to update it from the consumer.
+   * The selected cells, by the row/column indices on the bin passed to onClick. Controlled: update
+   * it from onClick. Selected cells are framed, and their columns and rows get bold labels, a
+   * pointer at the axis and a tick on the minimap's edge. A whole selected column marks only its
+   * column; a single cell marks both.
    */
   selectedCells?: HeatmapCellId[];
   /**

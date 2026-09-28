@@ -1,11 +1,8 @@
 import { scaleLinear } from "@visx/scale";
-import type { HeatmapCellId } from "./types";
 
 /** A cell outside highlightRange: faint enough that the cells inside it carry the grid. */
 export const DIMMED_OPACITY = 0.12;
-export const NULL_VALUE_COLOR = "none";
-
-export const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
+const NULL_VALUE_COLOR = "none";
 
 export function getHeatmapColorScale(colors: [string, string, ...string[]], domain: [number, number]) {
   const [minValue, maxValue] = domain;
@@ -23,12 +20,8 @@ export const isOutsideRange = (count: number | null | undefined, range: [number,
   !!range && count != null && (count < range[0] || count > range[1]);
 
 /**
- * Shared by the SVG cell renderer (HeatmapCells.tsx, used for non-scrollable mode and export)
- * and the canvas cell renderer (HeatmapCanvasCells.ts, used on-screen in scrollable mode) so the
- * two can never drift apart on what a cell actually looks like.
- *
- * Selection doesn't touch a cell's own color: it is framed instead (see heatmapSelection.ts), so
- * the cells around a selection keep the colors a reader picks the next one out by.
+ * A cell's fill, shared by the SVG and canvas renderers so they can't drift apart. Selection isn't
+ * part of it: selected cells are framed instead (see heatmapSelection.ts).
  */
 export function resolveCellAppearance(
   count: number | null | undefined,

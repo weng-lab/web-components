@@ -1,11 +1,9 @@
 import { useEffect, useRef, type RefObject } from "react";
 import type { HeatmapCellId } from "../types";
-import { cellKey } from "../heatmapCellAppearance";
+import { cellKey } from "../heatmapSelection";
 
-// Minimal scroll offset (along one axis) that brings [boxStart, boxEnd) fully into
-// [current, current+viewportSize) - unchanged if it's already fully visible, and aligned to
-// boxStart if the box itself is bigger than the viewport (can't fit all of it either way).
-// Mirrors Element.scrollIntoView({ block: "nearest" })'s semantics.
+// The smallest scroll that brings [boxStart, boxEnd) into view, as scrollIntoView({ block: "nearest" })
+// would: unchanged if it's already visible, aligned to boxStart if it can't fit.
 function nearestScrollOffset(current: number, viewportSize: number, boxStart: number, boxEnd: number): number {
   if (boxEnd - boxStart > viewportSize) return boxStart;
   if (boxStart < current) return boxStart;
@@ -17,14 +15,13 @@ export interface UseScrollToSelectionArgs {
   mainPaneRef: RefObject<HTMLDivElement | null>;
   selectedCells?: HeatmapCellId[];
   scrollToSelection?: boolean;
-  isScrollable: boolean;
   binWidth: number;
   viewportWidth: number;
 }
 
-// Auto-scrolls to reveal newly-selected cells
+// Scrolls newly selected cells into view, horizontally.
 export function useScrollToSelection({
-  mainPaneRef, selectedCells, scrollToSelection, isScrollable, binWidth, viewportWidth,
+  mainPaneRef, selectedCells, scrollToSelection, binWidth, viewportWidth,
 }: UseScrollToSelectionArgs) {
   const previousSelectionKeysRef = useRef<Set<string>>(new Set());
 
@@ -35,7 +32,7 @@ export function useScrollToSelection({
     previousSelectionKeysRef.current = new Set(cells.map(cellKey));
 
     const main = mainPaneRef.current;
-    if (!scrollToSelection || !isScrollable || !main || newCells.length === 0) return;
+    if (!scrollToSelection || !main || newCells.length === 0) return;
 
     let minCol = Infinity, maxCol = -Infinity;
     for (const cell of newCells) {
@@ -50,5 +47,5 @@ export function useScrollToSelection({
     if (targetLeft !== main.scrollLeft) {
       main.scrollTo({ left: targetLeft, behavior: "smooth" });
     }
-  }, [selectedCells, scrollToSelection, isScrollable, binWidth, viewportWidth]);
+  }, [selectedCells, scrollToSelection, binWidth, viewportWidth]);
 }

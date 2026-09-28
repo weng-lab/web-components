@@ -42,7 +42,6 @@ const HeatmapScrollableGrid = ({
     xScale, yScale, xTickValues, yTickValues, stableColors, minValue, maxValue, canvasCellParams,
     selectionMarks,
   } = layout;
-  // Bold where a column or row holds the selection - see selectionMarks.
   const markedXTickLabelProps = useMemo(
     () => markTickLabels(xAxisTickLabelProps, selectionMarks.columns),
     [xAxisTickLabelProps, selectionMarks]
@@ -53,20 +52,16 @@ const HeatmapScrollableGrid = ({
     canvasRef, mainPaneRef, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
     visibleXTickValues, visibleYTickValues, canvasHandlers,
   } = useHeatmapCanvasGrid({
-    canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, isScrollable: true, onClick,
+    canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, onClick,
   });
-  useScrollToSelection({ mainPaneRef, selectedCells, scrollToSelection, isScrollable: true, binWidth, viewportWidth });
+  useScrollToSelection({ mainPaneRef, selectedCells, scrollToSelection, binWidth, viewportWidth });
 
   const xTickClipId = useId();
-  // Shrinks to 0 as soon as scrolling moves away from the start, so the reveal only ever applies
-  // to column 0's genuine edge case (nothing real to its left) and doesn't linger over the y-axis
-  // pane at other scroll positions, where a real, adjacent column - not empty space - would
-  // otherwise show through.
+  // Room for the first column's slanted label to hang left over the y-axis pane, only while
+  // scrolled to the start: anywhere else, the column to its left would show through.
   const xTickLeftOverhang = Math.max(0, xTickLeftOverhangMax - axisScrollPos.left);
 
-  // Drives the minimap: scrollTo dispatches a native scroll event on mainPaneRef, which
-  // handleGridScroll picks up the same way it would a manual scroll (repainting the canvas and
-  // updating axisScrollPos, which also moves the minimap's own viewport rectangle).
+  // The resulting scroll event repaints the grid and moves the minimap's rectangle, as a manual scroll does.
   const handleMiniMapNavigate = useCallback((left: number, top: number) => {
     mainPaneRef.current?.scrollTo({ left, top });
   }, []);
@@ -74,8 +69,7 @@ const HeatmapScrollableGrid = ({
   const [isMiniMapExpanded, setIsMiniMapExpanded] = useState(false);
   const miniMapContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // The caller's legend or the built-in one, standing up beside the grid or lying across the
-  // expanded minimap.
+  // The caller's legend or the built-in one, beside the grid or across the expanded minimap.
   const legend = (frame: HeatmapLegendFrame) =>
     renderLegend ? (
       renderLegend(frame)

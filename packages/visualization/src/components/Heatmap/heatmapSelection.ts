@@ -1,19 +1,15 @@
 /**
- * How a selection shows: framed, with the columns and rows it belongs to marked on the axes and
- * along the minimap's edges, while every cell keeps its own color. Fading everything unselected
- * hid the very cells a reader was scanning for the next thing to select.
+ * How a selection shows: a frame around the selected cells, and marks on the axes and minimap for
+ * the columns and rows holding them. Cells keep their own colors, so the rest of the grid can
+ * still be read for what to select next.
  */
 
 import type { HeatmapCellId } from "./types";
-import { cellKey } from "./heatmapCellAppearance";
 
 /** The frame's dark line, and the white one just inside it that holds it against a dark cell. */
 export const SELECTION_COLOR = "#1a1c1e";
 const HALO_COLOR = "#ffffff";
-/**
- * The dark line's thickness, laid outside the selected cells. At the default gap of 2 it fills the
- * gaps around them exactly, covering no cell - neither a selected one nor its neighbor.
- */
+/** Laid outside the selected cells: at the default gap of 2 it fills the gap and covers no cell. */
 const FRAME_WIDTH = 2;
 const HALO_WIDTH = 1;
 
@@ -27,20 +23,16 @@ type FrameGeometry = {
   gap: number;
 };
 
-/** The grid's size, which nothing drawn outside of shows. */
 type GridBounds = { width: number; height: number };
 
-/** A cell's key back into its row and column. */
+export const cellKey = (cell: HeatmapCellId) => `${cell.row}-${cell.column}`;
+
 const parseKey = (key: string): HeatmapCellId => {
   const [row, column] = key.split("-").map(Number);
   return { row, column };
 };
 
-/**
- * The selected cells within a block of the grid - by walking the block where it holds fewer cells
- * than the selection, by filtering the selection where it holds more, as the whole grid does for a
- * download.
- */
+/** The selected cells within a block, walking whichever of the block and the selection is smaller. */
 export function* selectedCellsIn(
   selectedKeys: Set<string>,
   { colStart, colEnd, rowStart, rowEnd }: { colStart: number; colEnd: number; rowStart: number; rowEnd: number }
@@ -58,10 +50,8 @@ export function* selectedCellsIn(
 
 /**
  * The frame around the selected cells among `cells`, as rectangles to fill in order: a dark band
- * outside every edge a selected cell shares with an unselected one, or with the grid's edge, then
- * a white line just inside it. Neighboring selected cells share one frame - a selected column is
- * one tall box, and two side by side one wide one - so it reads as what was picked rather than as
- * a grid of little boxes.
+ * outside each edge not shared with another selected cell, then a white line just inside it.
+ * Adjacent selected cells share one frame, so a selected column is one tall box.
  */
 export function selectionFrame(
   selectedKeys: Set<string>,
@@ -83,9 +73,7 @@ export function selectionFrame(
     const cellRight = cellLeft + binWidth - gap;
     const cellTop = cellYScale(row) + gap;
     const cellBottom = cellYScale(row) + binHeight;
-    // The box the dark line runs round: the cell itself, pulled in wherever the line would fall past
-    // the grid's edge and be cut off - at the bottom and left always, where the gaps are on the far
-    // side of the cells, and at the top and right where there is less gap than line.
+    // The cell, pulled in wherever the line outside it would fall past the grid's edge.
     const left = cellLeft - FRAME_WIDTH < 0 ? cellLeft + FRAME_WIDTH : cellLeft;
     const right = cellRight + FRAME_WIDTH > bounds.width ? cellRight - FRAME_WIDTH : cellRight;
     const top = cellTop - FRAME_WIDTH < 0 ? cellTop + FRAME_WIDTH : cellTop;
@@ -95,8 +83,8 @@ export function selectionFrame(
     const below = isSelected(row - 1, column);
     const before = isSelected(row, column - 1);
     const after = isSelected(row, column + 1);
-    // How far an edge's line runs on past the box: across the gap to a selected neighbor, so the
-    // line is unbroken, or round the corner where there is none.
+    // How far an edge's line runs past the box: across the gap to a selected neighbor, or round
+    // the corner where there is none.
     const reach = (selected: boolean) => (selected ? gap : FRAME_WIDTH);
     const bridge = (selected: boolean) => (selected ? gap : 0);
     const across = [left - reach(before), right - left + reach(before) + reach(after)] as const;
@@ -127,13 +115,12 @@ export function selectionFrame(
 /** The columns and rows the axes and minimap mark as holding the selection. */
 export type SelectionMarks = { columns: Set<number>; rows: Set<number> };
 
-export const NO_SELECTION_MARKS: SelectionMarks = { columns: new Set(), rows: new Set() };
+const NO_SELECTION_MARKS: SelectionMarks = { columns: new Set(), rows: new Set() };
 
 /**
- * Which columns and rows to mark. A column is marked for a selected cell in it whose row isn't
- * selected all the way across, and a row for one whose column isn't selected all the way down.
- * So a whole selected column marks its column alone - not every row it runs through - and a
- * single selected cell marks both its row and its column, as a spreadsheet lights both headers.
+ * Which columns and rows to mark. A column is marked for a selected cell whose row isn't fully
+ * selected, and a row for one whose column isn't: a whole selected column marks only its column,
+ * and a single cell marks both.
  */
 export function selectionMarks(selectedKeys: Set<string> | null, numColumns: number, numRows: number): SelectionMarks {
   if (!selectedKeys?.size) return NO_SELECTION_MARKS;

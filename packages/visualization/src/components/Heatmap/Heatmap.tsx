@@ -75,11 +75,8 @@ const Heatmap = ({
       }
     },
   }));
-  // No deps array: buildScrollableExportSVG (and the plain closures above) now render the cells
-  // and both axes fresh on every export (see its comment), reading a long list of render-scoped
-  // values - hand-maintaining an exhaustive deps list for that is exactly the kind of duplicated
-  // upkeep this refactor was trying to reduce elsewhere, and risks a stale export if one is ever
-  // missed. Recomputing this handle (two small closures) on every render is negligible cost.
+  // No deps array: the exports read many render-scoped values, and rebuilding two closures per
+  // render is cheaper than a deps list that could go stale.
 
   return (
     <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>

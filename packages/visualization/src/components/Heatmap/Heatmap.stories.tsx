@@ -256,8 +256,8 @@ export const ManualSize: Story = {
         ),
       ],
 };
-// z-score-like counts: mostly within ±3, with a few cells far out in the tails - the case a clamped
-// colorDomain exists for. Seeded, so the story draws the same grid every time.
+
+// z-score-like counts: mostly within ±3, with a few far out in the tails. Seeded, so it's stable.
 const seeded = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const zRandom = seeded(7);
 const normal = () => Math.sqrt(-2 * Math.log(zRandom() || 1e-9)) * Math.cos(2 * Math.PI * zRandom());
@@ -272,13 +272,12 @@ const Z_COLORS: [string, string, ...string[]] = ['#00766c', '#70b9af', '#eeeeee'
 const Z_DOMAIN: [number, number] = [-3, 3];
 
 /**
- * A minimal custom legend: a bar that, swept with the cursor, hands the heatmap the stretch of the
- * scale under it. The window at either end reaches past the domain, taking in the cells the clamp
- * holds at the end color. It stands up beside the grid and lies down across the expanded minimap.
+ * A minimal custom legend: sweeping the bar hands the heatmap the stretch of the scale under the
+ * cursor, open-ended at either end to take in the clamped cells.
  */
 const SweepLegend = ({ frame, onSweep }: { frame: HeatmapLegendFrame; onSweep: (range: [number, number] | null) => void }) => {
-    const [window, setWindow] = useState<[number, number] | null>(null);
-    // Per instance: the expanded minimap draws a second copy while the first stays beside the grid.
+    const [sweepWindow, setSweepWindow] = useState<[number, number] | null>(null);
+    // Unique per instance: the expanded minimap draws a second copy.
     const gradientId = `sweep-legend-${useId().replace(/:/g, "")}`;
     const horizontal = frame.orientation === "horizontal";
     // Room for a label at either end: above and below standing up, either side lying down.
@@ -288,7 +287,7 @@ const SweepLegend = ({ frame, onSweep }: { frame: HeatmapLegendFrame; onSweep: (
     const valueAt = (t: number) => low + t * (high - low);
     const sweep = (t: number) => {
         const from = Math.min(Math.max(t - 0.075, 0), 0.85);
-        setWindow([from, from + 0.15]);
+        setSweepWindow([from, from + 0.15]);
         onSweep([from <= 0 ? -Infinity : valueAt(from), from + 0.15 >= 1 ? Infinity : valueAt(from + 0.15)]);
     };
     // A stretch of the bar, and a band across it: rightward lying down, upward standing up.
@@ -315,7 +314,7 @@ const SweepLegend = ({ frame, onSweep }: { frame: HeatmapLegendFrame; onSweep: (
                 </>
             )}
             <rect {...box(0, 1, 0, 12)} rx={6} fill={`url(#${gradientId})`} />
-            {window && <rect {...box(window[0], window[1], -3, 18)} rx={3} fill="none" stroke="#1a1c1e" strokeWidth={2} />}
+            {sweepWindow && <rect {...box(sweepWindow[0], sweepWindow[1], -3, 18)} rx={3} fill="none" stroke="#1a1c1e" strokeWidth={2} />}
             <rect
                 {...box(0, 1, -8, 28)}
                 fill="transparent"
@@ -323,16 +322,14 @@ const SweepLegend = ({ frame, onSweep }: { frame: HeatmapLegendFrame; onSweep: (
                     const bar = event.currentTarget.getBoundingClientRect();
                     sweep(horizontal ? (event.clientX - bar.left) / bar.width : 1 - (event.clientY - bar.top) / bar.height);
                 }}
-                onMouseLeave={() => { setWindow(null); onSweep(null); }}
+                onMouseLeave={() => { setSweepWindow(null); onSweep(null); }}
             />
         </g>
     );
 };
 
-// Sweep the legend: every cell outside the window under the cursor fades, in the grid and the
-// minimap alike, so the cells of one stretch of the scale show wherever they are. The legend is the
-// caller's own, through renderLegend, and a download captures it as drawn. Click the minimap to
-// expand it: the legend lies across the top there, and sweeping it lights up the whole grid.
+// Sweep the legend to fade every cell outside the window under the cursor. Click the minimap to
+// expand it: the legend lies across the top there, and sweeping it works the same.
 export const LegendSweepHighlight: Story = {
     args: {
         data: zScoreData,

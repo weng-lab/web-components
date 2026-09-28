@@ -267,12 +267,15 @@ export const isPointVisible = (
     y <= height
 );
 
+/** Identifies a point by its position, which is what hover tracks it by. */
+export const pointKey = (point: { x: number; y: number }) => `${point.x},${point.y}`;
+
 export const partitionPointsByHover = <T extends object>(
     pointData: Point<T>[],
     hoveredPointKeys: Set<string>
 ) => ({
-    nonHovered: pointData.filter((point) => !hoveredPointKeys.has(`${point.x},${point.y}`)),
-    hovered: pointData.filter((point) => hoveredPointKeys.has(`${point.x},${point.y}`)),
+    nonHovered: pointData.filter((point) => !hoveredPointKeys.has(pointKey(point))),
+    hovered: pointData.filter((point) => hoveredPointKeys.has(pointKey(point))),
 });
 
 /** How a hovered point is set apart from the rest. */

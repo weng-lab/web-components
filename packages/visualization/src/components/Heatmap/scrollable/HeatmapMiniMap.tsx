@@ -14,20 +14,18 @@ export interface HeatmapMiniMapProps {
   height: number;
   onNavigate: (left: number, top: number) => void;
   onCanvasClick?: () => void;
-  /** Fires after each draw completes, so a caller (e.g. the expanded popup) can show its own
-   * loading state for the full-dataset draw without this component needing to know about it. */
+  /** Fires after each draw, so the expanded popup can hide its spinner. */
   onReady?: () => void;
   /**
-   * Keeps the last drawing instead of redrawing, while this copy is out of sight - the inline
-   * minimap, under the expanded one. A sweep of the expanded minimap's legend would otherwise draw
-   * the whole grid twice per step. Redraws as soon as it is lifted.
+   * Skips redrawing while out of sight - the inline minimap under the expanded one - so a sweep
+   * doesn't draw the whole grid twice. Redraws once lifted.
    */
   paused?: boolean;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-/** How far a selection mark reaches in from the minimap's edge, and how narrow one can get. */
+/** How far a selection mark reaches in from the edge, and its narrowest width. */
 const MARK_DEPTH = 5;
 const MARK_MIN_WIDTH = 2;
 
@@ -50,19 +48,14 @@ const HeatmapMiniMap = ({
   const scaleX = xMax > 0 ? width / xMax : 0;
   const scaleY = yMax > 0 ? height / yMax : 0;
 
-  // Read via a ref rather than as an effect dependency below - onReady is commonly passed as an
-  // inline arrow function, and putting it in the deps array would re-trigger (and re-run) the
-  // draw effect on every parent render instead of only when the drawable content actually changes.
+  // A ref, so an inline onReady doesn't re-run the draw on every parent render.
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || paused || scaleX <= 0 || scaleY <= 0) return;
-    // The full-dataset draw below is synchronous and can take a while for large grids (the
-    // minimap has no windowing, unlike the main grid). Deferring it a frame lets the surrounding
-    // UI - the expanded popup's backdrop, border, and title bar - paint first, so opening the
-    // minimap feels immediate instead of the whole popup appearing to hang.
+    // A frame later, so the expanded popup paints before the whole-grid draw.
     const raf = requestAnimationFrame(() => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -118,7 +111,7 @@ const HeatmapMiniMap = ({
   const { columns, rows } = canvasCellParams.selectionMarks;
   const numColumns = canvasCellParams.data.length;
   const { numRows } = canvasCellParams;
-  // Cell i's run along an edge `size` pixels long holding `cells` of them, widened to be seen.
+  // Cell i's span along an edge `size` pixels long, widened to at least MARK_MIN_WIDTH.
   const markSpan = (i: number, cells: number, size: number) => {
     const from = (i * size) / cells;
     const run = size / cells;
@@ -157,10 +150,8 @@ const HeatmapMiniMap = ({
         }}
       />
       {/*
-        The columns and rows holding the selection, marked along the top and left edges: a column
-        here is often under a pixel wide, too narrow to frame, and these are what find a selection in
-        a grid too large to scroll through. Above the viewport rectangle, whose border would otherwise
-        cover them just when the selection is in view.
+        The selection's columns and rows, marked along the top and left edges since a column here
+        can be under a pixel wide. Above the viewport rectangle so its border can't cover them.
       */}
       {(columns.size > 0 || rows.size > 0) && (
         <svg

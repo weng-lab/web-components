@@ -4,8 +4,7 @@ import type { AnyBin } from "../HeatmapCells";
 import type { PlotTooltipHandle } from "../../../tooltip";
 import { drawHeatmapCells, getVisibleRange, hitTestCell, buildBin, type CanvasCellParams } from "../HeatmapCanvasCells";
 
-// Extra rows/columns painted/rendered just beyond the visible viewport in scrollable mode, so a
-// cell or tick label is already there before it scrolls into view rather than popping in late.
+// Rows and columns drawn past the viewport, so cells and tick labels don't pop in as they scroll into view.
 const GRID_OVERSCAN_CELLS = 4;
 
 export interface UseHeatmapCanvasGridArgs {
@@ -14,18 +13,14 @@ export interface UseHeatmapCanvasGridArgs {
   viewportHeight: number;
   xTickValues: number[];
   yTickValues: number[];
-  isScrollable: boolean;
   onClick?: (bin: AnyBin) => void;
 }
 
 export function useHeatmapCanvasGrid({
-  canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, isScrollable, onClick,
+  canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, onClick,
 }: UseHeatmapCanvasGridArgs) {
-  // mainPaneRef is the only pane with a real native scrollbar - the cell canvas and the
-  // row/column tick-label panes all track its scroll position by reading it directly here
-  // (rAF-throttled), rather than being natively scrolled themselves: the canvas repaints
-  // imperatively (drawCanvas), and the tick label panes shift via a transform driven by
-  // axisScrollPos state - both cheaper than the pane actually scrolling 15,000px+ of real content.
+  // Only mainPaneRef scrolls natively. The canvas repaints from its scroll position, and the tick
+  // label panes follow it through a transform (axisScrollPos), both once per frame.
   const mainPaneRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hoveredCellRef = useRef<HeatmapCellId | null>(null);
@@ -36,13 +31,7 @@ export function useHeatmapCanvasGrid({
     if (drawRafRef.current != null) cancelAnimationFrame(drawRafRef.current);
   }, []);
 
-  // Imperative canvas paint - deliberately never routed through React state. Driven both by prop
-  // changes (the effect below) and by native scroll events (handleGridScroll), and it's the
-  // scroll case that matters: an earlier attempt at this drove the redraw through a React state
-  // update on every scroll frame, which forced React to reconcile on every frame and made
-  // scrolling *slower* than the plain (if huge) static SVG it replaced. Reading scroll position
-  // directly off the DOM and painting immediately keeps scrolling itself entirely on the
-  // browser's native, free compositor path - React is never involved.
+  // Painted imperatively rather than through state, so scrolling never waits on a React render.
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const main = mainPaneRef.current;
@@ -58,8 +47,8 @@ export function useHeatmapCanvasGrid({
   }, [canvasCellParams, viewportWidth, viewportHeight]);
 
   useEffect(() => {
-    if (isScrollable) drawCanvas();
-  }, [isScrollable, drawCanvas]);
+    drawCanvas();
+  }, [drawCanvas]);
 
   const [axisScrollPos, setAxisScrollPos] = useState({ left: 0, top: 0 });
   const setMainPaneNode = useCallback((node: HTMLDivElement | null) => {
@@ -97,10 +86,7 @@ export function useHeatmapCanvasGrid({
     const contentX = event.nativeEvent.offsetX + main.scrollLeft;
     const contentY = event.nativeEvent.offsetY + main.scrollTop;
     const cell = hitTestCell(canvasCellParams, contentX, contentY);
-    // Matches the SVG path's heatmapCellStyles (`.visx-heatmap-cell { cursor: pointer }`):
-    // pointer over any real cell - including a null-count one, which still hit-tests true here,
-    // same as it still being a hit target there via `pointer-events: all` - not just where
-    // onClick is wired up, so hover-only tooltips still get the affordance.
+    // As heatmapCellStyles does for SVG cells: a pointer over any cell, null ones included.
     event.currentTarget.style.cursor = cell ? "pointer" : "default";
     const prev = hoveredCellRef.current;
     if (prev?.row !== cell?.row || prev?.column !== cell?.column) {

@@ -5,8 +5,8 @@ import type { ColumnDatum, HeatmapCellId } from "./types";
 import type { HeatmapProps } from "./types";
 import { measureTextWidth } from "../../utility";
 import { getHeatmapLegendWidth } from "./HeatmapLegend";
-import { cellKey, getHeatmapColorScale } from "./heatmapCellAppearance";
-import { selectionMarks as markSelection, type SelectionMarks } from "./heatmapSelection";
+import { getHeatmapColorScale } from "./heatmapCellAppearance";
+import { cellKey, selectionMarks as markSelection, type SelectionMarks } from "./heatmapSelection";
 import { type CanvasCellParams } from "./HeatmapCanvasCells";
 import { TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
 

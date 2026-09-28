@@ -3,11 +3,7 @@ import type { AnyBin } from "./HeatmapCells";
 import { DIMMED_OPACITY, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
 import { selectedCellsIn, selectionFrame, type SelectionMarks } from "./heatmapSelection";
 
-/**
- * Everything the canvas draw loop and hit-testing need to place a cell exactly where the SVG
- * path (HeatmapCells.tsx, via @visx/heatmap's HeatmapRect/HeatmapCircle) would. xScale/cellYScale
- * are the same functions Heatmap.tsx already builds and passes to HeatmapCells.
- */
+/** What the canvas renderers and hit-testing need to place and color cells as the SVG renderer does. */
 export interface CanvasCellParams {
   data: ColumnDatum[];
   numRows: number;
@@ -38,12 +34,8 @@ export interface CanvasDrawRange {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-// Mirrors @visx/heatmap's HeatmapRect/HeatmapCircle bin geometry exactly (see their source:
-// node_modules/@visx/heatmap/lib/heatmaps/{HeatmapRect,HeatmapCircle}.js) so canvas-drawn cells
-// land on the same pixels the SVG path (export, non-scrollable mode) would draw them at. The
-// circle center's x mirrors HeatmapCell.tsx's own recomputation (col*binWidth + binWidth/2)
-// rather than @visx/heatmap's raw cx, for the same reason that file does it: keeps circles
-// centered in their cell regardless of the configured radius.
+// Mirrors @visx/heatmap's HeatmapRect/HeatmapCircle geometry, so canvas cells land on the pixels SVG
+// cells would. A circle's x is centered in its cell, as HeatmapCell.tsx recomputes it.
 type CellGeometry =
   | { isRect: true; x: number; y: number; width: number; height: number }
   | { isRect: false; cx: number; cy: number; r: number; radius: number };
@@ -58,12 +50,8 @@ function getCellGeometry(params: CanvasCellParams, col: number, row: number): Ce
 }
 
 /**
- * Column/row index bounds (inclusive) that intersect the given scroll viewport, plus a small
- * overscan so a cell is already drawn just before it scrolls into view rather than popping in a
- * frame late. Row bounds are derived from cellYScale's own convention (row 0 at the bottom of
- * the grid, row numRows-1 at the top): a cell at row r occupies content-y band
- * [yMax-(r+1)*binHeight, yMax-r*binHeight), so the row under a given y is
- * floor((yMax-y)/binHeight).
+ * The columns and rows (inclusive) within the scrolled viewport, plus `overscan` either side. Row 0
+ * is at the bottom, so the row under content y is floor((yMax - y) / binHeight).
  */
 export function getVisibleRange(
   params: CanvasCellParams,
@@ -90,12 +78,8 @@ export function drawHeatmapCells(
   hoveredCell: HeatmapCellId | null
 ) {
   const { data, colorScale, selectedKeys, highlightRange } = params;
-  // fillStyle/globalAlpha assignment forces the browser to re-parse the CSS color string even
-  // when it's unchanged from the previous cell - skipping redundant writes matters at this scale
-  // (this loop runs per-cell, up to hundreds of thousands of times for the minimap's full-dataset
-  // draw). Rects also use fillRect directly (no beginPath/rect/fill trio) since it's a faster
-  // native path for solid fills; a path is only built for a cell when it's the hovered one, so
-  // its outline can still be stroked.
+  // Setting fillStyle re-parses the color even when unchanged, so repeats are skipped: an export
+  // runs this for every cell. A path is built only for the hovered cell, to stroke its outline.
   let lastFill: string | null = null;
   let lastAlpha = -1;
   for (let col = range.colStart; col <= range.colEnd; col++) {
@@ -162,8 +146,7 @@ export function drawHeatmapCells(
   }
 }
 
-// Colors the overview reads out of colorScale, sampled across its domain: far fewer than the cells,
-// and plenty for a grid drawn at a fraction of a pixel per cell.
+// Colors sampled from colorScale for the overview, which looks them up rather than calling it per cell.
 const OVERVIEW_LEVELS = 256;
 
 let colorParser: CanvasRenderingContext2D | null = null;
@@ -179,7 +162,7 @@ function parseColor(css: string): [number, number, number] {
   return [r, g, b];
 }
 
-// Keyed on the identities the layout memoizes, so a sweep - which changes none of them - reuses them.
+// Keyed on identities the layout memoizes, which a highlight sweep leaves alone.
 const lutCache = new WeakMap<object, Uint8ClampedArray>();
 const countsCache = new WeakMap<ColumnDatum[], Float64Array>();
 
@@ -196,11 +179,7 @@ function colorLut(params: CanvasCellParams): Uint8ClampedArray {
   return lut;
 }
 
-/**
- * Every cell's count in one flat array, column-major, NaN where there is none: the overview's loop
- * reads it for each of up to a million cells on every step of a sweep, and reading the row objects
- * instead - scattered across the heap - cost several times as much.
- */
+/** Every count in one column-major array, NaN where there is none: several times faster to scan than the row objects. */
 function flatCounts(data: ColumnDatum[], numRows: number): Float64Array {
   const cached = countsCache.get(data);
   if (cached && cached.length === data.length * numRows) return cached;
@@ -215,23 +194,15 @@ function flatCounts(data: ColumnDatum[], numRows: number): Float64Array {
 }
 
 /**
- * The whole grid resampled to `width` x `height` device pixels, for the minimap. Filling each cell as
- * its own rectangle, as the main grid does, meant a million fillRect calls for a lipidomics-sized
- * grid - some 400ms, on every change a legend sweep makes - to paint a picture a fraction of a pixel
- * per cell. This walks the cells once and writes pixels straight into an ImageData: a few
- * milliseconds.
+ * The whole grid resampled to `width` x `height` pixels for the minimap, written straight into an
+ * ImageData: a fillRect per cell took ~400ms on a million-cell grid.
  *
- * Each pixel averages the cells under it where cells are smaller than pixels, and takes the one cell
- * it falls in where they are larger, so a small grid stays crisp rather than smeared. While a
- * highlightRange is set, a pixel with any cell in the range under it shows those cells alone, at their
- * full strength: averaged in with the faded cells around it, a single outlier among fourteen rows to a
- * pixel would vanish from the one view that shows the whole grid at once.
- *
- * Colors and fading come out as drawHeatmapCells draws them; gaps and circles don't - each cell is a
- * solid square, which at a minimap's scale is a difference of shading. Nor does the selection's
- * frame, a column of which is a fraction of a pixel here: the minimap marks it along its edges.
+ * Each pixel averages the cells under it. While highlightRange is set, a pixel holding any cell in
+ * the range shows those cells alone at full strength, so a lone outlier isn't averaged away. Cells
+ * are drawn as solid squares, without gaps, circles or the selection frame - the minimap marks the
+ * selection along its edges instead.
  */
-export function renderHeatmapOverview(params: CanvasCellParams, width: number, height: number): ImageData | null {
+function renderHeatmapOverview(params: CanvasCellParams, width: number, height: number): ImageData | null {
   const { data, numRows, highlightRange, minValue, maxValue } = params;
   const numColumns = data.length;
   if (numColumns === 0 || numRows === 0 || width < 1 || height < 1) return null;
@@ -259,9 +230,9 @@ export function renderHeatmapOverview(params: CanvasCellParams, width: number, h
     const [rowFrom, rowTo] = rowSpans[y];
     for (let x = 0; x < width; x++) {
       const [columnFrom, columnTo] = columnSpans[x];
-      // Premultiplied sums, over every cell and over the highlighted ones alone.
+      // Opacity-weighted sums over every cell, and plain sums over the highlighted ones.
       let r = 0, g = 0, b = 0, a = 0, cells = 0;
-      let hr = 0, hg = 0, hb = 0, ha = 0, highlighted = 0;
+      let hr = 0, hg = 0, hb = 0, highlighted = 0;
       for (let column = columnFrom; column < columnTo; column++) {
         const base = column * numRows;
         for (let fromTop = rowFrom; fromTop < rowTo; fromTop++) {
@@ -272,24 +243,21 @@ export function renderHeatmapOverview(params: CanvasCellParams, width: number, h
           // Held at the ends, as the color scale itself clamps.
           const level = span > 0 ? Math.round(Math.min(Math.max((count - minValue) / span, 0), 1) * (OVERVIEW_LEVELS - 1)) * 3 : 0;
           const cr = lut[level], cg = lut[level + 1], cb = lut[level + 2];
-          let opacity = 1;
           // isOutsideRange, inlined.
-          if (count >= low && count <= high) {
-            if (highlightRange) {
-              hr += cr * opacity; hg += cg * opacity; hb += cb * opacity; ha += opacity; highlighted++;
-            }
-          } else {
-            opacity *= DIMMED_OPACITY;
+          const inRange = count >= low && count <= high;
+          if (inRange && highlightRange) {
+            hr += cr; hg += cg; hb += cb; highlighted++;
           }
+          const opacity = inRange ? 1 : DIMMED_OPACITY;
           r += cr * opacity; g += cg * opacity; b += cb * opacity; a += opacity;
         }
       }
       const offset = (y * width + x) * 4;
       if (highlighted > 0) {
-        pixels[offset] = hr / ha;
-        pixels[offset + 1] = hg / ha;
-        pixels[offset + 2] = hb / ha;
-        pixels[offset + 3] = (ha / highlighted) * 255;
+        pixels[offset] = hr / highlighted;
+        pixels[offset + 1] = hg / highlighted;
+        pixels[offset + 2] = hb / highlighted;
+        pixels[offset + 3] = 255;
       } else if (a > 0) {
         pixels[offset] = r / a;
         pixels[offset + 1] = g / a;
@@ -304,11 +272,8 @@ export function renderHeatmapOverview(params: CanvasCellParams, width: number, h
 let overviewScratch: HTMLCanvasElement | null = null;
 
 /**
- * The whole grid, filling the canvas - see renderHeatmapOverview. Resampled at no more than a pixel
- * per cell along either axis and stretched from there, nearest-neighbor, rather than at every device
- * pixel: the expanded minimap spans most of a Retina screen, some four million pixels over a grid of
- * under a million cells, and resampling each of them took over 100ms - on every step a legend sweep
- * takes. Stretching a cell-sized picture gives the same crisp squares for the price of the cells.
+ * The whole grid, filling the canvas. Rendered at no more than a pixel per cell and stretched
+ * nearest-neighbor from there: resampling every pixel of the expanded minimap took over 100ms.
  */
 export function drawHeatmapOverview(ctx: CanvasRenderingContext2D, params: CanvasCellParams) {
   const { width, height } = ctx.canvas;

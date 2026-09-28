@@ -11,17 +11,10 @@ export const CELL_CLASS = "visx-heatmap-cell";
 export const CELL_SHAPE_CLASS = "visx-heatmap-cell-shape";
 
 /**
- * Hover styling is plain CSS rather than React state: `:hover` costs no render at all, while
- * tracking hover in state re-renders on every cell the pointer crosses. Rendered once per chart
- * by Heatmap, inside the <svg> so it survives the SVG/PNG download serialization.
- *
- * The stroke is always painted in the cell's own fill color, so hovering only has to give it a
- * width. `strokeWidth={0}` below is a presentation attribute, which loses to any CSS rule - so
- * the hover rule wins without needing !important.
- *
- * `pointer-events: all` because cells with a null count render with fill="none", and SVG's
- * default (visiblePainted) only treats painted area as a hit target - without this the pointer
- * falls through such a cell to the <svg> and it can never show its "no data" tooltip.
+ * Hover styling as plain CSS, which costs no render, placed inside the <svg> so downloads keep it.
+ * The stroke is already the cell's fill color, and this rule beats the `strokeWidth={0}` attribute
+ * without !important. `pointer-events: all` keeps null cells (fill="none") hoverable for their
+ * tooltip.
  */
 export const heatmapCellStyles = `
 .${CELL_CLASS} { cursor: pointer; }
@@ -43,13 +36,9 @@ export interface HeatmapCellProps {
 }
 
 /**
- * visx rebuilds every bin object inside its own render, so `bin` always arrives with a fresh
- * identity and memo's default shallow compare can never bail out. Comparing the bin's fields
- * instead lets untouched cells skip re-rendering, which is what makes selection changes cheap:
- * only the cells whose appearance actually changed re-render, rather than the whole grid.
- *
- * `bin.bin` and `bin.datum` are the caller's own row/column data, which do keep identity, so a
- * reference check on those covers data and metadata changes.
+ * visx builds a fresh bin object every render, so memo compares the bin's fields instead: only
+ * cells whose appearance changed re-render. `bin.bin` and `bin.datum` are the caller's own data,
+ * so a reference check covers data changes.
  */
 const binsEqual = (a: AnyBin, b: AnyBin): boolean => {
   if (
