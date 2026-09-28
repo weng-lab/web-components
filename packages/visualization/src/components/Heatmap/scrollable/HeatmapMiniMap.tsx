@@ -88,24 +88,43 @@ const HeatmapMiniMap = ({
     [onCanvasClick, navigateCentered, scaleX, scaleY]
   );
 
-  const handleRectPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }, []);
+  /**
+   * Where the window was grabbed: the pointer, and the scroll position then. Each move places the
+   * window by the pointer's distance from here, so it stays under the pointer. Adding each move's
+   * movementX to scrollLeft instead drifted: scrollLeft trails the grid's scroll by a frame, and
+   * each step's rounding was kept, so the window ran ahead or fell behind further the longer the drag.
+   */
+  const grabRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+
+  const handleRectPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      grabRef.current = { x: event.clientX, y: event.clientY, left: scrollLeft, top: scrollTop };
+    },
+    [scrollLeft, scrollTop]
+  );
 
   const handleRectPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (scaleX <= 0 || scaleY <= 0 || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+      const grab = grabRef.current;
+      if (!grab || scaleX <= 0 || scaleY <= 0 || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
       onNavigate(
-        clamp(scrollLeft + event.movementX / scaleX, 0, Math.max(0, xMax - viewportWidth)),
-        clamp(scrollTop + event.movementY / scaleY, 0, Math.max(0, yMax - viewportHeight))
+        clamp(grab.left + (event.clientX - grab.x) / scaleX, 0, Math.max(0, xMax - viewportWidth)),
+        clamp(grab.top + (event.clientY - grab.y) / scaleY, 0, Math.max(0, yMax - viewportHeight))
       );
     },
-    [scrollLeft, scrollTop, scaleX, scaleY, xMax, yMax, viewportWidth, viewportHeight, onNavigate]
+    [scaleX, scaleY, xMax, yMax, viewportWidth, viewportHeight, onNavigate]
   );
 
   const handleRectPointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.releasePointerCapture(event.pointerId);
+    grabRef.current = null;
+  }, []);
+
+  // A capture can also end without a pointerup, e.g. when the browser cancels the gesture.
+  const handleRectLostCapture = useCallback(() => {
+    grabRef.current = null;
   }, []);
 
   const { columns, rows } = canvasCellParams.selectionMarks;
@@ -137,6 +156,7 @@ const HeatmapMiniMap = ({
         onPointerDown={handleRectPointerDown}
         onPointerMove={handleRectPointerMove}
         onPointerUp={handleRectPointerUp}
+        onLostPointerCapture={handleRectLostCapture}
         style={{
           position: "absolute",
           left: rectLeft,
