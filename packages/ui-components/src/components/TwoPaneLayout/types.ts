@@ -43,4 +43,10 @@ export type TwoPaneLayoutProps = {
    * @default 80
    */
   max?: number;
+  /**
+   * Keep tab labels visible even at `column` breakpoints, where they're
+   * normally hidden to save horizontal space (icon-only tabs).
+   * @default false
+   */
+  showTabLabels?: boolean;
 };

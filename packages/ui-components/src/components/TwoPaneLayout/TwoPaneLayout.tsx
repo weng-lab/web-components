@@ -21,6 +21,7 @@ const TwoPaneLayout = ({
   initialPct = 50,
   min = 20,
   max = 80,
+  showTabLabels = false,
 }: TwoPaneLayoutProps) => {
   const [tab, setTab] = useState<number>(0);
   const [tableOpen, setTableOpen] = useState(true);
@@ -31,7 +32,9 @@ const TwoPaneLayout = ({
   // correctly on the first frame with no orientation flash. `column` → compact.
   const columnOnlyDisplay = perBreakpoint(direction, (d) => (d === "column" ? "inline-flex" : "none"));
   const rowOnlyDisplay = perBreakpoint(direction, (d) => (d === "column" ? "none" : "inline-flex"));
-  const tabLabelDisplay = perBreakpoint(direction, (d) => (d === "column" ? "none" : "inline"));
+  const tabLabelDisplay = showTabLabels
+    ? "inline"
+    : perBreakpoint(direction, (d) => (d === "column" ? "none" : "inline"));
 
   const tabValue = Math.min(tab, plots.length - 1);
   const activePlot = plots[tabValue];

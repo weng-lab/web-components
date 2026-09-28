@@ -87,4 +87,56 @@ function LargeHeatmapTest() {
     );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(<LargeHeatmapTest />);
+// Regression test for a heatmap given very few columns (down to just one) paired with a long
+// x-axis TITLE (the xLabel prop, not a per-column tick label): the title is centered on the plot
+// area (xMax), which can be much narrower than the title itself, and used to run half off the
+// SVG's edge instead of being pulled back into view. Covers both the static and scrollable
+// (cellWidth/cellHeight) renderers, since the fix differs between the two.
+const LONG_X_AXIS_TITLE = 'This Is A Very Long X-Axis Title That Used To Run Off The Edge';
+
+const singleColumnData: ColumnDatum[] = [
+    {
+        columnName: 'Col 1',
+        rows: Array.from({ length: 8 }, (_, rowIndex) => ({
+            rowName: `Row ${rowIndex + 1}`,
+            count: Math.floor(Math.random() * 100),
+        })),
+    },
+];
+
+function LongXAxisTitleTest() {
+    return (
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Box>
+                <Box sx={{ mb: 1, fontWeight: 'bold' }}>static, 1 column</Box>
+                <Box sx={{ border: '1px solid #ccc', display: 'inline-block' }}>
+                    <Heatmap
+                        data={singleColumnData}
+                        colors={['#20619e', '#fff36e', '#c92b16']}
+                        xLabel={LONG_X_AXIS_TITLE}
+                        yLabel="Y-Axis Label"
+                        width={600}
+                        height={280}
+                    />
+                </Box>
+            </Box>
+            <Box>
+                <Box sx={{ mb: 1, fontWeight: 'bold' }}>scrollable, 1 column</Box>
+                <Box sx={{ border: '1px solid #ccc', display: 'inline-block' }}>
+                    <Heatmap
+                        data={singleColumnData}
+                        colors={['#20619e', '#fff36e', '#c92b16']}
+                        xLabel={LONG_X_AXIS_TITLE}
+                        yLabel="Y-Axis Label"
+                        cellWidth={24}
+                        cellHeight={18}
+                        width={600}
+                        height={280}
+                    />
+                </Box>
+            </Box>
+        </Box>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(<LongXAxisTitleTest />);
