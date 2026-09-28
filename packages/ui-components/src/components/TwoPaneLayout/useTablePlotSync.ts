@@ -56,7 +56,11 @@ export function useTablePlotSync<T>({ rows, getRowId }: UseTablePlotSyncOptions<
    */
   const onTableReady = useCallback((readyApiRef: RefObject<GridApi>) => {
     const sync = () => {
-      const newRows = gridFilteredSortedRowEntriesSelector(readyApiRef).map((x) => x.model) as T[];
+      // Leaf rows only: with row grouping on, the grid lists a row of its own to head each group
+      // among the data rows, with an empty model that no plot can draw.
+      const newRows = gridFilteredSortedRowEntriesSelector(readyApiRef)
+        .filter(({ id }) => readyApiRef.current.getRowNode(id)?.type === "leaf")
+        .map((x) => x.model) as T[];
       setSortedFilteredData((prev) => (arraysShallowEqual(prev, newRows) ? prev : newRows));
     };
     sync(); // initial sync
