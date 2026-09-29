@@ -60,7 +60,14 @@ export const ResizablePanes = ({
 
   return (
     <Box ref={containerRef} display="grid" sx={{ gridTemplateColumns, rowGap: gap }}>
-      {showFirst && <Box sx={{ minWidth: 0, height: paneHeight, gridColumn: firstGridColumn }}>{first}</Box>}
+      {/*
+        A collapsed pane stays mounted, hidden. Unmounting it would throw its state away - a table's
+        filters, sort, grouping and scroll - and whatever reads from it (a plot drawn from the table's
+        rows) would stop hearing from it until it came back.
+      */}
+      <Box sx={{ minWidth: 0, height: paneHeight, gridColumn: firstGridColumn, display: showFirst ? undefined : "none" }}>
+        {first}
+      </Box>
 
       {/* Always rendered; CSS-hidden in column (and collapsed) mode. `display:none`
           also drops it from the tab order and a11y tree, so no phantom separator
@@ -98,7 +105,9 @@ export const ResizablePanes = ({
         </Divider>
       </Box>
 
-      {showSecond && <Box sx={{ minWidth: 0, height: paneHeight, gridColumn: secondGridColumn }}>{second}</Box>}
+      <Box sx={{ minWidth: 0, height: paneHeight, gridColumn: secondGridColumn, display: showSecond ? undefined : "none" }}>
+        {second}
+      </Box>
     </Box>
   );
 };
