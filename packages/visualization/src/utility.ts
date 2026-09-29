@@ -166,6 +166,18 @@ export function measureTextWidth(text: string, fontSize: number, fontFamily: str
 
 // Maximum stagger delay (in seconds) regardless of how many bars are being animated
 const MAX_ANIMATION_DELAY = 1;
+// Seconds, for every type but "pop"
+const ANIMATION_DURATION = 0.4;
+const POP_SPRING = { stiffness: 150, damping: 12 };
+
+// Each type's starting pose. All come to rest at opacity 1, scale 1 and no offset.
+const ANIMATION_START: Record<AnimationType, { opacity?: number; scale?: number; x?: number; y?: number }> = {
+    fade: { opacity: 0 },
+    scale: { opacity: 0, scale: 0.8 },
+    slideUp: { opacity: 0, y: 20 },
+    slideRight: { opacity: 0, x: -20 },
+    pop: { scale: 0 },
+};
 
 export const getAnimationProps = (type: AnimationType | undefined, index: number, buffer = .03) => {
     if (!type) return {};
@@ -174,32 +186,76 @@ export const getAnimationProps = (type: AnimationType | undefined, index: number
 
     // Reusable transition object, typed properly
     const common: { transition: Transition } = {
-        transition: { duration: 0.4, delay, ease: easeOut },
+        transition: { duration: ANIMATION_DURATION, delay, ease: easeOut },
     };
 
     switch (type) {
         case "fade":
-            return { initial: { opacity: 0 }, animate: { opacity: 1 }, ...common };
+            return { initial: ANIMATION_START.fade, animate: { opacity: 1 }, ...common };
         case "scale":
-            return { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 }, ...common };
+            return { initial: ANIMATION_START.scale, animate: { opacity: 1, scale: 1 }, ...common };
         case "slideUp":
-            return { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, ...common };
+            return { initial: ANIMATION_START.slideUp, animate: { opacity: 1, y: 0 }, ...common };
         case "slideRight":
-            return { initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, ...common };
+            return { initial: ANIMATION_START.slideRight, animate: { opacity: 1, x: 0 }, ...common };
         case "pop":
             const spring: Transition = {
                 type: "spring" as const,
-                stiffness: 150,
-                damping: 12,
+                ...POP_SPRING,
                 delay,
             };
             return {
-                initial: { scale: 0 },
+                initial: ANIMATION_START.pop,
                 animate: { scale: 1 },
                 transition: spring,
             };
         default:
             return {};
     }
+};
+
+/** A mark partway through its entry animation. */
+export interface AnimationPose {
+    opacity: number;
+    scale: number;
+    /** Offset from its resting place, in px. */
+    x: number;
+    y: number;
+    done: boolean;
+}
+
+const AT_REST: AnimationPose = { opacity: 1, scale: 1, x: 0, y: 0, done: true };
+
+// POP_SPRING in closed form, as framer-motion runs it: an underdamped oscillator (mass 1) released
+// from 0 toward 1, so it overshoots before settling.
+const popUndamped = Math.sqrt(POP_SPRING.stiffness);
+const popDecay = POP_SPRING.damping / 2;
+const popFrequency = Math.sqrt(popUndamped * popUndamped - popDecay * popDecay);
+const popAt = (t: number) =>
+    1 - Math.exp(-popDecay * t) * (Math.cos(popFrequency * t) + (popDecay / popFrequency) * Math.sin(popFrequency * t));
+// Once its swing is under half a percent, too little to see.
+const POP_SETTLE = Math.log(Math.hypot(1, popDecay / popFrequency) / 0.005) / popDecay;
+
+/**
+ * getAnimationProps's animation sampled `elapsed` seconds in, for renderers that paint their own
+ * frames (a canvas).
+ */
+export const getAnimationPose = (type: AnimationType, index: number, elapsed: number, buffer = .03): AnimationPose => {
+    const start = ANIMATION_START[type];
+    if (!start) return AT_REST;
+    const t = elapsed - Math.min(index * buffer, MAX_ANIMATION_DELAY);
+    const isPop = type === "pop";
+    if (t >= (isPop ? POP_SETTLE : ANIMATION_DURATION)) return AT_REST;
+
+    // 0 until the delay is up, then toward 1 - past it while the spring overshoots.
+    const progress = t <= 0 ? 0 : isPop ? popAt(t) : easeOut(t / ANIMATION_DURATION);
+    const towardOne = (from = 1) => from + (1 - from) * progress;
+    return {
+        opacity: towardOne(start.opacity),
+        scale: towardOne(start.scale),
+        x: (start.x ?? 0) * (1 - progress),
+        y: (start.y ?? 0) * (1 - progress),
+        done: false,
+    };
 };
 

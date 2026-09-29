@@ -3,24 +3,6 @@ import { DownloadPlotHandle, AnimationType } from "../../utility";
 import { RectCell, CircleCell } from "@visx/heatmap";
 import { ManualSizeProps } from "../../responsive";
 
-/*
-Example data format:
-[
-  {
-    columnNum: 1,
-    columnName: celltype_1
-    rows: [
-      {
-        rowNum: 1,
-	      rowName: celltype_a
-        count: 20,
-        metadata: { ... }
-      },
-    ],
-  },
-];
-*/
-
 export type RowDatum<R extends object = Record<string, unknown>> = {
     rowName: string;
     count: number | null;
@@ -72,7 +54,12 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   tooltipBody?: (bin:  RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>) => ReactElement;
   gap?: number;
   isRect?: boolean;
+  /**
+   * Space around the grid, in px: left for the y-axis title (40px) and row labels, bottom for the
+   * column labels and x-axis title (70px), right for the legend. Defaults to fitting them.
+   */
   margin?: { top: number; right: number; bottom: number; left: number };
+  /** Animates the cells in on mount, column by column from the left. Scrolling cuts it short. */
   animationType?: AnimationType;
   showLegend?: boolean;
   /**
@@ -100,14 +87,17 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
    */
   selectedCells?: HeatmapCellId[];
   /**
-   * Fixed pixel width/height for each cell. Provide both to render cells at this exact size
-   * instead of stretching them to fill the container. Once the data no longer fits in the
-   * available space, the grid becomes scrollable in both directions with the row and column
-   * axis labels pinned in place (frozen panes), so large datasets stay legible instead of
-   * cells shrinking and overlapping.
+   * Fixed pixel width for each cell; without it, the columns share the width available. Fixed-size
+   * cells that don't fit scroll under pinned axis labels rather than shrinking.
    */
   cellWidth?: number;
+  /** Fixed pixel height for each cell, as cellWidth is for width. */
   cellHeight?: number;
+  /** Scrolls the grid sideways to bring newly selected cells into view. */
   scrollToSelection?: boolean;
+  /**
+   * Shows an overview of the whole grid above it: drag its rectangle to scroll, or click it to
+   * expand it. Defaults to false.
+   */
   showMiniMap?: boolean;
 };

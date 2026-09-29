@@ -1,9 +1,13 @@
-import type { ColumnDatum, HeatmapCellId } from "./types";
-import type { AnyBin } from "./HeatmapCells";
+import type { RectCell, CircleCell } from "@visx/heatmap";
+import type { ColumnDatum, HeatmapCellId, RowDatum } from "./types";
+import { getAnimationPose, type AnimationPose, type AnimationType } from "../../utility";
 import { DIMMED_OPACITY, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
 import { selectedCellsIn, selectionFrame, type SelectionMarks } from "./heatmapSelection";
 
-/** What the canvas renderers and hit-testing need to place and color cells as the SVG renderer does. */
+/** A cell as onClick and tooltipBody receive it - see buildBin. */
+export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
+
+/** What the canvas renderers and hit-testing need to place and color cells. */
 export interface CanvasCellParams {
   data: ColumnDatum[];
   numRows: number;
@@ -32,10 +36,18 @@ export interface CanvasDrawRange {
   rowEnd: number;
 }
 
+/** An entry animation, `elapsed` seconds in. */
+export interface CanvasEntryFrame {
+  type: AnimationType;
+  elapsed: number;
+  /** The column the stagger counts from: the first in view when the animation began. */
+  firstColumn: number;
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-// Mirrors @visx/heatmap's HeatmapRect/HeatmapCircle geometry, so canvas cells land on the pixels SVG
-// cells would. A circle's x is centered in its cell, as HeatmapCell.tsx recomputes it.
+// visx's HeatmapRect/HeatmapCircle geometry, which buildBin passes on to onClick and tooltipBody,
+// except that circles are centered in their cells.
 type CellGeometry =
   | { isRect: true; x: number; y: number; width: number; height: number }
   | { isRect: false; cx: number; cy: number; r: number; radius: number };
@@ -47,6 +59,22 @@ function getCellGeometry(params: CanvasCellParams, col: number, row: number): Ce
   }
   const radius = Math.min(binWidth, binHeight) / 2;
   return { isRect: false, cx: col * binWidth + binWidth / 2, cy: cellYScale(row) + gap + radius, r: radius - gap, radius };
+}
+
+/** A cell's geometry moved, and scaled about its center, by an animation pose. */
+function poseCellGeometry(geometry: CellGeometry, pose: AnimationPose): CellGeometry {
+  if (geometry.isRect) {
+    const width = geometry.width * pose.scale;
+    const height = geometry.height * pose.scale;
+    return {
+      isRect: true,
+      x: geometry.x + (geometry.width - width) / 2 + pose.x,
+      y: geometry.y + (geometry.height - height) / 2 + pose.y,
+      width,
+      height,
+    };
+  }
+  return { ...geometry, cx: geometry.cx + pose.x, cy: geometry.cy + pose.y, r: geometry.r * pose.scale };
 }
 
 /**
@@ -70,14 +98,20 @@ export function getVisibleRange(
   };
 }
 
-/** Paints the cells in `range` onto `ctx`, whose origin is already at content-space (0,0), and the selection's frame over them. */
+/**
+ * Paints the cells in `range` onto `ctx`, whose origin is already at content-space (0,0), and the
+ * selection's frame over them. With `entry`, the cells (not the frame) are drawn mid-animation.
+ * Returns whether any cell drawn is still animating.
+ */
 export function drawHeatmapCells(
   ctx: CanvasRenderingContext2D,
   params: CanvasCellParams,
   range: CanvasDrawRange,
-  hoveredCell: HeatmapCellId | null
-) {
+  hoveredCell: HeatmapCellId | null,
+  entry: CanvasEntryFrame | null = null
+): boolean {
   const { data, colorScale, selectedKeys, highlightRange } = params;
+  let isEntering = false;
   // Setting fillStyle re-parses the color even when unchanged, so repeats are skipped: an export
   // runs this for every cell. A path is built only for the hovered cell, to stroke its outline.
   let lastFill: string | null = null;
@@ -85,6 +119,13 @@ export function drawHeatmapCells(
   for (let col = range.colStart; col <= range.colEnd; col++) {
     const columnDatum = data[col];
     if (!columnDatum) continue;
+    // Staggered by column: a column's rows move together.
+    const pose = entry ? getAnimationPose(entry.type, Math.max(0, col - entry.firstColumn), entry.elapsed) : null;
+    const isPosed = pose !== null && !pose.done;
+    if (isPosed) {
+      isEntering = true;
+      if (pose.opacity <= 0 || pose.scale <= 0) continue;
+    }
     for (let row = range.rowStart; row <= range.rowEnd; row++) {
       const rowDatum = columnDatum.rows[row];
       if (!rowDatum) continue;
@@ -94,10 +135,11 @@ export function drawHeatmapCells(
       const { fill, fillOpacity } = resolveCellAppearance(count, color, isDimmed);
       if (fillOpacity <= 0) continue;
 
-      const geometry = getCellGeometry(params, col, row);
-      if (fillOpacity !== lastAlpha) {
-        ctx.globalAlpha = fillOpacity;
-        lastAlpha = fillOpacity;
+      const geometry = isPosed ? poseCellGeometry(getCellGeometry(params, col, row), pose) : getCellGeometry(params, col, row);
+      const alpha = isPosed ? fillOpacity * pose.opacity : fillOpacity;
+      if (alpha !== lastAlpha) {
+        ctx.globalAlpha = alpha;
+        lastAlpha = alpha;
       }
       if (fill !== lastFill) {
         ctx.fillStyle = fill;
@@ -120,8 +162,9 @@ export function drawHeatmapCells(
       }
 
       if (isHovered) {
-        ctx.globalAlpha = 1;
-        lastAlpha = 1;
+        // Full strength even on a dimmed cell, but fading in with its cell.
+        lastAlpha = isPosed ? pose.opacity : 1;
+        ctx.globalAlpha = lastAlpha;
         ctx.lineWidth = 2;
         ctx.strokeStyle = fill;
         ctx.stroke();
@@ -144,6 +187,7 @@ export function drawHeatmapCells(
       ctx.fillRect(x, y, width, height);
     }
   }
+  return isEntering;
 }
 
 // Colors sampled from colorScale for the overview, which looks them up rather than calling it per cell.
@@ -199,8 +243,7 @@ function flatCounts(data: ColumnDatum[], numRows: number): Float64Array {
  *
  * Each pixel averages the cells under it. While highlightRange is set, a pixel holding any cell in
  * the range shows those cells alone at full strength, so a lone outlier isn't averaged away. Cells
- * are drawn as solid squares, without gaps, circles or the selection frame - the minimap marks the
- * selection along its edges instead.
+ * are solid squares here; the minimap marks the selection along its edges instead.
  */
 function renderHeatmapOverview(params: CanvasCellParams, width: number, height: number): ImageData | null {
   const { data, numRows, highlightRange, minValue, maxValue } = params;

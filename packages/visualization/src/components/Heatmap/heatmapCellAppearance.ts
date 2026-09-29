@@ -20,8 +20,8 @@ export const isOutsideRange = (count: number | null | undefined, range: [number,
   !!range && count != null && (count < range[0] || count > range[1]);
 
 /**
- * A cell's fill, shared by the SVG and canvas renderers so they can't drift apart. Selection isn't
- * part of it: selected cells are framed instead (see heatmapSelection.ts).
+ * A cell's fill. Selection isn't part of it: selected cells are framed instead (see
+ * heatmapSelection.ts).
  */
 export function resolveCellAppearance(
   count: number | null | undefined,

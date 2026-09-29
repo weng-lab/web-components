@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
-import { drawHeatmapOverview, type CanvasCellParams } from "../HeatmapCanvasCells";
-import { SELECTION_COLOR } from "../heatmapSelection";
+import { useStableCallback } from "../../hooks";
+import { drawHeatmapOverview, type CanvasCellParams } from "./HeatmapCanvasCells";
+import { SELECTION_COLOR } from "./heatmapSelection";
 
 export interface HeatmapMiniMapProps {
   canvasCellParams: CanvasCellParams;
@@ -48,9 +49,8 @@ const HeatmapMiniMap = ({
   const scaleX = xMax > 0 ? width / xMax : 0;
   const scaleY = yMax > 0 ? height / yMax : 0;
 
-  // A ref, so an inline onReady doesn't re-run the draw on every parent render.
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
+  // Stable, so an inline onReady doesn't re-run the draw on every parent render.
+  const handleReady = useStableCallback(onReady);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -60,10 +60,10 @@ const HeatmapMiniMap = ({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       drawHeatmapOverview(ctx, canvasCellParams);
-      onReadyRef.current?.();
+      handleReady();
     });
     return () => cancelAnimationFrame(raf);
-  }, [canvasCellParams, xMax, yMax, scaleX, scaleY, paused]);
+  }, [canvasCellParams, width, height, scaleX, scaleY, paused, handleReady]);
 
   const navigateCentered = useCallback(
     (contentX: number, contentY: number) => {
@@ -89,10 +89,9 @@ const HeatmapMiniMap = ({
   );
 
   /**
-   * Where the window was grabbed: the pointer, and the scroll position then. Each move places the
-   * window by the pointer's distance from here, so it stays under the pointer. Adding each move's
-   * movementX to scrollLeft instead drifted: scrollLeft trails the grid's scroll by a frame, and
-   * each step's rounding was kept, so the window ran ahead or fell behind further the longer the drag.
+   * The pointer and scroll position when the rectangle was grabbed. Each move places it by the
+   * pointer's distance from there, so it stays under the pointer; adding up movementX instead
+   * drifted, as scrollLeft lags a frame and each step's rounding built up.
    */
   const grabRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
 

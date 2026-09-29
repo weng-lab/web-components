@@ -1,20 +1,18 @@
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { AxisLeft, AxisBottom } from "@visx/axis";
-import type { ColumnDatum } from "../types";
-import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS, downloadBlob } from "../../../utility";
-import type { HeatmapLayout } from "../heatmapLayout";
-import { LEGEND_GAP, xAxisTitleCenter } from "../heatmapLayout";
-import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, markTickLabels, yAxisTickLabelProps } from "../heatmapAxisProps";
-import { drawHeatmapCells } from "../HeatmapCanvasCells";
-import HeatmapSelectionPointers from "../HeatmapSelectionPointers";
+import { MAX_CANVAS_EXPORT_DIMENSION, MAX_CANVAS_EXPORT_PIXELS, downloadBlob } from "../../utility";
+import type { HeatmapLayout } from "./heatmapLayout";
+import { LEGEND_GAP, xAxisTitleCenter } from "./heatmapLayout";
+import { AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY, getXAxisTickLabelProps, markTickLabels, yAxisTickLabelProps } from "./heatmapAxisProps";
+import { drawHeatmapCells } from "./HeatmapCanvasCells";
+import HeatmapSelectionPointers from "./HeatmapSelectionPointers";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const XLINK_NS = "http://www.w3.org/1999/xlink";
 
-interface ScrollableExportOptions {
+interface HeatmapExportOptions {
   layout: HeatmapLayout;
-  data: ColumnDatum[];
   xLabel?: string;
   yLabel?: string;
   showLegend: boolean;
@@ -57,7 +55,7 @@ function computeExportScale(width: number, height: number): number {
 
 // The whole cell grid painted onto a canvas, as the live grid paints it. As SVG shapes, a large grid
 // would serialize into hundreds of MB and hang the tab.
-function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasElement | null {
+function rasterizeCells(o: HeatmapExportOptions, scale: number): HTMLCanvasElement | null {
   const { xMax, yMax, canvasCellParams, numRows } = o.layout;
   if (xMax <= 0 || yMax <= 0) return null;
 
@@ -68,14 +66,14 @@ function rasterizeCells(o: ScrollableExportOptions, scale: number): HTMLCanvasEl
   if (!ctx) return null;
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  const range = { colStart: 0, colEnd: Math.max(0, o.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
+  const range = { colStart: 0, colEnd: Math.max(0, canvasCellParams.data.length - 1), rowStart: 0, rowEnd: Math.max(0, numRows - 1) };
   // A highlight is a passing hover, not part of the figure; the selection is kept.
   drawHeatmapCells(ctx, { ...canvasCellParams, highlightRange: null }, range, null);
   return canvas;
 }
 
 // For the .svg download only; the PNG draws the canvas directly.
-function renderCellsToDataURL(o: ScrollableExportOptions): string | null {
+function renderCellsToDataURL(o: HeatmapExportOptions): string | null {
   const { xMax, yMax } = o.layout;
   if (xMax <= 0 || yMax <= 0) return null;
   const canvas = rasterizeCells(o, computeExportScale(xMax, yMax));
@@ -97,12 +95,11 @@ const appendCellsImage = (exportSvg: SVGSVGElement, dataUrl: string, x: number, 
 
 // A standalone <svg> of the whole plot. The on-screen axis panes only hold the visible ticks, so the
 // axes are rendered afresh, in full, in a detached tree; the cells come in as an image.
-export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCells = true }: { includeCells?: boolean } = {}): SVGSVGElement | null {
-  const { layout } = o;
+function buildHeatmapExportSVG(o: HeatmapExportOptions, { includeCells = true }: { includeCells?: boolean } = {}): SVGSVGElement | null {
   const {
-    marg, xMax, yMax, xScale, yScale, numRows, xTickValues, yTickValues, yTickLabelWidth, xTickLabelHeight,
+    marg, xMax, yMax, xScale, yScale, xTickValues, yTickValues, yTickLabelWidth, xTickLabelHeight,
     yTitleWidth, xTitleHeight, selectionMarks,
-  } = layout;
+  } = o.layout;
 
   const exportSvg = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
   exportSvg.setAttribute("width", String(marg.left + xMax + marg.right));
@@ -124,7 +121,6 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
           <g transform={`translate(${yTickLabelWidth},0)`}>
             <AxisLeft
               scale={yScale}
-              numTicks={numRows}
               tickValues={yTickValues}
               tickFormat={o.yAxisTickFormat}
               tickLabelProps={markTickLabels(yAxisTickLabelProps, selectionMarks.rows)}
@@ -136,7 +132,6 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
           <AxisBottom
             top={0}
             scale={xScale}
-            numTicks={o.data.length}
             tickFormat={o.xAxisTickFormat}
             tickValues={xTickValues}
             tickLabelProps={markTickLabels(o.xAxisTickLabelProps, selectionMarks.columns)}
@@ -154,7 +149,7 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
     appendClone(exportSvg, o.legendSvg, marg.left + xMax + LEGEND_GAP, marg.top);
   }
 
-  // On screen the titles sit in their own fixed panes, so there is nothing to clone: they're drawn here.
+  // The titles have no on-screen SVG to clone, so they're drawn here.
   if (o.yLabel) appendTitle(exportSvg, o.yLabel, yTitleWidth / 2, marg.top + yMax / 2, true);
   if (o.xLabel) {
     const center = xAxisTitleCenter(o.xLabel, marg.left + xMax / 2, marg.left + xMax + marg.right);
@@ -167,7 +162,7 @@ export function buildScrollableExportSVG(o: ScrollableExportOptions, { includeCe
 // The cells are painted straight onto the output canvas, with only the axes, legend and titles
 // going through SVG. Embedding the cells in the SVG as a data URL and decoding it back doubled the
 // memory, enough to crash the tab on a large export.
-export function downloadScrollableHeatmapPNG(o: ScrollableExportOptions, fileName: string): void {
+export function downloadHeatmapPNG(o: HeatmapExportOptions, fileName: string): void {
   const { marg, xMax, yMax } = o.layout;
   if (xMax <= 0 || yMax <= 0) return;
 
@@ -188,7 +183,7 @@ export function downloadScrollableHeatmapPNG(o: ScrollableExportOptions, fileNam
     if (blob) downloadBlob(blob, fileName);
   };
 
-  const axesSvg = buildScrollableExportSVG(o, { includeCells: false });
+  const axesSvg = buildHeatmapExportSVG(o, { includeCells: false });
   if (!axesSvg) {
     canvas.toBlob(finish, "image/png", 1);
     return;
@@ -209,8 +204,8 @@ export function downloadScrollableHeatmapPNG(o: ScrollableExportOptions, fileNam
 
 // Keeps the export <svg> attached off-screen until `run` is done with it. The offset goes on a
 // wrapper: set on the <svg> itself, it would be serialized into the file.
-export function withOffscreenExportSVG(o: ScrollableExportOptions, run: (svg: SVGSVGElement, onDone: () => void) => void): void {
-  const svg = buildScrollableExportSVG(o);
+export function withOffscreenExportSVG(o: HeatmapExportOptions, run: (svg: SVGSVGElement, onDone: () => void) => void): void {
+  const svg = buildHeatmapExportSVG(o);
   if (!svg) return;
   const wrapper = document.createElement("div");
   wrapper.style.position = "absolute";

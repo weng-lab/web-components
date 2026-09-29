@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import type { HeatmapLegendFrame } from "../types";
+import type { HeatmapLegendFrame } from "./types";
 import HeatmapMiniMap, { type HeatmapMiniMapProps } from "./HeatmapMiniMap";
 
 // Nearly the whole screen, with enough backdrop showing that it reads as a popup.

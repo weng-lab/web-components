@@ -3,7 +3,7 @@ import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
 import { Box, Button, Stack } from '@mui/material';
 import { RowDatum, ColumnDatum, HeatmapCellId, HeatmapLegendFrame } from './types';
-import type { AnyBin } from './HeatmapCells';
+import type { AnyBin } from './HeatmapCanvasCells';
 
 const meta = {
     title: 'visualization/Heatmap',
@@ -76,6 +76,21 @@ export const Default: Story = {
     },
 };
 
+// Replay remounts the plot, which plays its entry animation again.
+const renderWithReplay: Story['render'] = (args) => {
+    const [replays, setReplays] = useState(0);
+    return (
+        <Stack gap={1} sx={{ height: '100%' }}>
+            <Box>
+                <Button variant="outlined" size="small" onClick={() => setReplays((n) => n + 1)}>Replay</Button>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0 }}>
+                <Heatmap key={replays} {...args} />
+            </Box>
+        </Stack>
+    );
+};
+
 export const WithAnimation: Story = {
     args: {
         data: heatmapData,
@@ -84,6 +99,7 @@ export const WithAnimation: Story = {
         colors: ['#20619e', '#fff36e', '#c92b16'],
         animationType: 'scale',
     },
+    render: renderWithReplay,
 };
 
 export const NoLegend: Story = {
@@ -187,6 +203,27 @@ export const ScrollableLargeDataset: Story = {
         cellHeight: 18,
         xLabelOrientation: 'leftDiagonal',
     },
+};
+
+// The entry animation on a grid that scrolls. Worth trying: hovering partway through, scrolling
+// (which cuts it short), and smaller cells for a bigger grid.
+export const ScrollableWithAnimation: Story = {
+    args: {
+        data: largeHeatmapData,
+        xLabel: 'X-Axis Label',
+        yLabel: 'Y-Axis Label',
+        colors: ['#20619e', '#fff36e', '#c92b16'],
+        cellWidth: 24,
+        cellHeight: 18,
+        animationType: 'scale',
+        tooltipBody: (bin: AnyBin) => (
+            <Box maxWidth={300}>
+                <div><strong>Row:</strong> {bin.bin.rowName}</div>
+                <div><strong>Column:</strong> {bin.datum.columnName}</div>
+                <div><strong>Value:</strong> {bin?.count}</div>
+            </Box>),
+    },
+    render: renderWithReplay,
 };
 
 // Mimics selecting a column/row in an external table: clicking a button sets selectedCells to an
@@ -356,7 +393,7 @@ export const LegendSweepHighlight: Story = {
     },
 };
 
-// The same legend on the static (unscrolled) layout, whose cells are SVG rather than canvas.
+// The same legend on a grid sized to fit its container, which doesn't scroll.
 export const LegendSweepHighlightStatic: Story = {
     args: {
         data: zScoreData.slice(0, 24).map((column) => ({ ...column, rows: column.rows.slice(0, 16) })),
