@@ -183,8 +183,14 @@ const Table = (props: TableProps) => {
     ...restProps
   } = props;
 
-  //Assign default ID if no ID is provided in the row data
-  const rowsWithIds = useMemo(() => rows.map((row, index) => ({ ...row, id: row?.id || index })), [rows]);
+  // Rows without an id are given their index, so a simple table needs no getRowId. With a getRowId the
+  // grid takes the rows as they are: copying them here would hand the grid (and anything reading rows
+  // back from it, like useTablePlotSync) copies rather than the caller's own objects.
+  const getRowId = restProps.getRowId;
+  const rowsWithIds = useMemo(
+    () => (getRowId ? rows : rows.map((row, index) => ({ ...row, id: row?.id || index }))),
+    [rows, getRowId]
+  );
 
   if (emptyTableFallback && rowsWithIds.length === 0 && !restProps.loading) {
     return typeof emptyTableFallback === "string" ? (

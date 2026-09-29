@@ -14,7 +14,7 @@ export interface TableProps extends Omit<DataGridPremiumProps, 'label'> {
    *
    * ```undefined``` will be given default value of ```[]```
    *
-   * Note: Rows without an 'id' property will be given id matching their index
+   * Note: Rows without an 'id' property will be given id matching their index, unless a `getRowId` is given
    */
   rows: DataGridPremiumProps["rows"];
   /**
@@ -41,7 +41,8 @@ export interface TableProps extends Omit<DataGridPremiumProps, 'label'> {
    */
   autosizeOnMount?: boolean;
   /**
-   * @note Table assigns a default internal ID to each row if no ID is provided in the row data.
+   * @note Without one, Table gives each row without an `id` its index as one, working on copies of the
+   * rows. With one, the rows go to the grid as they are, so rows read back from it are the same objects.
    */
   getRowId?: DataGridPremiumProps["getRowId"];
   /**
