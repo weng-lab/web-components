@@ -90,8 +90,8 @@ function LargeHeatmapTest() {
 // Regression test for a heatmap given very few columns (down to just one) paired with a long
 // x-axis TITLE (the xLabel prop, not a per-column tick label): the title is centered on the plot
 // area (xMax), which can be much narrower than the title itself, and used to run half off the
-// SVG's edge instead of being pulled back into view. Covers both the static and scrollable
-// (cellWidth/cellHeight) renderers, since the fix differs between the two.
+// plot's edge instead of being pulled back into view. Covers cells fit to the container and fixed
+// cellWidth/cellHeight, where the grid is much narrower than the container.
 const LONG_X_AXIS_TITLE = 'This Is A Very Long X-Axis Title That Used To Run Off The Edge';
 
 const singleColumnData: ColumnDatum[] = [
@@ -108,7 +108,7 @@ function LongXAxisTitleTest() {
     return (
         <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Box>
-                <Box sx={{ mb: 1, fontWeight: 'bold' }}>static, 1 column</Box>
+                <Box sx={{ mb: 1, fontWeight: 'bold' }}>fit to container, 1 column</Box>
                 <Box sx={{ border: '1px solid #ccc', display: 'inline-block' }}>
                     <Heatmap
                         data={singleColumnData}
@@ -121,7 +121,7 @@ function LongXAxisTitleTest() {
                 </Box>
             </Box>
             <Box>
-                <Box sx={{ mb: 1, fontWeight: 'bold' }}>scrollable, 1 column</Box>
+                <Box sx={{ mb: 1, fontWeight: 'bold' }}>fixed cell size, 1 column</Box>
                 <Box sx={{ border: '1px solid #ccc', display: 'inline-block' }}>
                     <Heatmap
                         data={singleColumnData}

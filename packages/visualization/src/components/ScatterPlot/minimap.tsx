@@ -34,35 +34,36 @@ const MiniMap = <T,>({
      * paints updates a zoom shared by every synced plot on each move, and React eventually
      * warns that the update depth was exceeded.
      *
-     * Movement is accumulated rather than replaced: these are deltas, so dropping the moves in
-     * between would lose the distance they covered. A pointer moving faster than the frame rate
-     * still pans exactly as far as it travelled.
+     * Each frame places the window by the pointer's distance from where it was grabbed, so it
+     * stays under the pointer, and only the latest position matters. Adding up each move's
+     * movementX instead drifted: its units follow the screen rather than the page, so under
+     * browser zoom the window ran ahead of or behind the pointer, and each step was added to a
+     * pan that could still be a render behind.
      */
     const frameRef = useRef<number | null>(null);
-    const pendingRef = useRef<{ dx: number; dy: number } | null>(null);
-    // Touch events carry absolute positions, so a drag delta is the step from the previous one.
-    const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+    const grabRef = useRef<{ x: number; y: number; translateX: number; translateY: number } | null>(null);
+    const pendingRef = useRef<{ x: number; y: number } | null>(null);
 
     const flushPan = useStableCallback(() => {
         const pending = pendingRef.current;
+        const grab = grabRef.current;
         pendingRef.current = null;
-        if (!pending) return;
+        if (!pending || !grab) return;
 
         zoom.setTransformMatrix({
             ...zoom.transformMatrix,
-            translateX: zoom.transformMatrix.translateX - pending.dx / MINIMAP_SCALE_FACTOR * zoom.transformMatrix.scaleX,
-            translateY: zoom.transformMatrix.translateY - pending.dy / MINIMAP_SCALE_FACTOR * zoom.transformMatrix.scaleY,
+            translateX: grab.translateX - (pending.x - grab.x) / MINIMAP_SCALE_FACTOR * zoom.transformMatrix.scaleX,
+            translateY: grab.translateY - (pending.y - grab.y) / MINIMAP_SCALE_FACTOR * zoom.transformMatrix.scaleY,
         });
     });
 
-    const accumulate = (dx: number, dy: number) => {
-        const pending = pendingRef.current ?? { dx: 0, dy: 0 };
-        pending.dx += dx;
-        pending.dy += dy;
-        pendingRef.current = pending;
+    const startPan = (x: number, y: number) => {
+        grabRef.current = { x, y, translateX: zoom.transformMatrix.translateX, translateY: zoom.transformMatrix.translateY };
     };
 
-    const scheduleFrame = () => {
+    const movePan = (x: number, y: number) => {
+        if (!grabRef.current) return;
+        pendingRef.current = { x, y };
         if (frameRef.current !== null) return;
         frameRef.current = requestAnimationFrame(() => {
             frameRef.current = null;
@@ -78,7 +79,7 @@ const MiniMap = <T,>({
             frameRef.current = null;
         }
         flushPan();
-        lastTouchRef.current = null;
+        grabRef.current = null;
         zoom.dragEnd();
     };
 
@@ -148,20 +149,26 @@ const MiniMap = <T,>({
                         transform={zoom.toStringInvert()}
                         //drag functionality for window, must invert zoom and take the scale into account
                         style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
-                        onMouseDown={zoom.dragStart}
-                        onMouseUp={endPan}
-                        onMouseMove={(event) => {
-                            if (zoom.isDragging) {
-                                accumulate(event.movementX, event.movementY);
-                                scheduleFrame();
-                            }
+                        // A mouse or pen drags through pointer events, captured so a quick move
+                        // off the window doesn't drop it. Touch keeps its own handlers below.
+                        onPointerDown={(event) => {
+                            if (event.pointerType === "touch") return;
+                            event.currentTarget.setPointerCapture(event.pointerId);
+                            startPan(event.clientX, event.clientY);
+                            zoom.dragStart(event);
                         }}
-                        onMouseLeave={endPan}
+                        onPointerMove={(event) => {
+                            if (event.pointerType !== "touch") movePan(event.clientX, event.clientY);
+                        }}
+                        onPointerUp={(event) => {
+                            if (event.pointerType !== "touch") endPan();
+                        }}
+                        onLostPointerCapture={(event) => {
+                            if (event.pointerType !== "touch" && grabRef.current) endPan();
+                        }}
                         onTouchStart={(event) => {
                             const touch = event.touches[0];
-                            // Seed the previous position so the first move measures a step from
-                            // where the finger landed, not from the origin.
-                            if (touch) lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+                            if (touch) startPan(touch.clientX, touch.clientY);
                             zoom.dragStart(event);
                         }}
                         onTouchEnd={endPan}
@@ -169,13 +176,9 @@ const MiniMap = <T,>({
                         onTouchMove={(event) => {
                             // Only a single finger pans; a second one is a pinch, which belongs
                             // to the plot's own zoom rather than to this window.
-                            if (!zoom.isDragging || event.touches.length !== 1) return;
+                            if (event.touches.length !== 1) return;
                             const touch = event.touches[0];
-                            const last = lastTouchRef.current;
-                            lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
-                            if (!last) return;
-                            accumulate(touch.clientX - last.x, touch.clientY - last.y);
-                            scheduleFrame();
+                            movePan(touch.clientX, touch.clientY);
                         }}
                     />
                     {crosshairY !== null && crosshairY >= 0 && crosshairY <= frameHeight && (

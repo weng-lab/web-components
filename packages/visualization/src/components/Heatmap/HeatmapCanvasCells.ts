@@ -1,25 +1,32 @@
-import type { ColumnDatum, HeatmapCellId } from "./types";
-import type { AnyBin } from "./HeatmapCells";
-import { cellKey, resolveCellAppearance } from "./heatmapCellAppearance";
+import type { RectCell, CircleCell } from "@visx/heatmap";
+import type { ColumnDatum, HeatmapCellId, RowDatum } from "./types";
+import { getAnimationPose, type AnimationPose, type AnimationType } from "../../utility";
+import { DIMMED_OPACITY, isOutsideRange, resolveCellAppearance } from "./heatmapCellAppearance";
+import { selectedCellsIn, selectionFrame, type SelectionMarks } from "./heatmapSelection";
 
-/**
- * Everything the canvas draw loop and hit-testing need to place a cell exactly where the SVG
- * path (HeatmapCells.tsx, via @visx/heatmap's HeatmapRect/HeatmapCircle) would. xScale/cellYScale
- * are the same functions Heatmap.tsx already builds and passes to HeatmapCells.
- */
+/** A cell as onClick and tooltipBody receive it - see buildBin. */
+export type AnyBin = RectCell<ColumnDatum, RowDatum> | CircleCell<ColumnDatum, RowDatum>;
+
+/** What the canvas renderers and hit-testing need to place and color cells. */
 export interface CanvasCellParams {
   data: ColumnDatum[];
   numRows: number;
   xScale: (column: number) => number;
   cellYScale: (row: number) => number;
   colorScale: (count: number) => string | undefined;
+  /** The counts colorScale spans, which the overview samples it across. */
+  minValue: number;
+  maxValue: number;
   gap: number;
   isRect: boolean;
   binWidth: number;
   binHeight: number;
   yMax: number;
+  /** The selected cells' keys, which the grid frames; null where nothing is selected. */
   selectedKeys: Set<string> | null;
-  deselectedColor: string;
+  /** The columns and rows holding the selection, which the minimap marks along its edges. */
+  selectionMarks: SelectionMarks;
+  highlightRange: [number, number] | null;
 }
 
 export interface CanvasDrawRange {
@@ -29,14 +36,18 @@ export interface CanvasDrawRange {
   rowEnd: number;
 }
 
+/** An entry animation, `elapsed` seconds in. */
+export interface CanvasEntryFrame {
+  type: AnimationType;
+  elapsed: number;
+  /** The column the stagger counts from: the first in view when the animation began. */
+  firstColumn: number;
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-// Mirrors @visx/heatmap's HeatmapRect/HeatmapCircle bin geometry exactly (see their source:
-// node_modules/@visx/heatmap/lib/heatmaps/{HeatmapRect,HeatmapCircle}.js) so canvas-drawn cells
-// land on the same pixels the SVG path (export, non-scrollable mode) would draw them at. The
-// circle center's x mirrors HeatmapCell.tsx's own recomputation (col*binWidth + binWidth/2)
-// rather than @visx/heatmap's raw cx, for the same reason that file does it: keeps circles
-// centered in their cell regardless of the configured radius.
+// visx's HeatmapRect/HeatmapCircle geometry, which buildBin passes on to onClick and tooltipBody,
+// except that circles are centered in their cells.
 type CellGeometry =
   | { isRect: true; x: number; y: number; width: number; height: number }
   | { isRect: false; cx: number; cy: number; r: number; radius: number };
@@ -50,13 +61,25 @@ function getCellGeometry(params: CanvasCellParams, col: number, row: number): Ce
   return { isRect: false, cx: col * binWidth + binWidth / 2, cy: cellYScale(row) + gap + radius, r: radius - gap, radius };
 }
 
+/** A cell's geometry moved, and scaled about its center, by an animation pose. */
+function poseCellGeometry(geometry: CellGeometry, pose: AnimationPose): CellGeometry {
+  if (geometry.isRect) {
+    const width = geometry.width * pose.scale;
+    const height = geometry.height * pose.scale;
+    return {
+      isRect: true,
+      x: geometry.x + (geometry.width - width) / 2 + pose.x,
+      y: geometry.y + (geometry.height - height) / 2 + pose.y,
+      width,
+      height,
+    };
+  }
+  return { ...geometry, cx: geometry.cx + pose.x, cy: geometry.cy + pose.y, r: geometry.r * pose.scale };
+}
+
 /**
- * Column/row index bounds (inclusive) that intersect the given scroll viewport, plus a small
- * overscan so a cell is already drawn just before it scrolls into view rather than popping in a
- * frame late. Row bounds are derived from cellYScale's own convention (row 0 at the bottom of
- * the grid, row numRows-1 at the top): a cell at row r occupies content-y band
- * [yMax-(r+1)*binHeight, yMax-r*binHeight), so the row under a given y is
- * floor((yMax-y)/binHeight).
+ * The columns and rows (inclusive) within the scrolled viewport, plus `overscan` either side. Row 0
+ * is at the bottom, so the row under content y is floor((yMax - y) / binHeight).
  */
 export function getVisibleRange(
   params: CanvasCellParams,
@@ -75,38 +98,48 @@ export function getVisibleRange(
   };
 }
 
-/** Paints the cells in `range` onto `ctx`, whose origin is already at content-space (0,0). */
+/**
+ * Paints the cells in `range` onto `ctx`, whose origin is already at content-space (0,0), and the
+ * selection's frame over them. With `entry`, the cells (not the frame) are drawn mid-animation.
+ * Returns whether any cell drawn is still animating.
+ */
 export function drawHeatmapCells(
   ctx: CanvasRenderingContext2D,
   params: CanvasCellParams,
   range: CanvasDrawRange,
-  hoveredCell: HeatmapCellId | null
-) {
-  const { data, colorScale, selectedKeys, deselectedColor } = params;
-  // fillStyle/globalAlpha assignment forces the browser to re-parse the CSS color string even
-  // when it's unchanged from the previous cell - skipping redundant writes matters at this scale
-  // (this loop runs per-cell, up to hundreds of thousands of times for the minimap's full-dataset
-  // draw). Rects also use fillRect directly (no beginPath/rect/fill trio) since it's a faster
-  // native path for solid fills; a path is only built for a cell when it's the hovered one, so
-  // its outline can still be stroked.
+  hoveredCell: HeatmapCellId | null,
+  entry: CanvasEntryFrame | null = null
+): boolean {
+  const { data, colorScale, selectedKeys, highlightRange } = params;
+  let isEntering = false;
+  // Setting fillStyle re-parses the color even when unchanged, so repeats are skipped: an export
+  // runs this for every cell. A path is built only for the hovered cell, to stroke its outline.
   let lastFill: string | null = null;
   let lastAlpha = -1;
   for (let col = range.colStart; col <= range.colEnd; col++) {
     const columnDatum = data[col];
     if (!columnDatum) continue;
+    // Staggered by column: a column's rows move together.
+    const pose = entry ? getAnimationPose(entry.type, Math.max(0, col - entry.firstColumn), entry.elapsed) : null;
+    const isPosed = pose !== null && !pose.done;
+    if (isPosed) {
+      isEntering = true;
+      if (pose.opacity <= 0 || pose.scale <= 0) continue;
+    }
     for (let row = range.rowStart; row <= range.rowEnd; row++) {
       const rowDatum = columnDatum.rows[row];
       if (!rowDatum) continue;
       const count = rowDatum.count;
       const color = count == null ? undefined : colorScale(count);
-      const isDeselected = !!selectedKeys && !selectedKeys.has(cellKey({ row, column: col }));
-      const { fill, fillOpacity } = resolveCellAppearance(count, color, isDeselected, deselectedColor);
+      const isDimmed = isOutsideRange(count, highlightRange);
+      const { fill, fillOpacity } = resolveCellAppearance(count, color, isDimmed);
       if (fillOpacity <= 0) continue;
 
-      const geometry = getCellGeometry(params, col, row);
-      if (fillOpacity !== lastAlpha) {
-        ctx.globalAlpha = fillOpacity;
-        lastAlpha = fillOpacity;
+      const geometry = isPosed ? poseCellGeometry(getCellGeometry(params, col, row), pose) : getCellGeometry(params, col, row);
+      const alpha = isPosed ? fillOpacity * pose.opacity : fillOpacity;
+      if (alpha !== lastAlpha) {
+        ctx.globalAlpha = alpha;
+        lastAlpha = alpha;
       }
       if (fill !== lastFill) {
         ctx.fillStyle = fill;
@@ -129,8 +162,9 @@ export function drawHeatmapCells(
       }
 
       if (isHovered) {
-        ctx.globalAlpha = 1;
-        lastAlpha = 1;
+        // Full strength even on a dimmed cell, but fading in with its cell.
+        lastAlpha = isPosed ? pose.opacity : 1;
+        ctx.globalAlpha = lastAlpha;
         ctx.lineWidth = 2;
         ctx.strokeStyle = fill;
         ctx.stroke();
@@ -138,6 +172,170 @@ export function drawHeatmapCells(
     }
   }
   ctx.globalAlpha = 1;
+
+  if (selectedKeys) {
+    // Past the range by a cell, so the frame's line for a selected cell just outside it still shows.
+    const around = {
+      colStart: range.colStart - 1,
+      colEnd: range.colEnd + 1,
+      rowStart: range.rowStart - 1,
+      rowEnd: range.rowEnd + 1,
+    };
+    const bounds = { width: data.length * params.binWidth, height: params.yMax };
+    for (const { x, y, width, height, fill } of selectionFrame(selectedKeys, selectedCellsIn(selectedKeys, around), params, bounds)) {
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, width, height);
+    }
+  }
+  return isEntering;
+}
+
+// Colors sampled from colorScale for the overview, which looks them up rather than calling it per cell.
+const OVERVIEW_LEVELS = 256;
+
+let colorParser: CanvasRenderingContext2D | null = null;
+/** Any CSS color as RGB, read back off a 1px canvas, so a color the browser understands is one this does. */
+function parseColor(css: string): [number, number, number] {
+  colorParser ??= document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  if (!colorParser) return [0, 0, 0];
+  colorParser.clearRect(0, 0, 1, 1);
+  colorParser.fillStyle = "#000";
+  colorParser.fillStyle = css;
+  colorParser.fillRect(0, 0, 1, 1);
+  const [r, g, b] = colorParser.getImageData(0, 0, 1, 1).data;
+  return [r, g, b];
+}
+
+// Keyed on identities the layout memoizes, which a highlight sweep leaves alone.
+const lutCache = new WeakMap<object, Uint8ClampedArray>();
+const countsCache = new WeakMap<ColumnDatum[], Float64Array>();
+
+function colorLut(params: CanvasCellParams): Uint8ClampedArray {
+  const cached = lutCache.get(params.colorScale);
+  if (cached) return cached;
+  const { colorScale, minValue, maxValue } = params;
+  const lut = new Uint8ClampedArray(OVERVIEW_LEVELS * 3);
+  for (let i = 0; i < OVERVIEW_LEVELS; i++) {
+    const [r, g, b] = parseColor(colorScale(minValue + ((maxValue - minValue) * i) / (OVERVIEW_LEVELS - 1)) ?? "#000");
+    lut.set([r, g, b], i * 3);
+  }
+  lutCache.set(params.colorScale, lut);
+  return lut;
+}
+
+/** Every count in one column-major array, NaN where there is none: several times faster to scan than the row objects. */
+function flatCounts(data: ColumnDatum[], numRows: number): Float64Array {
+  const cached = countsCache.get(data);
+  if (cached && cached.length === data.length * numRows) return cached;
+  const counts = new Float64Array(data.length * numRows).fill(NaN);
+  data.forEach((column, c) =>
+    column.rows.forEach((row, r) => {
+      if (r < numRows && row.count != null) counts[c * numRows + r] = row.count;
+    })
+  );
+  countsCache.set(data, counts);
+  return counts;
+}
+
+/**
+ * The whole grid resampled to `width` x `height` pixels for the minimap, written straight into an
+ * ImageData: a fillRect per cell took ~400ms on a million-cell grid.
+ *
+ * Each pixel averages the cells under it. While highlightRange is set, a pixel holding any cell in
+ * the range shows those cells alone at full strength, so a lone outlier isn't averaged away. Cells
+ * are solid squares here; the minimap marks the selection along its edges instead.
+ */
+function renderHeatmapOverview(params: CanvasCellParams, width: number, height: number): ImageData | null {
+  const { data, numRows, highlightRange, minValue, maxValue } = params;
+  const numColumns = data.length;
+  if (numColumns === 0 || numRows === 0 || width < 1 || height < 1) return null;
+
+  const lut = colorLut(params);
+  const counts = flatCounts(data, numRows);
+  const span = maxValue - minValue;
+  // With no range, every cell is inside it: nothing fades and nothing is singled out.
+  const [low, high] = highlightRange ?? [-Infinity, Infinity];
+  const image = new ImageData(width, height);
+  const pixels = image.data;
+
+  // The run of columns (rows) each pixel column (row) covers: at least one, and between them every one.
+  const spans = (cells: number, size: number) =>
+    Array.from({ length: size }, (_, i) => {
+      const start = Math.min(Math.floor((i * cells) / size), cells - 1);
+      return [start, Math.max(start + 1, Math.floor(((i + 1) * cells) / size))] as const;
+    });
+  const columnSpans = spans(numColumns, width);
+  // From the top down, where row 0 sits at the bottom of the grid (see cellYScale).
+  const rowSpans = spans(numRows, height);
+
+  // Scalars and typed arrays only in here: it runs once per cell per redraw.
+  for (let y = 0; y < height; y++) {
+    const [rowFrom, rowTo] = rowSpans[y];
+    for (let x = 0; x < width; x++) {
+      const [columnFrom, columnTo] = columnSpans[x];
+      // Opacity-weighted sums over every cell, and plain sums over the highlighted ones.
+      let r = 0, g = 0, b = 0, a = 0, cells = 0;
+      let hr = 0, hg = 0, hb = 0, highlighted = 0;
+      for (let column = columnFrom; column < columnTo; column++) {
+        const base = column * numRows;
+        for (let fromTop = rowFrom; fromTop < rowTo; fromTop++) {
+          const index = base + numRows - 1 - fromTop;
+          cells++;
+          const count = counts[index];
+          if (count !== count) continue; // NaN: transparent, as a null cell is drawn nowhere.
+          // Held at the ends, as the color scale itself clamps.
+          const level = span > 0 ? Math.round(Math.min(Math.max((count - minValue) / span, 0), 1) * (OVERVIEW_LEVELS - 1)) * 3 : 0;
+          const cr = lut[level], cg = lut[level + 1], cb = lut[level + 2];
+          // isOutsideRange, inlined.
+          const inRange = count >= low && count <= high;
+          if (inRange && highlightRange) {
+            hr += cr; hg += cg; hb += cb; highlighted++;
+          }
+          const opacity = inRange ? 1 : DIMMED_OPACITY;
+          r += cr * opacity; g += cg * opacity; b += cb * opacity; a += opacity;
+        }
+      }
+      const offset = (y * width + x) * 4;
+      if (highlighted > 0) {
+        pixels[offset] = hr / highlighted;
+        pixels[offset + 1] = hg / highlighted;
+        pixels[offset + 2] = hb / highlighted;
+        pixels[offset + 3] = 255;
+      } else if (a > 0) {
+        pixels[offset] = r / a;
+        pixels[offset + 1] = g / a;
+        pixels[offset + 2] = b / a;
+        pixels[offset + 3] = (a / cells) * 255;
+      }
+    }
+  }
+  return image;
+}
+
+let overviewScratch: HTMLCanvasElement | null = null;
+
+/**
+ * The whole grid, filling the canvas. Rendered at no more than a pixel per cell and stretched
+ * nearest-neighbor from there: resampling every pixel of the expanded minimap took over 100ms.
+ */
+export function drawHeatmapOverview(ctx: CanvasRenderingContext2D, params: CanvasCellParams) {
+  const { width, height } = ctx.canvas;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const overviewWidth = Math.min(width, params.data.length);
+  const overviewHeight = Math.min(height, params.numRows);
+  const overview = renderHeatmapOverview(params, overviewWidth, overviewHeight);
+  if (!overview) return;
+  if (overviewWidth === width && overviewHeight === height) {
+    ctx.putImageData(overview, 0, 0);
+  } else {
+    overviewScratch ??= document.createElement("canvas");
+    overviewScratch.width = overviewWidth;
+    overviewScratch.height = overviewHeight;
+    overviewScratch.getContext("2d")?.putImageData(overview, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(overviewScratch, 0, 0, width, height);
+  }
 }
 
 /** Content-space (post-scroll-offset) coordinates -> the cell under them, or null if none. */

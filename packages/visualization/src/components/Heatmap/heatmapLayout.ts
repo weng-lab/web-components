@@ -1,34 +1,36 @@
 import { useMemo, useCallback } from "react";
 import { scaleLinear } from "@visx/scale";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import type { ColumnDatum, HeatmapCellId } from "./types";
-import type { HeatmapProps } from "./types";
+import type { ColumnDatum, HeatmapCellId, HeatmapProps } from "./types";
 import { measureTextWidth } from "../../utility";
 import { getHeatmapLegendWidth } from "./HeatmapLegend";
-import { DEFAULT_DESELECTED_COLOR, cellKey, getHeatmapColorScale } from "./heatmapCellAppearance";
+import { getHeatmapColorScale } from "./heatmapCellAppearance";
+import { cellKey, selectionMarks as markSelection, type SelectionMarks } from "./heatmapSelection";
 import { type CanvasCellParams } from "./HeatmapCanvasCells";
-import { TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
+import { AXIS_TITLE_FONT_SIZE, TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
 
 export const LEGEND_GAP = 16;
-// Extra breathing room between the tick labels and the axis title, beyond the space
-// reserved for the tick labels themselves.
-export const AXIS_LABEL_GAP = 12;
-// Space reserved for the axis title itself (the "X-Axis Label" / "Y-Axis Label" text), beyond
-// the tick labels. In scrollable mode this is carved out into its own always-visible pane so
-// the title can't be scrolled out of view - see yTitleWidth/xTitleHeight in HeatmapLayout.
-export const Y_AXIS_TITLE_SPACE = 40;
-export const X_AXIS_TITLE_SPACE = 70;
-// Canvas's measureText and the browser's actual SVG text layout don't agree to the sub-pixel,
-// and the gap widens with string length - pad generously so long tick labels aren't clipped.
-export const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
+// Between the tick labels and the axis title.
+const AXIS_LABEL_GAP = 12;
+// Each axis title's pane, which stays put as the grid scrolls.
+const Y_AXIS_TITLE_SPACE = 40;
+const X_AXIS_TITLE_SPACE = 70;
+// measureText and SVG text layout disagree slightly, more so for long labels: pad so none get clipped.
+const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 export const MINI_MAP_HEIGHT = 50;
 
-export const getBins = (d: ColumnDatum) => d.rows;
+/**
+ * Where to center the x-axis title: at `plotCenter`, pulled in to stay inside `canvasWidth`, which
+ * a plot of a column or two can be narrower than the title.
+ */
+export function xAxisTitleCenter(title: string, plotCenter: number, canvasWidth: number): number {
+  const titleWidth = measureTextWidth(title, AXIS_TITLE_FONT_SIZE, TICK_FONT_FAMILY) * TICK_LABEL_WIDTH_SAFETY_FACTOR;
+  if (titleWidth >= canvasWidth) return canvasWidth / 2;
+  return Math.min(Math.max(plotCenter, titleWidth / 2), canvasWidth - titleWidth / 2);
+}
 
-export function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
-  // Null counts are gaps in the data and don't participate in the max. reduce rather than
-  // Math.max(...spread): returns 0 (not -Infinity) for empty/all-null input, with no
-  // argument-count ceiling.
+// Skips nulls, and is 0 with no values. A reduce, as Math.max(...values) has an argument limit.
+function maxOf<Datum>(data: Datum[], value: (d: Datum) => number | null): number {
   return data.reduce((max, datum) => {
     const datumValue = value(datum);
     return datumValue == null ? max : Math.max(max, datumValue);
@@ -51,19 +53,16 @@ export interface HeatmapLayout {
   xTitleHeight: number;
   xTickLabelHeight: number;
   binWidth: number;
-  binHeight: number;
-  colLabelHeight: number;
   xTickLeftOverhangMax: number;
-  maxRowNameWidth: number;
   legendWidth: number;
   xScale: ScaleLinear<number, number, never>;
   yScale: ScaleLinear<number, number, never>;
-  cellYScale: (row: number) => number;
   xTickValues: number[];
   yTickValues: number[];
   stableColors: [string, string, ...string[]];
-  colorScale: (count: number) => string | undefined;
+  /** Everything a cell's placement and color depend on, for drawing and hit-testing. */
   canvasCellParams: CanvasCellParams;
+  selectionMarks: SelectionMarks;
 }
 
 export interface UseHeatmapLayoutArgs {
@@ -73,7 +72,6 @@ export interface UseHeatmapLayoutArgs {
   xLabelOrientation: NonNullable<HeatmapProps["xLabelOrientation"]>;
   margin?: { top: number; right: number; bottom: number; left: number };
   showLegend: boolean;
-  isScrollable: boolean;
   cellWidth?: number;
   cellHeight?: number;
   parentWidth: number;
@@ -82,22 +80,23 @@ export interface UseHeatmapLayoutArgs {
   gap: number;
   isRect: boolean;
   selectedCells?: HeatmapCellId[];
-  deselectedColor?: string;
+  highlightRange?: [number, number] | null;
+  /** A custom legend's width, in place of the built-in legend's. */
+  legendWidth?: number;
 }
 
 export function useHeatmapLayout({
-  data, colorDomain, colors, xLabelOrientation, margin, showLegend, isScrollable,
+  data, colorDomain, colors, xLabelOrientation, margin, showLegend,
   cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
-  selectedCells, deselectedColor,
+  selectedCells, highlightRange, legendWidth: customLegendWidth,
 }: UseHeatmapLayoutArgs): HeatmapLayout {
   const allColNames = useMemo(() => data.map((d) => d.columnName), [data]);
   const allRowNames = useMemo(() => data[0]?.rows.map((r) => r.rowName) ?? [], [data]);
-  const dataMaxValue = useMemo(() => maxOf(data, (d) => maxOf(getBins(d), (r) => r.count)), [data]);
+  const dataMaxValue = useMemo(() => maxOf(data, (d) => maxOf(d.rows, (r) => r.count)), [data]);
   const [minValue, maxValue] = colorDomain ?? [0, dataMaxValue];
-  const numRows = useMemo(() => maxOf(data, (d) => getBins(d).length), [data]);
+  const numRows = useMemo(() => maxOf(data, (d) => d.rows.length), [data]);
 
-  // Measured (not estimated) pixel width of the longest label, so any label - short or long,
-  // narrow or wide characters - gets exactly the room it needs rather than a per-character guess.
+  // The longest labels, measured rather than estimated from their length.
   const maxColNameWidth = useMemo(
     () => allColNames.reduce((m, name) => Math.max(m, measureTextWidth(name, TICK_FONT_SIZE, TICK_FONT_FAMILY)), 0) * TICK_LABEL_WIDTH_SAFETY_FACTOR,
     [allColNames]
@@ -107,8 +106,7 @@ export function useHeatmapLayout({
     [allRowNames]
   );
 
-  const rotatedColNameSpace = maxColNameWidth;
-  const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? rotatedColNameSpace : rotatedColNameSpace * Math.SQRT1_2;
+  const colLabelHeight = xLabelOrientation === "horizontal" ? 12 : xLabelOrientation === "vertical" ? maxColNameWidth : maxColNameWidth * Math.SQRT1_2;
 
   const xTickLeftOverhangMax = xLabelOrientation === "leftDiagonal" ? colLabelHeight : 0;
 
@@ -118,7 +116,8 @@ export function useHeatmapLayout({
     [colorsKey]
   );
 
-  const legendWidth = useMemo(() => getHeatmapLegendWidth(minValue, maxValue), [minValue, maxValue]);
+  const builtInLegendWidth = useMemo(() => getHeatmapLegendWidth(minValue, maxValue), [minValue, maxValue]);
+  const legendWidth = customLegendWidth ?? builtInLegendWidth;
   const defaultRight = showLegend ? legendWidth + LEGEND_GAP : 10;
   const defaultTop = 20;
   const labelBottomSpace = colLabelHeight + AXIS_LABEL_GAP + X_AXIS_TITLE_SPACE;
@@ -129,14 +128,16 @@ export function useHeatmapLayout({
     bottom: labelBottomSpace + TICK_FONT_SIZE,
   };
 
-  const miniMapSpace = isScrollable && showMiniMap ? MINI_MAP_HEIGHT : 0;
+  const miniMapSpace = showMiniMap ? MINI_MAP_HEIGHT : 0;
   const availableWidth = Math.max(0, parentWidth - marg.left - marg.right);
   const availableHeight = Math.max(0, parentHeight - marg.bottom - marg.top - miniMapSpace);
 
-  const xMax = isScrollable ? data.length * (cellWidth as number) : availableWidth;
-  const yMax = isScrollable ? numRows * (cellHeight as number) : availableHeight;
-  const viewportWidth = isScrollable ? Math.min(xMax, availableWidth) : xMax;
-  const viewportHeight = isScrollable ? Math.min(yMax, availableHeight) : yMax;
+  // The whole grid: fixed-size cells where given, which scroll once they outgrow the space, and
+  // otherwise cells sharing it.
+  const xMax = cellWidth != null ? data.length * cellWidth : availableWidth;
+  const yMax = cellHeight != null ? numRows * cellHeight : availableHeight;
+  const viewportWidth = Math.min(xMax, availableWidth);
+  const viewportHeight = Math.min(yMax, availableHeight);
 
   const yTitleWidth = Y_AXIS_TITLE_SPACE;
   const yTickLabelWidth = Math.max(0, marg.left - yTitleWidth);
@@ -159,7 +160,6 @@ export function useHeatmapLayout({
   const xTickValues = useMemo(() => data.map((_, i) => i + 0.5), [data]);
   const yTickValues = useMemo(() => data[0]?.rows.map((_, i) => i + 0.5) ?? [], [data]);
 
-  const resolvedDeselectedColor = deselectedColor ?? DEFAULT_DESELECTED_COLOR;
   const colorScale = useMemo(
     () => getHeatmapColorScale(stableColors, [minValue, maxValue]),
     [stableColors, minValue, maxValue]
@@ -168,22 +168,32 @@ export function useHeatmapLayout({
     () => (selectedCells?.length ? new Set(selectedCells.map(cellKey)) : null),
     [selectedCells]
   );
+  const selectionMarks = useMemo(
+    () => markSelection(selectedKeys, data.length, numRows),
+    [selectedKeys, data.length, numRows]
+  );
 
-  // Everything the canvas draw loop and hit-testing need to place/color a cell. Only changes when
-  // a prop that actually affects appearance/geometry changes - never on scroll or hover, so
-  // drawCanvas (and, through it, handleGridScroll) keeps a stable identity across scroll events.
+  // Kept by value, so a caller passing a fresh [min, max] literal on each render doesn't repaint.
+  const [highlightMin, highlightMax] = highlightRange ?? [];
+  const stableHighlightRange = useMemo<[number, number] | null>(
+    () => (highlightMin === undefined || highlightMax === undefined ? null : [highlightMin, highlightMax]),
+    [highlightMin, highlightMax]
+  );
+
+  // Changes only with the cells' appearance or geometry, never on scroll or hover, so drawCanvas
+  // keeps its identity while scrolling.
   const canvasCellParams: CanvasCellParams = useMemo(
     () => ({
-      data, numRows, xScale, cellYScale, colorScale, gap, isRect, binWidth, binHeight,
-      yMax, selectedKeys, deselectedColor: resolvedDeselectedColor,
+      data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight,
+      yMax, selectedKeys, selectionMarks, highlightRange: stableHighlightRange,
     }),
-    [data, numRows, xScale, cellYScale, colorScale, gap, isRect, binWidth, binHeight, yMax, selectedKeys, resolvedDeselectedColor]
+    [data, numRows, xScale, cellYScale, colorScale, minValue, maxValue, gap, isRect, binWidth, binHeight, yMax, selectedKeys, selectionMarks, stableHighlightRange]
   );
 
   return {
     allColNames, allRowNames, numRows, minValue, maxValue, marg, xMax, yMax,
     viewportWidth, viewportHeight, yTitleWidth, yTickLabelWidth, xTitleHeight, xTickLabelHeight,
-    binWidth, binHeight, colLabelHeight, xTickLeftOverhangMax, maxRowNameWidth, legendWidth,
-    xScale, yScale, cellYScale, xTickValues, yTickValues, stableColors, colorScale, canvasCellParams,
+    binWidth, xTickLeftOverhangMax, legendWidth,
+    xScale, yScale, xTickValues, yTickValues, stableColors, canvasCellParams, selectionMarks,
   };
 }

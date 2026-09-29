@@ -121,9 +121,13 @@ const ControlButtons = ({
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Reset Zoom and Pan" placement={tooltipPlacement}>
-                        <IconButton aria-label="resetZoom" onClick={zoomReset} disabled={!resetable} sx={buttonSx}>
-                            <SettingsBackupRestore fontSize="small" />
-                        </IconButton>
+                        {/* A disabled button fires no events, so the tooltip listens on a wrapper. Flex, so
+                            the wrapper adds no line height around the button. */}
+                        <span style={{ display: "flex" }}>
+                            <IconButton aria-label="resetZoom" onClick={zoomReset} disabled={!resetable} sx={buttonSx}>
+                                <SettingsBackupRestore fontSize="small" />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                     {downloadButton && (
                         <Tooltip title="Download Plot as SVG" placement={tooltipPlacement}>

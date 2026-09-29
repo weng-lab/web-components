@@ -9,7 +9,7 @@ import { curveBasis } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { BackgroundGradient, ChartProps, CrosshairPosition, Point, SelectionMode, ZoomType } from "./types";
-import { DEFAULT_HOVER_STYLE, drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, prepareCanvas, rescaleX, rescaleY } from "./helpers";
+import { DEFAULT_HOVER_STYLE, drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, pointKey, prepareCanvas, rescaleX, rescaleY } from "./helpers";
 import { useStableCallback } from "../../hooks";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
@@ -63,6 +63,10 @@ const HOVER_GROW_MS = 120;
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
+/** How far into its growth a point is at `now`, having started at `start`: 0 at rest, 1 fully grown. */
+const hoverAmountAt = (start: number | undefined, now: number) =>
+    start === undefined ? 0 : easeOutCubic(Math.min(1, Math.max(0, (now - start) / HOVER_GROW_MS)));
+
 const ScatterPlotViewport = <T extends object>({
     width,
     height,
@@ -100,13 +104,11 @@ const ScatterPlotViewport = <T extends object>({
 }: ScatterPlotViewportProps<T>) => {
     const graphRef = useRef<SVGRectElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    // Hover growth is driven straight onto the canvas through a ref. A redraw is ~0.3ms at
-    // 3.4k points so the drawing is cheap, but a re-render per frame would not be.
-    const hoverAmountRef = useRef(0);
-    const animatedKeysRef = useRef<Set<string> | null>(null);
-    // When the current hover began, so its growth can be resumed rather than restarted if the
-    // effect driving it is re-run partway through.
-    const hoverStartedAtRef = useRef(0);
+    // When each hovered point began to grow, by pointKey. Timed per point so that when the hovered
+    // set shifts - a window swept along a colorbar - points still in it keep their growth and only
+    // new ones start from nothing. Painted straight onto the canvas rather than through state: a
+    // redraw is ~0.3ms, a re-render per frame is not.
+    const hoverStartsRef = useRef<Map<string, number>>(new Map());
 
     // Animation state — viewport owns what it renders
     const [showPointAnimation, setShowPointAnimation] = useState(Boolean(animation));
@@ -195,14 +197,11 @@ const ScatterPlotViewport = <T extends object>({
     const previousHoveredKeysRef = useRef<Set<string>>(new Set());
 
     const hoveredPointKeys = useMemo(() => {
-        const next = new Set(groupedPoints.map((point) => `${point.x},${point.y}`));
+        const next = new Set(groupedPoints.map(pointKey));
         const previous = previousHoveredKeysRef.current;
 
-        // Moving between points inside one anchored group rebuilds this set, but its contents
-        // are unchanged - the hovered group is the same group. Handing back the previous Set
-        // keeps its identity stable, so the redraw effect and the hover growth it drives both
-        // sit still instead of restarting on every point the cursor crosses. Purely a
-        // memoisation hint: the contents are correct either way.
+        // An unchanged set keeps its identity, so moving within one hovered group doesn't re-run
+        // the redraw effect for every point the cursor crosses.
         if (next.size === previous.size && [...next].every((key) => previous.has(key))) {
             return previous;
         }
@@ -212,11 +211,9 @@ const ScatterPlotViewport = <T extends object>({
     }, [groupedPoints]);
 
     const currentDisplayedPoints = useMemo(
-        () => pointData.filter((point) => {
-            const tx = xScaleTransformed(point.x);
-            const ty = yScaleTransformed(point.y);
-            return tx >= 0 && tx <= boundedWidth && ty >= 0 && ty <= boundedHeight;
-        }),
+        () => pointData.filter((point) =>
+            isPointVisible(xScaleTransformed(point.x), yScaleTransformed(point.y), boundedWidth, boundedHeight)
+        ),
         [pointData, xScaleTransformed, yScaleTransformed, boundedWidth, boundedHeight]
     );
 
@@ -233,7 +230,9 @@ const ScatterPlotViewport = <T extends object>({
     const drawPoints = useCallback((
         xST: ScaleLinear<number, number, never>,
         yST: ScaleLinear<number, number, never>,
-        canvas: HTMLCanvasElement
+        canvas: HTMLCanvasElement,
+        /** The frame's time, which every hovered point's growth is measured to. */
+        now: number
     ) => {
         const context = canvas.getContext('2d');
         if (!context) return;
@@ -258,61 +257,50 @@ const ScatterPlotViewport = <T extends object>({
         }
 
         const { nonHovered, hovered } = partitionPointsByHover(pointData, hoveredPointKeys);
+        const starts = hoverStartsRef.current;
 
-        const drawRenderedPoint = (point: Point<T>, isHovered: boolean) => {
+        const drawRenderedPoint = (point: Point<T>, hoverAmount: number) => {
             const transformedX = xST(point.x);
             const transformedY = yST(point.y);
             if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
-            drawCanvasPoint(context, point, transformedX, transformedY, isHovered ? hoverAmountRef.current : 0, hoverStyle);
+            drawCanvasPoint(context, point, transformedX, transformedY, hoverAmount, hoverStyle);
         };
 
-        nonHovered.forEach((point) => drawRenderedPoint(point, false));
-        hovered.forEach((point) => drawRenderedPoint(point, true));
+        nonHovered.forEach((point) => drawRenderedPoint(point, 0));
+        hovered.forEach((point) => drawRenderedPoint(point, hoverAmountAt(starts.get(pointKey(point)), now)));
     }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient, hoverStyle]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || showPointAnimation) return;
 
-        // Leaving is instant: drop the growth and repaint once.
-        if (hoveredPointKeys.size === 0) {
-            animatedKeysRef.current = null;
-            hoverAmountRef.current = 0;
-            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
+        // Sync start times with the hovered set: kept points keep theirs, new ones start now, and
+        // dropped ones are forgotten so leaving is instant. Idempotent, so a re-run for pan, zoom
+        // or new pointData carries on from the sizes already reached.
+        const now = performance.now();
+        const starts = hoverStartsRef.current;
+        for (const key of starts.keys()) {
+            if (!hoveredPointKeys.has(key)) starts.delete(key);
+        }
+        let latestStart = -Infinity;
+        for (const key of hoveredPointKeys) {
+            if (!starts.has(key)) starts.set(key, now);
+            latestStart = Math.max(latestStart, starts.get(key)!);
+        }
+
+        // Nothing still growing: repaint once, so panning over a hovered point doesn't queue frames.
+        const grownAt = latestStart + HOVER_GROW_MS;
+        if (now >= grownAt) {
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas, now);
             return;
         }
 
-        // Only a change of hovered set starts the growth. This effect also runs on pan, zoom and
-        // data changes, which should carry on from the size the points have already reached
-        // rather than snapping them back to zero.
-        const sameHover = animatedKeysRef.current === hoveredPointKeys;
-        if (!sameHover) {
-            animatedKeysRef.current = hoveredPointKeys;
-            hoverStartedAtRef.current = performance.now();
-            hoverAmountRef.current = 0;
-        }
-
-        const startedAt = hoverStartedAtRef.current;
-
-        // Already fully grown: repaint at full size without scheduling a frame, so a pan over a
-        // hovered point does not queue one per move.
-        if (sameHover && performance.now() - startedAt >= HOVER_GROW_MS) {
-            hoverAmountRef.current = 1;
-            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
-            return;
-        }
-
-        // Timed from when this hover began rather than from now, so an animation interrupted
-        // partway - by new pointData arriving under the cursor, most often - resumes where it
-        // left off instead of restarting. Before this was kept in a ref, the cleanup below
-        // cancelled the frame and the sameHover branch above returned without scheduling
-        // another, leaving the point frozen at whatever growth it had reached: on the first
-        // frame, none at all, drawn with a ring at a tenth of its opacity.
+        // Until the newest point has grown; the last frame is drawn at or past grownAt, so every
+        // point ends at full size.
         let frame = requestAnimationFrame(function step() {
-            const t = Math.min(1, (performance.now() - startedAt) / HOVER_GROW_MS);
-            hoverAmountRef.current = easeOutCubic(t);
-            drawPoints(xScaleTransformed, yScaleTransformed, canvas);
-            if (t < 1) frame = requestAnimationFrame(step);
+            const time = performance.now();
+            drawPoints(xScaleTransformed, yScaleTransformed, canvas, time);
+            if (time < grownAt) frame = requestAnimationFrame(step);
         });
 
         return () => cancelAnimationFrame(frame);
@@ -340,17 +328,12 @@ const ScatterPlotViewport = <T extends object>({
     };
 
     /**
-     * Panning is coalesced to one zoom update per animation frame.
+     * Panning is coalesced to one zoom update per frame. React flushes mousemove updates
+     * synchronously, and a shared zoom re-renders every synced plot, so handling each move
+     * outright never lets the browser paint and eventually exceeds React's update depth.
      *
-     * zoom.dragMove sets the transform matrix on every move it is handed, and a mouse reports
-     * positions faster than the browser paints. Because mousemove is a continuous event that
-     * React flushes synchronously - and because a shared zoom sits above every synced plot, so
-     * one update re-renders all of them - handling each move outright never lets the browser
-     * paint, and React eventually warns that the update depth was exceeded.
-     *
-     * The buffer holds nativeEvent rather than the synthetic event: React clears currentTarget
-     * once dispatch returns, and this runs a frame later. Routing through useStableCallback
-     * keeps the frame calling the current zoom rather than the one captured when it was queued.
+     * The buffer holds nativeEvent, since React clears the synthetic event's currentTarget after
+     * dispatch, and useStableCallback makes the frame use the current zoom.
      */
     const dragFrameRef = useRef<number | null>(null);
     const pendingDragRef = useRef<MouseEvent | TouchEvent | null>(null);

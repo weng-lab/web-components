@@ -8,10 +8,10 @@ export const makeTickFormat = (names: string[]) => (d: number | { valueOf(): num
 
 type XLabelOrientation = NonNullable<HeatmapProps["xLabelOrientation"]>;
 
-export const xTickAngleFor = (xLabelOrientation: XLabelOrientation) =>
+const xTickAngleFor = (xLabelOrientation: XLabelOrientation) =>
   xLabelOrientation === "horizontal" ? 0 : xLabelOrientation === "vertical" ? -90 : xLabelOrientation === "leftDiagonal" ? -45 : 45;
 
-export const xTickTextAnchorFor = (xLabelOrientation: XLabelOrientation): "middle" | "start" | "end" =>
+const xTickTextAnchorFor = (xLabelOrientation: XLabelOrientation): "middle" | "start" | "end" =>
   xLabelOrientation === "horizontal" ? "middle" : xLabelOrientation === "rightDiagonal" ? "start" : "end";
 
 export const getXAxisTickLabelProps = (xLabelOrientation: XLabelOrientation) => ({
@@ -22,13 +22,6 @@ export const getXAxisTickLabelProps = (xLabelOrientation: XLabelOrientation) => 
   dy: xLabelOrientation === "horizontal" ? "0.71em" : "0.25em",
 });
 
-export const xAxisLabelProps = {
-  fontSize: AXIS_TITLE_FONT_SIZE,
-  fontFamily: TICK_FONT_FAMILY,
-  textAnchor: "middle" as const,
-  dy: "-0.5em",
-};
-
 export const yAxisTickLabelProps = {
   fontSize: TICK_FONT_SIZE,
   fontFamily: TICK_FONT_FAMILY,
@@ -37,8 +30,11 @@ export const yAxisTickLabelProps = {
   dy: "0.25em",
 };
 
-export const yAxisLabelProps = {
-  fontSize: AXIS_TITLE_FONT_SIZE,
-  fontFamily: TICK_FONT_FAMILY,
-  textAnchor: "middle" as const,
-};
+/**
+ * Tick label props that bold the labels of `marked` columns or rows (see selectionMarks). A tick's
+ * value is its index plus a half, the middle of its cell.
+ */
+export const markTickLabels = <P extends object>(props: P, marked: Set<number>) =>
+  marked.size === 0
+    ? props
+    : (value: number | { valueOf(): number }) => ({ ...props, fontWeight: marked.has(Math.floor(+value)) ? 700 : 400 });

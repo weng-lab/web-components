@@ -1,28 +1,33 @@
-import { useCallback, useId, useRef, useState, type ReactElement, type RefObject } from "react";
+import { useCallback, useId, useMemo, useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 import { AxisLeft, AxisBottom } from "@visx/axis";
-import type { ColumnDatum, HeatmapCellId } from "../types";
-import type { AnyBin } from "../HeatmapCells";
-import HeatmapLegend from "../HeatmapLegend";
+import type { HeatmapCellId, HeatmapLegendFrame } from "./types";
+import type { AnyBin } from "./HeatmapCanvasCells";
+import type { AnimationType } from "../../utility";
+import HeatmapLegend from "./HeatmapLegend";
+import HeatmapSelectionPointers from "./HeatmapSelectionPointers";
 import HeatmapMiniMap from "./HeatmapMiniMap";
 import HeatmapMiniMapPopup from "./HeatmapMiniMapPopup";
-import { PlotTooltip } from "../../../tooltip";
-import { TICK_FONT_FAMILY, AXIS_TITLE_FONT_SIZE, yAxisTickLabelProps, type getXAxisTickLabelProps } from "../heatmapAxisProps";
-import { LEGEND_GAP, MINI_MAP_HEIGHT, type HeatmapLayout } from "../heatmapLayout";
-import { useHeatmapCanvasGrid } from "../hooks/useHeatmapCanvasGrid";
-import { useScrollToSelection } from "../hooks/useScrollToSelection";
+import { PlotTooltip } from "../../tooltip";
+import { TICK_FONT_FAMILY, AXIS_TITLE_FONT_SIZE, markTickLabels, yAxisTickLabelProps, type getXAxisTickLabelProps } from "./heatmapAxisProps";
+import { LEGEND_GAP, MINI_MAP_HEIGHT, xAxisTitleCenter, type HeatmapLayout } from "./heatmapLayout";
+import { useHeatmapCanvasGrid } from "./hooks/useHeatmapCanvasGrid";
+import { useScrollToSelection } from "./hooks/useScrollToSelection";
 
 const X_AXIS_OVERHANG_CLIP_HEIGHT = 10;
 
-export interface HeatmapScrollableGridProps {
+export interface HeatmapGridProps {
   legendSvgRef: RefObject<SVGSVGElement | null>;
   layout: HeatmapLayout;
-  data: ColumnDatum[];
+  /** The container's width, which a long x-axis title is kept inside. */
+  parentWidth: number;
   showMiniMap: boolean;
   showLegend: boolean;
+  renderLegend?: (frame: HeatmapLegendFrame) => ReactNode;
   xLabel?: string;
   yLabel?: string;
   tooltipBody?: (bin: AnyBin) => ReactElement;
   onClick?: (bin: AnyBin) => void;
+  animationType?: AnimationType;
   selectedCells?: HeatmapCellId[];
   scrollToSelection?: boolean;
   xAxisTickFormat: (d: number | { valueOf(): number }) => string;
@@ -30,40 +35,67 @@ export interface HeatmapScrollableGridProps {
   xAxisTickLabelProps: ReturnType<typeof getXAxisTickLabelProps>;
 }
 
-const HeatmapScrollableGrid = ({
-  legendSvgRef, layout, data, showMiniMap, showLegend, xLabel, yLabel, tooltipBody, onClick,
-  selectedCells, scrollToSelection, xAxisTickFormat, yAxisTickFormat, xAxisTickLabelProps,
-}: HeatmapScrollableGridProps) => {
+/**
+ * The cells on one viewport-sized canvas, repainted from the scroll position, with the axes, titles
+ * and legend in panes around it that stay put as the grid scrolls (frozen panes).
+ */
+const HeatmapGrid = ({
+  legendSvgRef, layout, parentWidth, showMiniMap, showLegend, renderLegend, xLabel, yLabel, tooltipBody,
+  onClick, animationType, selectedCells, scrollToSelection, xAxisTickFormat, yAxisTickFormat, xAxisTickLabelProps,
+}: HeatmapGridProps) => {
   const {
-    numRows, marg, xMax, yMax, viewportWidth, viewportHeight, yTitleWidth, yTickLabelWidth,
+    marg, xMax, yMax, viewportWidth, viewportHeight, yTitleWidth, yTickLabelWidth,
     xTitleHeight, xTickLabelHeight, binWidth, xTickLeftOverhangMax, legendWidth,
     xScale, yScale, xTickValues, yTickValues, stableColors, minValue, maxValue, canvasCellParams,
+    selectionMarks,
   } = layout;
+  const markedXTickLabelProps = useMemo(
+    () => markTickLabels(xAxisTickLabelProps, selectionMarks.columns),
+    [xAxisTickLabelProps, selectionMarks]
+  );
+  const markedYTickLabelProps = useMemo(() => markTickLabels(yAxisTickLabelProps, selectionMarks.rows), [selectionMarks]);
 
   const {
     canvasRef, mainPaneRef, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
     visibleXTickValues, visibleYTickValues, canvasHandlers,
   } = useHeatmapCanvasGrid({
-    canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, isScrollable: true, onClick,
+    canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, onClick, animationType,
   });
-  useScrollToSelection({ mainPaneRef, selectedCells, scrollToSelection, isScrollable: true, binWidth, viewportWidth });
+  useScrollToSelection({ mainPaneRef, selectedCells, scrollToSelection, binWidth, viewportWidth });
+
+  // Centered under the viewport, but kept inside the container, as the download places it.
+  const plotLeft = yTitleWidth + yTickLabelWidth;
+  const xTitleX = useMemo(
+    () => (xLabel ? xAxisTitleCenter(xLabel, plotLeft + viewportWidth / 2, parentWidth) - plotLeft : viewportWidth / 2),
+    [xLabel, plotLeft, viewportWidth, parentWidth]
+  );
 
   const xTickClipId = useId();
-  // Shrinks to 0 as soon as scrolling moves away from the start, so the reveal only ever applies
-  // to column 0's genuine edge case (nothing real to its left) and doesn't linger over the y-axis
-  // pane at other scroll positions, where a real, adjacent column - not empty space - would
-  // otherwise show through.
+  // Room for the first column's slanted label to hang left over the y-axis pane, only while
+  // scrolled to the start: anywhere else, the column to its left would show through.
   const xTickLeftOverhang = Math.max(0, xTickLeftOverhangMax - axisScrollPos.left);
 
-  // Drives the minimap: scrollTo dispatches a native scroll event on mainPaneRef, which
-  // handleGridScroll picks up the same way it would a manual scroll (repainting the canvas and
-  // updating axisScrollPos, which also moves the minimap's own viewport rectangle).
+  // The scroll event repaints the grid and moves the minimap's rectangle, as a manual scroll does.
   const handleMiniMapNavigate = useCallback((left: number, top: number) => {
     mainPaneRef.current?.scrollTo({ left, top });
   }, []);
 
   const [isMiniMapExpanded, setIsMiniMapExpanded] = useState(false);
   const miniMapContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // The caller's legend or the built-in one, beside the grid or across the expanded minimap.
+  const legend = (frame: HeatmapLegendFrame) =>
+    renderLegend ? (
+      renderLegend(frame)
+    ) : (
+      <HeatmapLegend
+        colors={stableColors}
+        minValue={minValue}
+        maxValue={maxValue}
+        length={frame.orientation === "vertical" ? frame.height : frame.width}
+        orientation={frame.orientation}
+      />
+    );
 
   return (
     <>
@@ -82,6 +114,7 @@ const HeatmapScrollableGrid = ({
               height={MINI_MAP_HEIGHT}
               onNavigate={handleMiniMapNavigate}
               onCanvasClick={() => setIsMiniMapExpanded(true)}
+              paused={isMiniMapExpanded}
             />
           </div>
         )}
@@ -94,8 +127,8 @@ const HeatmapScrollableGrid = ({
             gridTemplateRows: `${marg.top}px ${viewportHeight}px ${xTickLabelHeight}px ${xTitleHeight}px`,
           }}
         >
-          <div style={{ gridColumn: 1, gridRow: 2, width: yTitleWidth, height: viewportHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width={yTitleWidth} height={viewportHeight}>
+          <div style={{ gridColumn: 1, gridRow: 2 }}>
+            <svg width={yTitleWidth} height={viewportHeight} style={{ display: "block" }}>
               <text
                 x={yTitleWidth / 2}
                 y={viewportHeight / 2}
@@ -114,11 +147,11 @@ const HeatmapScrollableGrid = ({
               <g transform={`translate(${yTickLabelWidth},${-axisScrollPos.top})`}>
                 <AxisLeft
                   scale={yScale}
-                  numTicks={numRows}
                   tickValues={visibleYTickValues}
                   tickFormat={yAxisTickFormat}
-                  tickLabelProps={yAxisTickLabelProps}
+                  tickLabelProps={markedYTickLabelProps}
                 />
+                <HeatmapSelectionPointers axis="row" marked={selectionMarks.rows} scale={yScale} />
               </g>
             </svg>
           </div>
@@ -146,8 +179,8 @@ const HeatmapScrollableGrid = ({
             </div>
           </div>
           {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
-          <div style={{ gridColumn: 3, gridRow: 3, width: viewportWidth, height: xTickLabelHeight, overflow: "visible" }}>
-            <svg width={viewportWidth} height={xTickLabelHeight} style={{ overflow: "visible" }}>
+          <div style={{ gridColumn: 3, gridRow: 3 }}>
+            <svg width={viewportWidth} height={xTickLabelHeight} style={{ display: "block", overflow: "visible" }}>
               <defs>
                 <clipPath id={xTickClipId}>
                   <rect x={0} y={0} width={viewportWidth} height={xTickLabelHeight} />
@@ -166,24 +199,19 @@ const HeatmapScrollableGrid = ({
                   <AxisBottom
                     top={0}
                     scale={xScale}
-                    numTicks={data.length}
                     tickFormat={xAxisTickFormat}
                     tickValues={visibleXTickValues}
-                    tickLabelProps={xAxisTickLabelProps}
+                    tickLabelProps={markedXTickLabelProps}
                   />
+                  <HeatmapSelectionPointers axis="column" marked={selectionMarks.columns} scale={xScale} />
                 </g>
               </g>
             </svg>
           </div>
-          {/* X-axis title: fixed in place (not scroll-synced) so it's always visible, centered on
-              the visible viewport rather than the full data range. overflow: visible lets a title
-              wider than the viewport (e.g. very few columns) spill symmetrically into the
-              y-tick-label and legend panes' columns - harmless since neither has content in this
-              row - rather than being clipped at the viewport's own edge. */}
-          <div style={{ gridColumn: 3, gridRow: 4, width: viewportWidth, height: xTitleHeight, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width={viewportWidth} height={xTitleHeight} style={{ overflow: "visible" }}>
+          <div style={{ gridColumn: 3, gridRow: 4 }}>
+            <svg width={viewportWidth} height={xTitleHeight} style={{ display: "block", overflow: "visible" }}>
               <text
-                x={viewportWidth / 2}
+                x={xTitleX}
                 y={xTitleHeight / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
@@ -197,12 +225,7 @@ const HeatmapScrollableGrid = ({
           {showLegend && (
             <div style={{ gridColumn: 4, gridRow: 2, width: legendWidth, marginLeft: LEGEND_GAP, height: viewportHeight }}>
               <svg width={legendWidth} height={viewportHeight} ref={legendSvgRef} style={{ overflow: "visible" }}>
-                <HeatmapLegend
-                  colors={stableColors}
-                  minValue={minValue}
-                  maxValue={maxValue}
-                  height={viewportHeight}
-                />
+                {legend({ width: legendWidth, height: viewportHeight, orientation: "vertical" })}
               </svg>
             </div>
           )}
@@ -220,10 +243,11 @@ const HeatmapScrollableGrid = ({
           scrollLeft={axisScrollPos.left}
           scrollTop={axisScrollPos.top}
           onNavigate={handleMiniMapNavigate}
+          legend={showLegend ? legend : undefined}
         />
       )}
     </>
   );
 };
 
-export default HeatmapScrollableGrid;
+export default HeatmapGrid;
