@@ -31,7 +31,10 @@ export type ResizablePanesProps = {
    * @default 80
    */
   max?: number;
-  /** Collapse one pane, rendering the other full-width and hiding the divider. */
+  /**
+   * Collapse one pane, rendering the other full-width and hiding the divider. The collapsed pane is
+   * hidden rather than unmounted, so it keeps its state for when it's shown again.
+   */
   collapsed?: "first" | "second";
   /**
    * Pane height when laid out side-by-side (row mode).

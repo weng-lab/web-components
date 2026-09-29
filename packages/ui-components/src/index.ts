@@ -13,7 +13,7 @@ export type * from "./components/BiosampleTable";
 export { GenomeSearch, useEntityAutocomplete } from "./components/GenomeSearch";
 export type { GenomeSearchProps, Result, Domain, ResultType, StaticListOption } from "./components/GenomeSearch";
 
-export { TwoPaneLayout, useSyncedTable, useTablePlotSync } from "./components/TwoPaneLayout";
+export { TwoPaneLayout, useTablePlotSync } from "./components/TwoPaneLayout";
 export type { TwoPanePlotConfig, TwoPaneLayoutProps, SyncedTableProps } from "./components/TwoPaneLayout";
 
 export { ResizablePanes, useResizablePanes } from "./components/ResizablePanes";

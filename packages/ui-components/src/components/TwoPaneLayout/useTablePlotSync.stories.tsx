@@ -38,11 +38,14 @@ const columns = [
   { field: "status", headerName: "Status" },
 ];
 
-/** Stands in for a plot: the rows it's handed, in order. */
-const SyncedRows = ({ rows }: { rows: Sample[] }) => (
+/** Stands in for a plot: the rows it's handed, in order, and which are selected. */
+const SyncedRows = ({ rows, selected }: { rows: Sample[]; selected: Sample[] }) => (
   <Stack gap={0.5} minWidth={220}>
     <Typography variant="subtitle2" data-testid="synced-count">
       The plot gets {rows.length} rows
+    </Typography>
+    <Typography variant="body2" data-testid="synced-selected">
+      Selected: {selected.map((row) => row.sample_id).join(", ") || "none"}
     </Typography>
     {rows.map((row, i) => (
       <Typography key={i} variant="body2" data-testid="synced-row">
@@ -53,13 +56,13 @@ const SyncedRows = ({ rows }: { rows: Sample[] }) => (
 );
 
 const SyncedTable = ({ initialState }: { initialState?: GridInitialState }) => {
-  const { sortedFilteredData, tableProps } = useTablePlotSync({ rows, getRowId: (row) => row.sample_id });
+  const { selected, sortedFilteredData, tableProps } = useTablePlotSync({ rows, getRowId: (row) => row.sample_id });
   return (
     <Stack direction="row" gap={3} height={500}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <Table {...tableProps} rows={rows} columns={columns} label="Samples" initialState={initialState} />
       </div>
-      <SyncedRows rows={sortedFilteredData} />
+      <SyncedRows rows={sortedFilteredData} selected={selected} />
     </Stack>
   );
 };
@@ -71,7 +74,8 @@ export const SyncedRowOrder: Story = {
 
 /**
  * Grouped by site, the plot still gets only the samples - in the grouped order, including those in
- * collapsed groups - and none of the rows the grid adds to head each group.
+ * collapsed groups - and none of the rows the grid adds to head each group. A group's checkbox
+ * selects and deselects its samples, and reads checked once all of them are selected.
  */
 export const GroupedRows: Story = {
   render: () => <SyncedTable initialState={{ rowGrouping: { model: ["site"] } }} />,
