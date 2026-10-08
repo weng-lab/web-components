@@ -26,6 +26,8 @@ export * from './components/SequenceAlignmentPlot'
 
 export * from './components/Heatmap'
 
+export * from './components/Legend'
+
 export { Histogram } from './components/Histogram';
 export type { HistogramProps, HistogramBin } from './components/Histogram';
 
