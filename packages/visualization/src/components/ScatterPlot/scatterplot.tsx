@@ -8,6 +8,7 @@ import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import { DEFAULT_DIM_STYLE, getDomains, getPointExtents, isSameTransform } from './helpers';
+import { FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH } from './backgroundField';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
@@ -40,9 +41,11 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     const divRef = React.useRef<HTMLDivElement>(null);
     const selectable = props.selectable ?? false;
+    // A field's legend is given room inside the container rather than spilling out of its right edge.
+    const marginRight = props.backgroundField?.legend ? FIELD_LEGEND_GAP + FIELD_LEGEND_WIDTH : MARGIN.right;
     const boundedWidth = square
         ? size * 0.9 - MARGIN.left
-        : Math.max(0, plotWidth - MARGIN.left - MARGIN.right);
+        : Math.max(0, plotWidth - MARGIN.left - marginRight);
     const boundedHeight = square
         ? size * 0.9 - MARGIN.left
         : Math.max(0, plotHeight - MARGIN.top - MARGIN.bottom);
@@ -206,7 +209,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     bottomAxisLabel={props.bottomAxisLabel}
                     border={props.border ?? false}
                     originLine={props.originLine}
-                    backgroundGradient={props.backgroundGradient}
+                    backgroundField={props.backgroundField}
                     crosshair={crosshair}
                     divRef={divRef}
                 />
