@@ -1,6 +1,6 @@
 import { Tooltip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
+import { useId, useState, type MouseEvent } from "react";
 import {
   clampOf,
   describeSweep,
@@ -10,7 +10,7 @@ import {
   type ColorRange,
   type RampRange,
   type RampStop,
-} from "./colorbarAxis";
+} from "../colorbarAxis";
 import {
   BAR,
   GAP,
@@ -18,11 +18,14 @@ import {
   breakPoints,
   colorbarDepth,
   columnColor,
+  histogramColumns,
   type ColorbarOrientation,
-} from "./colorbarGeometry";
+} from "../colorbarGeometry";
+import { useSweep } from "./useSweep";
 
 /** Pixels of bar per histogram column. */
 const COLUMN = 5;
+
 export type ColorbarGraphicProps = {
   orientation: ColorbarOrientation;
   /** The bar's length in pixels. */
@@ -32,14 +35,13 @@ export type ColorbarGraphicProps = {
   range: ColorRange;
   /** Every value on the plot, sorted ascending and unclamped: what the columns count. */
   values: ArrayLike<number>;
-  format: (value: number) => string;
-  /** How the sweep writes real values, which can want more precision than the scale's rounded ends. */
-  formatValue?: (value: number) => string;
+  /** How the sweep's tooltip writes values. */
+  formatValue: (value: number) => string;
   /** What one value is, for the sweep's count: "sample", "cell". */
   noun: string;
   /**
    * The stretch of the bar under the cursor, drawn on it as a window - or an end's clamp (see
-   * clampAt), drawn as a ring round that end's tip, as it has no width to frame.
+   * clampAt), drawn as a ring round that end's tip.
    */
   sweep: RampRange | null;
   /** Fired as the cursor moves along the bar and when it leaves, so the plot can highlight the window's values. */
@@ -52,9 +54,7 @@ export type ColorbarGraphicProps = {
 
 /**
  * A colorbar with a histogram of the plot's values along it, as a `<g>` for the caller's `<svg>`, so
- * a heatmap can use it as its legend and downloads keep it. The end columns also count the values
- * beyond the range and can dwarf the rest, so the histogram is scaled to the tallest middle column,
- * and a taller end column is capped with a break.
+ * a heatmap can use it as its legend and downloads keep it.
  */
 const ColorbarGraphic = ({
   orientation,
@@ -62,8 +62,7 @@ const ColorbarGraphic = ({
   stops,
   range,
   values,
-  format,
-  formatValue = format,
+  formatValue,
   noun,
   sweep,
   onSweep,
@@ -75,10 +74,10 @@ const ColorbarGraphic = ({
   const horizontal = orientation === "horizontal";
   const depth = HISTOGRAM[orientation];
   const axis = rangeAxis(range);
+  const fill = columnColor(theme);
 
   const bins = Math.max(8, Math.round(length / COLUMN));
-  const counts = histogram(values, axis, bins);
-  const tallest = Math.max(1, ...counts.slice(1, -1));
+  const columns = histogramColumns(histogram(values, axis, bins), depth);
 
   // Placed along the bar (t from 0 at its low end) and across it. The histogram sits above a
   // horizontal bar, and right of a vertical one, whose low end is at the bottom.
@@ -95,34 +94,33 @@ const ColorbarGraphic = ({
     horizontal ? [along, across] : [across, length - along];
   const around = (pad: number): [number, number] => [barAcross[0] - pad, barAcross[1] + pad];
 
-  const sweepText = sweep ? describeSweep(values, range, sweep, noun, formatValue) : "";
+  // A clamp rings the rounded tip at its end; a window frames its stretch of the bar.
+  const clamp = sweep && clampOf(sweep);
+  const frame = !sweep
+    ? null
+    : clamp
+      ? {
+          ...box(
+            clamp === "low" ? -3 / length : 1 - (BAR + 3) / length,
+            clamp === "low" ? (BAR + 3) / length : 1 + 3 / length,
+            around(3)
+          ),
+          rx: BAR / 2 + 3,
+        }
+      : { ...box(sweep.from, sweep.to, around(3)), rx: 3 };
+
   // Whether the cursor is on the bar: a sweep can also come from an end label, which shows its own count.
   const [over, setOver] = useState(false);
-
-  // Whether this bar is being swept. It can unmount mid-sweep (Escape closing the expanded minimap)
-  // with no mouseleave, so unmounting ends the sweep too.
-  const sweeping = useRef(false);
-  const onSweepRef = useRef(onSweep);
-  useEffect(() => {
-    onSweepRef.current = onSweep;
-  });
-  useEffect(
-    () => () => {
-      if (sweeping.current) onSweepRef.current(null);
-    },
-    []
-  );
+  const sweepTo = useSweep(onSweep);
 
   const handleMove = (event: MouseEvent<SVGRectElement>) => {
     const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
-    sweeping.current = true;
     setOver(true);
-    onSweep(rangeAt(horizontal ? (event.clientX - left) / width : 1 - (event.clientY - top) / height));
+    sweepTo(rangeAt(horizontal ? (event.clientX - left) / width : 1 - (event.clientY - top) / height));
   };
   const handleLeave = () => {
-    sweeping.current = false;
     setOver(false);
-    onSweep(null);
+    sweepTo(null);
   };
 
   return (
@@ -135,17 +133,15 @@ const ColorbarGraphic = ({
         </linearGradient>
       </defs>
 
-      {counts.map((count, k) => {
+      {columns.map(({ count, size, capped }, k) => {
         if (count === 0) return null;
-        const share = count / tallest;
-        const size = Math.max(1, Math.min(share, 1) * depth);
         // A pixel between columns, taken off each column's high side.
         const t0 = k / bins;
         const t1 = (k + 1) / bins - 1 / length;
         return (
           <g key={k}>
-            <rect {...box(t0, t1, columnAcross(size))} fill={columnColor(theme)} />
-            {share > 1 && (
+            <rect {...box(t0, t1, columnAcross(size))} fill={fill} />
+            {capped && (
               <polygon
                 // Half a pixel past the column's sides, so no sliver is left either side.
                 points={breakPoints(
@@ -162,29 +158,13 @@ const ColorbarGraphic = ({
 
       <rect {...box(0, 1, barAcross)} rx={BAR / 2} fill={`url(#${gradientId})`} />
 
-      {sweep &&
-        (() => {
-          // A clamp takes the rounded tip at its end, as a ring as far round as the frame sits off
-          // the bar; a window, its stretch of the bar.
-          const clamp = clampOf(sweep);
-          const frame = clamp
-            ? {
-                ...box(
-                  clamp === "low" ? -3 / length : 1 - (BAR + 3) / length,
-                  clamp === "low" ? (BAR + 3) / length : 1 + 3 / length,
-                  around(3)
-                ),
-                rx: BAR / 2 + 3,
-              }
-            : { ...box(sweep.from, sweep.to, around(3)), rx: 3 };
-          return (
-            <g fill="none">
-              {/* White inside and out, so the frame holds against the dark and pale ends alike. */}
-              <rect {...frame} stroke={theme.palette.background.paper} strokeWidth={4} />
-              <rect {...frame} stroke={theme.palette.text.primary} strokeWidth={2} />
-            </g>
-          );
-        })()}
+      {frame && (
+        // Paper-colored inside and out, so the frame holds against the dark and pale ends alike.
+        <g fill="none">
+          <rect {...frame} stroke={theme.palette.background.paper} strokeWidth={4} />
+          <rect {...frame} stroke={theme.palette.text.primary} strokeWidth={2} />
+        </g>
+      )}
 
       {marker !== null && (
         <rect
@@ -196,12 +176,9 @@ const ColorbarGraphic = ({
         />
       )}
 
-      {/*
-        The hit area runs past the bar on both sides: a sweep end to end drifts, and leaving mid-sweep
-        would drop the highlight. The count follows the cursor rather than sitting over the plot.
-      */}
+      {/* The hit area runs past the bar on both sides, so a sweep that drifts off it doesn't drop the highlight. */}
       <Tooltip
-        title={sweepText}
+        title={over && sweep ? describeSweep(values, range, sweep, noun, formatValue) : ""}
         open={over && sweep !== null}
         followCursor
         placement={horizontal ? "top" : "right"}
@@ -209,7 +186,7 @@ const ColorbarGraphic = ({
         slotProps={{ popper: { container: overlayContainer } }}
       >
         <rect
-          {...box(0, 1, [horizontal ? -4 : -4, colorbarDepth(orientation) + 4])}
+          {...box(0, 1, [-4, colorbarDepth(orientation) + 4])}
           fill="transparent"
           onMouseMove={handleMove}
           onMouseLeave={handleLeave}

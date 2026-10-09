@@ -8,7 +8,7 @@ import { Text } from "@visx/text";
 import { curveBasis } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { BackgroundGradient, ChartProps, CrosshairPosition, Point, SelectionMode, ZoomType } from "./types";
+import { BackgroundGradient, ChartProps, CrosshairPosition, DimStyle, Point, SelectionMode, ZoomType } from "./types";
 import { DEFAULT_HOVER_STYLE, drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, pointKey, prepareCanvas, rescaleX, rescaleY } from "./helpers";
 import { useStableCallback } from "../../hooks";
 import AnimatedPoints from "./AnimatedPoints";
@@ -34,9 +34,12 @@ type ScatterPlotViewportProps<T extends object> = {
     selectMode: SelectionMode;
     selectable: boolean;
     disableZoom?: boolean;
-    groupPointsAnchor?: keyof Point<T> | keyof T;
     hoveredPoint: Point<T> | null;
-    hoveredPoints?: Point<T>[];
+    /** Every point drawn as hovered, by pointKey - see useHoveredPointKeys. */
+    hoveredPointKeys: Set<string>;
+    /** Whether every point outside hoveredPointKeys is dimmed - see ChartProps' spotlight. */
+    spotlit: boolean;
+    dimStyle: DimStyle;
     hoverGrowth?: number;
     hoverStroke?: string;
     handleMouseMove: (event: React.MouseEvent<SVGElement>, zoom: ZoomType) => void;
@@ -84,9 +87,10 @@ const ScatterPlotViewport = <T extends object>({
     selectMode,
     selectable,
     disableZoom,
-    groupPointsAnchor,
     hoveredPoint,
-    hoveredPoints,
+    hoveredPointKeys,
+    spotlit,
+    dimStyle,
     hoverGrowth,
     hoverStroke,
     handleMouseMove,
@@ -163,53 +167,6 @@ const ScatterPlotViewport = <T extends object>({
         [yScale, zoom.transformMatrix]
     );
 
-    // What is hovered: the point under the cursor if there is one, otherwise whatever the
-    // consumer has asked to highlight. The cursor takes precedence so the plot's own hover is
-    // never overridden mid-gesture.
-    const highlightSeeds: Point<T>[] = useMemo(
-        () => (hoveredPoint ? [hoveredPoint] : hoveredPoints ?? []),
-        [hoveredPoint, hoveredPoints]
-    );
-
-    const groupedPoints: Point<T>[] = useMemo(() => {
-        const anchor = groupPointsAnchor;
-        if (!anchor) return highlightSeeds;
-
-        const anchorValue = (point: Point<T>): unknown =>
-            anchor in point
-                ? point[anchor as keyof Point<T>]
-                : point.metaData?.[anchor as keyof T];
-
-        // Collect the seeds' anchor values first, so this stays O(points + seeds). Matching each
-        // point against each seed would be 2.5m comparisons when a whole 750-point group is
-        // handed in against 3.4k points.
-        const seedValues = new Set(
-            highlightSeeds.map(anchorValue).filter((value) => value !== undefined)
-        );
-        if (seedValues.size === 0) return [];
-
-        return pointData.filter((point) => {
-            const value = anchorValue(point);
-            return value !== undefined && seedValues.has(value);
-        });
-    }, [highlightSeeds, groupPointsAnchor, pointData]);
-
-    const previousHoveredKeysRef = useRef<Set<string>>(new Set());
-
-    const hoveredPointKeys = useMemo(() => {
-        const next = new Set(groupedPoints.map(pointKey));
-        const previous = previousHoveredKeysRef.current;
-
-        // An unchanged set keeps its identity, so moving within one hovered group doesn't re-run
-        // the redraw effect for every point the cursor crosses.
-        if (next.size === previous.size && [...next].every((key) => previous.has(key))) {
-            return previous;
-        }
-
-        previousHoveredKeysRef.current = next;
-        return next;
-    }, [groupedPoints]);
-
     const currentDisplayedPoints = useMemo(
         () => pointData.filter((point) =>
             isPointVisible(xScaleTransformed(point.x), yScaleTransformed(point.y), boundedWidth, boundedHeight)
@@ -259,16 +216,23 @@ const ScatterPlotViewport = <T extends object>({
         const { nonHovered, hovered } = partitionPointsByHover(pointData, hoveredPointKeys);
         const starts = hoverStartsRef.current;
 
-        const drawRenderedPoint = (point: Point<T>, hoverAmount: number) => {
+        const drawRenderedPoint = (point: Point<T>, hoverAmount: number, dim?: DimStyle) => {
             const transformedX = xST(point.x);
             const transformedY = yST(point.y);
             if (!isPointVisible(transformedX, transformedY, boundedWidth, boundedHeight)) return;
-            drawCanvasPoint(context, point, transformedX, transformedY, hoverAmount, hoverStyle);
+            drawCanvasPoint(context, point, transformedX, transformedY, hoverAmount, hoverStyle, dim);
         };
 
-        nonHovered.forEach((point) => drawRenderedPoint(point, 0));
-        hovered.forEach((point) => drawRenderedPoint(point, hoverAmountAt(starts.get(pointKey(point)), now)));
-    }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient, hoverStyle]);
+        // Dimmed points first, so they're drawn beneath the rest. While spotlit, every point not hovered is.
+        const dimmed: Point<T>[] = [];
+        const lit: Point<T>[] = [];
+        for (const point of nonHovered) (spotlit || point.dimmed ? dimmed : lit).push(point);
+        dimmed.forEach((point) => drawRenderedPoint(point, 0, dimStyle));
+        lit.forEach((point) => drawRenderedPoint(point, 0));
+        hovered.forEach((point) =>
+            drawRenderedPoint(point, hoverAmountAt(starts.get(pointKey(point)), now), point.dimmed ? dimStyle : undefined)
+        );
+    }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient, hoverStyle, spotlit, dimStyle]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -430,7 +394,8 @@ const ScatterPlotViewport = <T extends object>({
                     point.r === nextPoint.r &&
                     point.shape === nextPoint.shape &&
                     point.color === nextPoint.color &&
-                    point.opacity === nextPoint.opacity
+                    point.opacity === nextPoint.opacity &&
+                    point.dimmed === nextPoint.dimmed
                 );
             });
         };
@@ -479,6 +444,7 @@ const ScatterPlotViewport = <T extends object>({
                                 {showPointAnimation && animation && (
                                     <AnimatedPoints
                                         pointData={pointData}
+                                        dimStyle={dimStyle}
                                         animation={animation}
                                         animationGroupSize={animationGroupSize}
                                         animationBuffer={animationBuffer}

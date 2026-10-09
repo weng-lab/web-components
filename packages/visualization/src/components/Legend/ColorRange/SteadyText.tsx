@@ -10,11 +10,9 @@ export type SteadyTextProps = {
 };
 
 /**
- * A label that doesn't wobble in width while a range is dragged, but takes its own width otherwise
- * - reserving the widest possible label would leave a gap beside a short one like "0".
- *
- * Each shape it takes while held, digits written as 0, sits hidden in the same grid cell, which
- * sizes to the widest. In tabular figures every digit is as wide as a 0.
+ * A label that holds its widest width while a range is dragged, and takes its own width otherwise.
+ * Each shape it takes while held (digits written as 0, which in tabular figures are as wide as any
+ * digit) sits hidden in the same grid cell, which sizes to the widest.
  */
 const SteadyText = ({ text, hold, align = "start" }: SteadyTextProps) => {
   const shape = text.replace(/\d/g, "0");

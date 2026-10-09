@@ -1,17 +1,9 @@
 import { Stack, Typography } from "@mui/material";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import {
-  percentilePresets,
-  percentileRange,
-  reachOf,
-  sweptValues,
-  symmetricPresets,
-  type ColorRange,
-  type RampRange,
-} from "./colorbarAxis";
+import { percentileRange, sweptValues, type ColorRange, type RampRange } from "../colorbarAxis";
 import ColorbarLegend, { type ColorbarLegendProps } from "./ColorbarLegend";
-import { MISSING_COLOR, READS, RED_BLUE, VIRIDIS, Z_SCORES, formatReads, formatZ } from "./example-data/legendData";
+import { MISSING_COLOR, READS, RED_BLUE, VIRIDIS, Z_SCORES, formatReads, formatZ } from "../example-data/legendData";
 
 type StoryArgs = ColorbarLegendProps & {
   /** Whether the story wires up the range editor. */
@@ -28,7 +20,6 @@ const Stateful = ({ adjustable = true, ...args }: StoryArgs) => {
   const [sweep, setSweep] = useState<RampRange | null>(null);
   const within = range && sweep && sweptValues(range, sweep);
   const count = within ? Array.from(args.values).filter((v) => v >= within[0] && v <= within[1]).length : 0;
-  const { values } = args;
 
   return (
     <Stack gap={1.5}>
@@ -37,16 +28,7 @@ const Stateful = ({ adjustable = true, ...args }: StoryArgs) => {
         range={range}
         sweep={sweep}
         onSweep={setSweep}
-        control={
-          adjustable && initialRange && values.length > 0
-            ? {
-                defaultRange: initialRange,
-                extent: [values[0], values[values.length - 1]],
-                presets: args.kind === "diverging" ? symmetricPresets(reachOf(values)) : percentilePresets(values),
-                onChange: setRange,
-              }
-            : undefined
-        }
+        control={adjustable && initialRange ? { defaultRange: initialRange, onChange: setRange } : undefined}
       />
       <Typography variant="caption" color="text.secondary">
         {within ? `The plot would highlight ${count} ${args.noun}s.` : "Hover the bar or an end label to sweep it."}

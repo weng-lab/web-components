@@ -4,10 +4,12 @@
  * heatmap's hundreds of thousands of cells cost no more than a plot's points.
  */
 
+import { rgb } from "@visx/vendor/d3-color";
+
 /** Where the colors stop, in the units the ramp is drawn in. Values beyond take the end colors. */
 export type ColorRange = [low: number, high: number];
 
-/** A color stop, `at` from 0 at the low end of the ramp to 1 at its high end. */
+/** A color stop, `at` from 0 at the low end of the ramp to 1 at its high end. Any CSS color. */
 export type RampStop = { at: number; color: string };
 
 /** Sequential runs low to high. Diverging runs out both ways from 0, so its range stays symmetric (±limit). */
@@ -45,13 +47,19 @@ const upperBound = (sorted: Sorted, x: number) => {
   return lo;
 };
 
-/** Linear interpolation between closest ranks - numpy's default, so it agrees with a quick check in Python. */
+/** Linear interpolation between closest ranks, as numpy's default. */
 export const percentile = (sorted: Sorted, p: number) => {
   const rank = ((sorted.length - 1) * p) / 100;
   const below = Math.floor(rank);
   const above = Math.min(below + 1, sorted.length - 1);
   return sorted[below] + (sorted[above] - sorted[below]) * (rank - below);
 };
+
+/** The middle of the values, with `clip` percent trimmed off each end, so a few extreme values don't wash out the rest. */
+export const percentileRange = (sorted: Sorted, clip: number): ColorRange => [
+  percentile(sorted, clip),
+  percentile(sorted, 100 - clip),
+];
 
 /** Colors spaced evenly along the ramp, as Heatmap spaces its `colors`. */
 export const evenStops = (colors: readonly string[]): RampStop[] =>
@@ -84,8 +92,8 @@ const TAIL_SHARE = 0.16;
 
 /**
  * The range editor's axis, spanning every value: linear across `core`, where nearly every value
- * lies, and logarithmic in the tails, squeezed into the last 16% at either end - heatmap z-scores run
- * to ±23 with 99% within ±3. Independent of the range, so a dragged handle stays under the cursor.
+ * lies, and logarithmic in the tails, squeezed into the last 16% at either end. Independent of the
+ * range, so a dragged handle stays under the cursor.
  */
 export const squeezedAxis = (core: ColorRange, extent: ColorRange, kind: RampKind): BarAxis => {
   const [low, high] = core;
@@ -129,17 +137,14 @@ export const histogram = (sorted: Sorted, axis: BarAxis, bins: number): number[]
   return counts;
 };
 
-/** The values a stretch of the bar takes in, open-ended at the bar's ends to include values clamped there. */
-export const valuesIn = (axis: BarAxis, { from, to }: RampRange): ColorRange => [
-  from <= 0 ? -Infinity : axis.fromT(from),
-  to >= 1 ? Infinity : axis.fromT(to),
-];
-
 /**
  * The values a sweep of a colorbar spanning `range` takes in, as [low, high] inclusive: what a plot
- * highlights for it. The sweep's tooltip counts the same range.
+ * highlights for it. Open-ended at the bar's ends, to take in the values clamped there.
  */
-export const sweptValues = (range: ColorRange, sweep: RampRange): ColorRange => valuesIn(rangeAxis(range), sweep);
+export const sweptValues = (range: ColorRange, { from, to }: RampRange): ColorRange => {
+  const { fromT } = rangeAxis(range);
+  return [from <= 0 ? -Infinity : fromT(from), to >= 1 ? Infinity : fromT(to)];
+};
 
 /** Whether values lie past each end of a range and so take its end color: what "≤" and "≥" say. */
 export const clampedEnds = (sorted: Sorted, [low, high]: ColorRange) => ({
@@ -168,7 +173,7 @@ const RANGE_WIDTH = 0.15;
 
 /**
  * The values past the clamp at one end - the ones drawn in that end's color - as a stretch of no
- * width at that end of the bar, which valuesIn opens out past it: [high, ∞) or (−∞, low].
+ * width at that end of the bar, which sweptValues opens out past it: [high, ∞) or (−∞, low].
  */
 export const clampAt = (end: "low" | "high"): RampRange => (end === "low" ? { from: 0, to: 0 } : { from: 1, to: 1 });
 
@@ -205,26 +210,35 @@ export const symmetricPresets = (reach: number): RangePreset[] => [
 export const snapLimit = (limit: number) =>
   limit < 5 ? Math.round(limit * 10) / 10 : limit < 10 ? Math.round(limit * 2) / 2 : Math.round(limit);
 
-/** Whether two ranges match within half a percent of their span: beyond a link's rounding, below what shows. */
+/** Whether two ranges match within half a percent of their span, so a range that's been rounded still matches. */
 export const sameRange = (a: ColorRange, b: ColorRange) => {
   const tolerance = Math.max(Math.abs(a[1] - a[0]), Math.abs(b[1] - b[0])) * 5e-3;
   return Math.abs(a[0] - b[0]) <= tolerance && Math.abs(a[1] - b[1]) <= tolerance;
 };
 
-const toRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+/** A ramp's color at any place along it, from 0 at its low end to 1 at its high end. */
+export const rampAt = (stops: readonly RampStop[]) => {
+  const parsed = stops.map(({ at, color }) => ({ at, color: rgb(color) }));
+  return (s: number): string => {
+    const t = clamp01(s);
+    // The stops may be unevenly placed, so find the pair t falls between rather than indexing by step.
+    const next = parsed.findIndex(({ at }) => at >= t);
+    const upper = next === -1 ? parsed.length - 1 : Math.max(next, 1);
+    const [from, to] = [parsed[upper - 1], parsed[upper]];
+    const mix = to.at > from.at ? clamp01((t - from.at) / (to.at - from.at)) : 0;
+    const channel = (key: "r" | "g" | "b") => Math.round(from.color[key] + (to.color[key] - from.color[key]) * mix);
+    return `rgb(${channel("r")},${channel("g")},${channel("b")})`;
+  };
+};
 
-/** The color a ramp of hex stops has at `s`, from 0 at its low end to 1 at its high end. */
-export const colorAt = (stops: readonly RampStop[], s: number): string => {
-  const t = clamp01(s);
-  // The stops may be unevenly placed, so find the pair t falls between rather than indexing by step.
-  const upper = Math.max(
-    stops.findIndex(({ at }) => at >= t),
-    1
-  );
-  const [from, to] = [stops[upper - 1], stops[upper]];
-  const mix = to.at > from.at ? (t - from.at) / (to.at - from.at) : 0;
-  const [start, end] = [toRgb(from.color), toRgb(to.color)];
-  return `rgb(${start.map((channel, i) => Math.round(channel + (end[i] - channel) * mix)).join(",")})`;
+/**
+ * The color a value takes on a ramp whose colors span `range`, with values beyond held at the end
+ * colors: what to paint a point so it matches a colorbar of the same stops and range.
+ */
+export const rampColor = (stops: readonly RampStop[], range: ColorRange) => {
+  const at = rampAt(stops);
+  const { toT } = rangeAxis(range);
+  return (value: number) => at(toT(value));
 };
 
 /** A count as a share of a total, never rounded to zero ("<0.1%"). Tenths below 10%, whole percents above. */
@@ -234,19 +248,8 @@ export const formatShare = (count: number, total: number) => {
 };
 
 /**
- * The middle of the values, with `clip` percent trimmed off each end, so a few extreme values don't
- * wash out the rest. Values beyond take the end colors.
- */
-export const percentileRange = (sorted: Sorted, clip: number): ColorRange => [
-  percentile(sorted, clip),
-  percentile(sorted, 100 - clip),
-];
-
-/**
- * What a stretch of the bar takes in, as its sweep's tooltip says it: "12 samples (3.4%) · 0.2 – 1.5",
- * the true lowest and highest inside - at either end of the bar, past where the colors stop. A
- * clamp's is "10 samples (2.0%) · up to 113M": its near end is the clamp the label already names,
- * which written to more places than the label's rounding would seem to contradict it.
+ * A sweep's tooltip: "12 samples (3.4%) · 0.2 – 1.5", the true lowest and highest values inside. A
+ * clamp's reads "up to 113M" instead, leaving its near end to the end label.
  */
 export const describeSweep = (
   values: ArrayLike<number>,

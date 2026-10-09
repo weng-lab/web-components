@@ -1,7 +1,7 @@
 import { blueGrey } from "@mui/material/colors";
 import type { Theme } from "@mui/material/styles";
 
-/** How ColorbarGraphic lies across its bar: kept apart so a caller can set room for it. */
+/** Which way a colorbar's bar runs. */
 export type ColorbarOrientation = "horizontal" | "vertical";
 
 export const BAR = 10;
@@ -11,6 +11,20 @@ export const HISTOGRAM = { horizontal: 12, vertical: 16 } as const;
 
 /** How much room the graphic takes across the bar: histogram, gap and bar. */
 export const colorbarDepth = (orientation: ColorbarOrientation) => HISTOGRAM[orientation] + GAP + BAR;
+
+/**
+ * Each histogram column's height, out of `depth`. The end columns also count the values beyond the
+ * range and can dwarf the rest, so heights are scaled to the tallest middle column, and a taller end
+ * column is `capped`, to be drawn with a break (see breakPoints).
+ */
+export const histogramColumns = (counts: readonly number[], depth: number) => {
+  const tallest = Math.max(1, ...counts.slice(1, -1));
+  return counts.map((count) => ({
+    count,
+    size: Math.max(1, Math.min(count / tallest, 1) * depth),
+    capped: count > tallest,
+  }));
+};
 
 /**
  * The slanted cut through a capped column, as polygon points: `from` to `to` across the column,

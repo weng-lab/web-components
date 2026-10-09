@@ -5,11 +5,11 @@
 
 import type { Theme } from "@mui/material/styles";
 import { useState, useSyncExternalStore } from "react";
-import { clampedEnds, type ColorRange } from "./colorbarAxis";
+import { clampedEnds, type ColorRange } from "../colorbarAxis";
 
 /**
- * How a colorbar writes its end labels. The family is named outright, not through a CSS variable,
- * which neither the canvas that measures the labels nor a downloaded SVG can resolve.
+ * How a colorbar writes its end labels. Name the font family outright, not through a CSS variable
+ * (next/font's, say), which neither the canvas that measures the labels nor a downloaded SVG can resolve.
  */
 export type ColorbarLabelStyle = {
   fontFamily: string;
@@ -34,8 +34,7 @@ const toPx = (length: string | number | undefined, rem: number, em: number) => {
 
 /**
  * A theme's caption as a colorbar's label style, so the labels read as the text around them and
- * follow the theme into dark mode. Pass `fontFamily` by name where the theme's is a CSS variable
- * (next/font's, say), which neither the canvas measuring the labels nor a downloaded SVG can resolve.
+ * follow the theme into dark mode. Pass `fontFamily` where the theme's is a CSS variable.
  */
 export const themeLabelStyle = ({ typography, palette }: Theme, fontFamily?: string): ColorbarLabelStyle => {
   const { caption, htmlFontSize } = typography;

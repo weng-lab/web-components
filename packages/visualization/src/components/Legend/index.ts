@@ -1,31 +1,24 @@
 /**
  * Legends a plot can sit beside: chips for groups, and a colorbar for a continuous value, with the
- * button that moves where its colors stop. Plots don't draw these themselves; a page wires a legend's
- * hover and toggles to its plot.
+ * button that moves where its colors stop. A page wires a legend's hover and toggles to its plot.
  */
 
-export { default as ChipLegend } from "./ChipLegend";
-export type { ChipLegendProps, LegendGroup } from "./ChipLegend";
-export { default as ShapeGlyph } from "./ShapeGlyph";
-export type { ShapeGlyphProps } from "./ShapeGlyph";
+export { default as ChipLegend } from "./ChipLegend/ChipLegend";
+export type { ChipLegendProps, LegendGroup } from "./ChipLegend/ChipLegend";
 
-export { Colorbar, InlineColorbar } from "./Colorbar";
-export type { ColorbarProps, ColorbarScaleProps, InlineColorbarProps } from "./Colorbar";
-export { default as ColorbarLegend } from "./ColorbarLegend";
-export type { ColorbarLegendProps } from "./ColorbarLegend";
-export { DEFAULT_LABEL_STYLE, themeLabelStyle } from "./colorbarLabels";
-export type { ColorbarLabelStyle } from "./colorbarLabels";
-export { default as ColorRangeButton } from "./ColorRangeButton";
-export type { ColorRangeButtonProps, ColorRangeControl } from "./ColorRangeButton";
-export { default as SteadyText } from "./SteadyText";
+export { Colorbar } from "./Colorbar/Colorbar";
+export type { ColorbarProps, ColorbarScaleProps } from "./Colorbar/Colorbar";
+export { default as ColorbarLegend } from "./Colorbar/ColorbarLegend";
+export type { ColorbarLegendProps } from "./Colorbar/ColorbarLegend";
+export { themeLabelStyle } from "./Colorbar/colorbarLabels";
+export type { ColorbarLabelStyle } from "./Colorbar/colorbarLabels";
+export { default as ColorRangeButton } from "./ColorRange/ColorRangeButton";
+export type { ColorRangeButtonProps, ColorRangeControl } from "./ColorRange/ColorRangeButton";
 export {
-  colorAt,
   evenStops,
-  formatRange,
-  percentile,
   percentilePresets,
   percentileRange,
-  rangeAxis,
+  rampColor,
   reachOf,
   sameRange,
   sweptValues,

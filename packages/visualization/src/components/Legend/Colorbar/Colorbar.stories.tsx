@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import type { RampRange } from "./colorbarAxis";
+import type { RampRange } from "../colorbarAxis";
 import { Colorbar, type ColorbarProps } from "./Colorbar";
-import { RED_BLUE, Z_SCORES, formatZ } from "./example-data/legendData";
+import { RED_BLUE, Z_SCORES, formatZ } from "../example-data/legendData";
 
 /**
  * The colorbar in an `<svg>` the size of the box it's given, as a heatmap's legend slot gives it,

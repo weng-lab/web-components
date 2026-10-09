@@ -1,10 +1,11 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useState } from "react";
 import { InlineColorbar, type ColorbarScaleProps } from "./Colorbar";
-import ColorRangeButton, { type ColorRangeControl } from "./ColorRangeButton";
-import { colorAt, type ColorRange, type RampKind } from "./colorbarAxis";
+import ColorRangeButton, { type ColorRangeControl } from "../ColorRange/ColorRangeButton";
+import { rampAt, type ColorRange, type RampKind } from "../colorbarAxis";
 import { themeLabelStyle, type ColorbarLabelStyle } from "./colorbarLabels";
+import Swatch from "../Swatch";
 
 export type ColorbarLegendProps = Omit<
   ColorbarScaleProps,
@@ -23,13 +24,9 @@ export type ColorbarLegendProps = Omit<
   missing?: { count: number; color: string };
   /** The bar's length: by default a chip row's worth of room, lying down. */
   length?: number;
-  /** How the end labels are written. The theme's caption by default, as the text beside them is - see themeLabelStyle. */
+  /** How the end labels are written. The theme's caption by default - see themeLabelStyle. */
   labelStyle?: ColorbarLabelStyle;
 };
-
-const Swatch = ({ color }: { color: string }) => (
-  <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, flexShrink: 0 }} />
-);
 
 /**
  * A colorbar in place of a field's chips, held to their height so switching doesn't shift the plot,
@@ -56,7 +53,7 @@ const ColorbarLegend = ({
         // Every value is the same, so there's no range for a bar to show.
         (range[0] === range[1] ? (
           <Stack direction="row" alignItems="center" gap={0.75}>
-            <Swatch color={colorAt(scale.stops, 0.5)} />
+            <Swatch color={rampAt(scale.stops)(0.5)} />
             <Typography variant="caption">
               {scale.format(range[0])} in every {scale.noun}
             </Typography>

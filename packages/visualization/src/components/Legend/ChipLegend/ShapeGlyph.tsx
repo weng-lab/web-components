@@ -1,7 +1,6 @@
-import { getShapePoints } from "../ScatterPlot/helpers";
-import type { PointShape } from "../ScatterPlot/types";
+import { getShapePoints } from "../../ScatterPlot/helpers";
+import type { PointShape } from "../../ScatterPlot/types";
 
-/** The scatter plot's point shapes at legend size, drawn with the library's own geometry so they match. */
 export type ShapeGlyphProps = {
   shape: PointShape;
   color: string;
@@ -13,6 +12,7 @@ export type ShapeGlyphProps = {
 /** Radius as a fraction of the box, sized so the widest shape, the X (about 1.68r), isn't clipped. */
 const RADIUS_RATIO = 1 / 1.75;
 
+/** The scatter plot's point shapes at legend size, drawn with the library's own geometry so they match. */
 const ShapeGlyph = ({ shape, color, hollow = false, size = 12 }: ShapeGlyphProps) => {
   const center = size / 2;
   const radius = center * RADIUS_RATIO;

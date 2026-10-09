@@ -1,8 +1,8 @@
 import type { TooltipProps } from "@mui/material";
 import ColorbarEnd from "./ColorbarEnd";
 import ColorbarGraphic from "./ColorbarGraphic";
-import type { ColorRange, RampRange, RampStop } from "./colorbarAxis";
-import { LABEL_GAP, colorbarDepth, labelSpace, type ColorbarOrientation } from "./colorbarGeometry";
+import type { ColorRange, RampRange, RampStop } from "../colorbarAxis";
+import { LABEL_GAP, colorbarDepth, labelSpace, type ColorbarOrientation } from "../colorbarGeometry";
 import { DEFAULT_LABEL_STYLE, useEndLabels, type ColorbarLabelStyle, type EndLabel } from "./colorbarLabels";
 
 /** What a colorbar shows and how it's swept, however it's laid out. */
@@ -36,7 +36,9 @@ export type ColorbarScaleProps = {
 };
 
 /** A colorbar's props once its labels are measured and its bar's length is known. */
-type LaidOut = Omit<ColorbarScaleProps, "labelStyle" | "holdLabels"> & {
+type LaidOut = Omit<ColorbarScaleProps, "labelStyle" | "holdLabels" | "format" | "formatValue"> & {
+  /** How the sweeps write values: `formatValue`, or `format` without one. */
+  formatValue: (value: number) => string;
   labelStyle: ColorbarLabelStyle;
   labels: { low: EndLabel; high: EndLabel };
   length: number;
@@ -65,7 +67,7 @@ const EndText = ({ end, x, y, anchor, placement, bar }: EndTextProps) => {
       range={bar.range}
       values={bar.values}
       noun={bar.noun}
-      formatValue={bar.formatValue ?? bar.format}
+      formatValue={bar.formatValue}
       onSweep={bar.onSweep}
       placement={placement}
       overlayContainer={bar.overlayContainer}
@@ -88,22 +90,13 @@ const EndText = ({ end, x, y, anchor, placement, bar }: EndTextProps) => {
   );
 };
 
-const Graphic = ({ orientation, bar }: { orientation: ColorbarOrientation; bar: LaidOut }) => (
-  <ColorbarGraphic
-    orientation={orientation}
-    length={bar.length}
-    stops={bar.stops}
-    range={bar.range}
-    values={bar.values}
-    format={bar.format}
-    formatValue={bar.formatValue}
-    noun={bar.noun}
-    sweep={bar.sweep}
-    onSweep={bar.onSweep}
-    marker={bar.marker}
-    overlayContainer={bar.overlayContainer}
-  />
-);
+const Graphic = ({
+  orientation,
+  bar: { labels, labelStyle, ...bar },
+}: {
+  orientation: ColorbarOrientation;
+  bar: LaidOut;
+}) => <ColorbarGraphic orientation={orientation} {...bar} />;
 
 /** Lying down: the end labels either side of the bar, sitting on its bottom edge. */
 const ColorbarRow = (bar: LaidOut) => {
@@ -160,18 +153,21 @@ export const Colorbar = ({
   height,
   labelStyle = DEFAULT_LABEL_STYLE,
   holdLabels = false,
+  format,
+  formatValue = format,
   ...scale
 }: ColorbarProps) => {
-  const labels = useEndLabels(scale.range, scale.values, scale.format, labelStyle, holdLabels);
+  const labels = useEndLabels(scale.range, scale.values, format, labelStyle, holdLabels);
+  const bar = { ...scale, formatValue, labelStyle, labels };
 
   if (orientation === "vertical") {
     const length = Math.max(height - 2 * labelSpace(labelStyle.fontSize), MIN_LENGTH);
-    return <ColorbarColumn {...scale} labelStyle={labelStyle} labels={labels} length={length} />;
+    return <ColorbarColumn {...bar} length={length} />;
   }
   const length = Math.max(width - rowWidth(labels, 0), MIN_LENGTH);
   return (
     <g transform={`translate(0,${(height - colorbarDepth("horizontal")) / 2})`}>
-      <ColorbarRow {...scale} labelStyle={labelStyle} labels={labels} length={length} />
+      <ColorbarRow {...bar} length={length} />
     </g>
   );
 };
@@ -189,19 +185,21 @@ export const InlineColorbar = ({
   label,
   labelStyle = DEFAULT_LABEL_STYLE,
   holdLabels = false,
+  format,
+  formatValue = format,
   ...scale
 }: InlineColorbarProps) => {
-  const labels = useEndLabels(scale.range, scale.values, scale.format, labelStyle, holdLabels);
+  const labels = useEndLabels(scale.range, scale.values, format, labelStyle, holdLabels);
   const [low, high] = scale.range;
   return (
     <svg
       width={rowWidth(labels, length)}
       height={colorbarDepth("horizontal")}
       role="group"
-      aria-label={`${label} color scale, from ${scale.format(low)} to ${scale.format(high)}`}
+      aria-label={`${label} color scale, from ${format(low)} to ${format(high)}`}
       style={{ display: "block", overflow: "visible", flexShrink: 0 }}
     >
-      <ColorbarRow {...scale} labelStyle={labelStyle} labels={labels} length={length} />
+      <ColorbarRow {...scale} formatValue={formatValue} labelStyle={labelStyle} labels={labels} length={length} />
     </svg>
   );
 };

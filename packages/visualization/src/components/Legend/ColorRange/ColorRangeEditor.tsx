@@ -2,25 +2,29 @@ import { Box, Slider, Stack, ToggleButton, ToggleButtonGroup, Typography } from 
 import { useTheme } from "@mui/material/styles";
 import { useId } from "react";
 import {
-  colorAt,
   countBeyond,
   formatRange,
   formatShare,
   histogram,
+  percentilePresets,
+  rampAt,
+  reachOf,
   sameRange,
   snapLimit,
   squeezedAxis,
+  symmetricPresets,
   type ColorRange,
   type RampKind,
   type RampStop,
   type RangePreset,
-} from "./colorbarAxis";
-import { breakPoints, columnColor } from "./colorbarGeometry";
+} from "../colorbarAxis";
+import { breakPoints, columnColor, histogramColumns } from "../colorbarGeometry";
 
+/** The editor's own sizes, roomier than the compact colorbar's. */
 const WIDTH = 348;
-const HISTOGRAM = 56;
-const GAP = 3;
-const BAR = 12;
+const EDITOR_HISTOGRAM = 56;
+const EDITOR_GAP = 3;
+const EDITOR_BAR = 12;
 /** Pixels of bar per histogram column: wider than the compact legend's, for a steadier shape. */
 const COLUMN = 7;
 /** Samples of the bar's color per pixel: fine enough that the squeezed tails don't band. */
@@ -33,11 +37,12 @@ export type ColorRangeEditorProps = {
   range: ColorRange;
   /** The default range, which the editor's axis is built around. */
   defaultRange: ColorRange;
-  /** The lowest and highest value there is, which the editor's bar reaches. */
-  extent: ColorRange;
+  /** The lowest and highest value there is, which the editor's bar reaches. The ends of `values` by default. */
+  extent?: ColorRange;
   /** Every value on the plot, sorted ascending and unclamped: what the columns count. */
   values: ArrayLike<number>;
-  presets: RangePreset[];
+  /** Ranges offered in one click: ±2, ±3, ±5, ±10 for a diverging scale, the middle 90–98% otherwise. */
+  presets?: RangePreset[];
   format: (value: number) => string;
   /** What one value is, for the count beyond: "sample", "cell". */
   noun: string;
@@ -55,9 +60,10 @@ const ColorRangeEditor = ({
   kind,
   range,
   defaultRange,
-  extent,
   values,
-  presets,
+  // Defaulted after `values`, which they read.
+  extent = [values[0], values[values.length - 1]],
+  presets = kind === "diverging" ? symmetricPresets(reachOf(values)) : percentilePresets(values),
   format,
   noun,
   onChange,
@@ -70,21 +76,20 @@ const ColorRangeEditor = ({
   const span = high - low;
 
   const bins = Math.round(WIDTH / COLUMN);
-  const counts = histogram(values, axis, bins);
-  // Scaled as ColorbarGraphic scales its columns.
-  const tallest = Math.max(1, ...counts.slice(1, -1));
+  const columns = histogramColumns(histogram(values, axis, bins), EDITOR_HISTOGRAM);
   const column = WIDTH / bins;
 
   // Sampled, since a gradient between the ramp's stops can't follow the squeezed axis or the flat ends.
+  const colorAt = rampAt(stops);
   const barStops = Array.from({ length: Math.ceil(WIDTH / COLOR_STEP) + 1 }, (_, i) => {
     const t = Math.min((i * COLOR_STEP) / WIDTH, 1);
-    return { t, color: colorAt(stops, span > 0 ? (axis.fromT(t) - low) / span : 0.5) };
+    return { t, color: colorAt(span > 0 ? (axis.fromT(t) - low) / span : 0.5) };
   });
 
   const beyond = countBeyond(values, range);
 
-  const handleChange = (values: number[], active: number) => {
-    const dragged = axis.fromT(values[active]);
+  const handleChange = (thumbs: number[], active: number) => {
+    const dragged = axis.fromT(thumbs[active]);
     if (kind === "diverging") {
       const limit = Math.min(Math.max(snapLimit(Math.abs(dragged)), 0.5), Math.max(-extent[0], extent[1]));
       onChange([-limit, limit]);
@@ -102,8 +107,13 @@ const ColorRangeEditor = ({
   return (
     // As wide as the bar, so a long readout wraps rather than widening the panel mid-drag.
     <Stack gap={1} width={WIDTH}>
-      <Box position="relative" width={WIDTH} height={HISTOGRAM + GAP + BAR}>
-        <svg width={WIDTH} height={HISTOGRAM + GAP + BAR} style={{ display: "block", overflow: "visible" }} aria-hidden>
+      <Box position="relative" width={WIDTH} height={EDITOR_HISTOGRAM + EDITOR_GAP + EDITOR_BAR}>
+        <svg
+          width={WIDTH}
+          height={EDITOR_HISTOGRAM + EDITOR_GAP + EDITOR_BAR}
+          style={{ display: "block", overflow: "visible" }}
+          aria-hidden
+        >
           <defs>
             <linearGradient id={gradientId}>
               {barStops.map(({ t, color }) => (
@@ -111,20 +121,24 @@ const ColorRangeEditor = ({
               ))}
             </linearGradient>
           </defs>
-          {counts.map((count, k) => {
+          {columns.map(({ count, size, capped }, k) => {
             if (count === 0) return null;
-            const share = count / tallest;
-            const size = Math.max(1, Math.min(share, 1) * HISTOGRAM);
             const center = (k + 0.5) / bins;
             return (
               <g key={k} opacity={center < lowT || center > highT ? 0.35 : 1}>
-                <rect x={k * column} y={HISTOGRAM - size} width={column - 1} height={size} fill={columnColor(theme)} />
-                {share > 1 && (
+                <rect
+                  x={k * column}
+                  y={EDITOR_HISTOGRAM - size}
+                  width={column - 1}
+                  height={size}
+                  fill={columnColor(theme)}
+                />
+                {capped && (
                   <polygon
-                    points={breakPoints((across, up) => [across, HISTOGRAM - up], {
+                    points={breakPoints((across, up) => [across, EDITOR_HISTOGRAM - up], {
                       from: k * column - 0.5,
                       to: (k + 1) * column - 0.5,
-                      at: HISTOGRAM / 2,
+                      at: EDITOR_HISTOGRAM / 2,
                       rise: 5,
                       gap: 3,
                     })}
@@ -134,15 +148,22 @@ const ColorRangeEditor = ({
               </g>
             );
           })}
-          <rect x={0} y={HISTOGRAM + GAP} width={WIDTH} height={BAR} rx={BAR / 2} fill={`url(#${gradientId})`} />
+          <rect
+            x={0}
+            y={EDITOR_HISTOGRAM + EDITOR_GAP}
+            width={WIDTH}
+            height={EDITOR_BAR}
+            rx={EDITOR_BAR / 2}
+            fill={`url(#${gradientId})`}
+          />
           {/* Where the axis changes pace, from linear to squeezed. */}
           {axis.breaks.map((b) => (
             <rect
               key={b}
               x={b * WIDTH - 1}
-              y={HISTOGRAM + GAP}
+              y={EDITOR_HISTOGRAM + EDITOR_GAP}
               width={2}
-              height={BAR}
+              height={EDITOR_BAR}
               fill={theme.palette.background.paper}
             />
           ))}
@@ -152,7 +173,7 @@ const ColorRangeEditor = ({
               x={t * WIDTH - 0.5}
               y={0}
               width={1}
-              height={HISTOGRAM + GAP}
+              height={EDITOR_HISTOGRAM + EDITOR_GAP}
               fill={theme.palette.text.secondary}
             />
           ))}
@@ -165,24 +186,25 @@ const ColorRangeEditor = ({
           disableSwap
           scale={(t) => axis.fromT(t)}
           valueLabelDisplay="auto"
-          valueLabelFormat={(value) => format(value)}
+          // Both are handed the scaled value, so they take it as it is.
+          valueLabelFormat={format}
           getAriaLabel={(i) =>
             i === 0 ? "Where the colors stop at the low end" : "Where the colors stop at the high end"
           }
-          getAriaValueText={(t) => format(axis.fromT(t))}
+          getAriaValueText={format}
           onChange={(_, value, active) => handleChange(value as number[], active)}
           sx={{
             position: "absolute",
             left: 0,
-            top: HISTOGRAM + GAP,
+            top: EDITOR_HISTOGRAM + EDITOR_GAP,
             width: WIDTH,
-            height: BAR,
+            height: EDITOR_BAR,
             p: 0,
             "@media (pointer: coarse)": { p: 0 },
             "& .MuiSlider-rail, & .MuiSlider-track": { opacity: 0, border: 0 },
             "& .MuiSlider-thumb": {
               width: 6,
-              height: BAR + 10,
+              height: EDITOR_BAR + 10,
               borderRadius: "3px",
               bgcolor: "text.primary",
               boxShadow: `0 0 0 1px ${theme.palette.background.paper}`,

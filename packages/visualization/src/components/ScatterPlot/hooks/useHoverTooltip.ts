@@ -117,10 +117,14 @@ export const useHoverTooltip = <T extends object>({
             })();
 
         const threshold = 5;
-        const nextHoveredPoint = transformedPoints.find((curr) => (
+        const isNear = (curr: { x: number; y: number }) => (
             Math.abs(adjustedX - curr.x) < threshold &&
             Math.abs(adjustedY - curr.y) < threshold
-        ))?.point ?? null;
+        );
+        // A dimmed point is drawn beneath the rest, so it loses to any point drawn over it.
+        const nextHoveredPoint = (
+            transformedPoints.find((curr) => !curr.point.dimmed && isNear(curr)) ?? transformedPoints.find(isNear)
+        )?.point ?? null;
 
         // React bails out when the point is unchanged, so this only re-renders the plot when the
         // cursor enters or leaves one. The tooltip follows the cursor through its own ref

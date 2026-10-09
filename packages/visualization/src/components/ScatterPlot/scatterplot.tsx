@@ -7,7 +7,7 @@ import { HighlightAlt } from '@mui/icons-material';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
-import { getDomains, getPointExtents, isSameTransform } from './helpers';
+import { DEFAULT_DIM_STYLE, getDomains, getPointExtents, isSameTransform } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
@@ -16,6 +16,7 @@ import { useSelectionMode } from './hooks/useSelectionMode';
 import { useMiniMapToggle } from './hooks/useMiniMapToggle';
 import { useHoverTooltip } from './hooks/useHoverTooltip';
 import { useCrosshair } from './hooks/useCrosshair';
+import { useHoveredPointKeys } from './hooks/useHoveredPointKeys';
 
 const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
 
@@ -81,6 +82,19 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         onHoveredPointChange: props.onHoveredPointChange,
         tooltipRef,
     });
+
+    const hoveredPointKeys = useHoveredPointKeys({
+        pointData: props.pointData,
+        hoveredPoint,
+        hoveredPoints: props.hoveredPoints,
+        groupPointsAnchor: props.groupPointsAnchor,
+    });
+    // The cursor wins, as it does for hoveredPoints itself.
+    const spotlit = (props.spotlight ?? false) && !hoveredPoint && props.hoveredPoints !== undefined;
+    // Held by its fields, so a consumer passing a fresh object each render doesn't redraw every point.
+    const dimColor = props.dimStyle?.color ?? DEFAULT_DIM_STYLE.color;
+    const dimOpacity = props.dimStyle?.opacity ?? DEFAULT_DIM_STYLE.opacity;
+    const dimStyle = useMemo(() => ({ color: dimColor, opacity: dimOpacity }), [dimColor, dimOpacity]);
 
     const crosshairEnabled = props.crosshair ?? false;
 
@@ -177,9 +191,10 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     selectMode={selectMode}
                     selectable={selectable}
                     disableZoom={props.disableZoom}
-                    groupPointsAnchor={props.groupPointsAnchor}
                     hoveredPoint={hoveredPoint}
-                    hoveredPoints={props.hoveredPoints}
+                    hoveredPointKeys={hoveredPointKeys}
+                    spotlit={spotlit}
+                    dimStyle={dimStyle}
                     hoverGrowth={props.hoverGrowth}
                     hoverStroke={props.hoverStroke}
                     handleMouseMove={handlePointerMove}
@@ -224,6 +239,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         yScale={yScale}
                         zoom={zoom}
                         crosshair={crosshair}
+                        dimStyle={dimStyle}
+                        spotlitKeys={spotlit ? hoveredPointKeys : null}
                     />
                 )}
                 {!props.disableTooltip && (
