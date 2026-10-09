@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Group } from "@visx/group";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { Point } from "./types";
+import { placeLabels } from "./labelPlacement";
 
 type PointLabelsProps<T extends object> = {
     pointData: Point<T>[];
@@ -20,45 +21,37 @@ const PointLabels = <T extends object>({
     boundedHeight,
     margin,
 }: PointLabelsProps<T>) => {
-    if (!pointData.some(p => p.label)) return null;
+    const labeled = useMemo(() => pointData.filter((point) => point.label), [pointData]);
+
+    // Laid out together rather than each on its own, so that no two labels land on each other -
+    // see placeLabels. Only the labels in view take part, so one off screen holds no room.
+    const labels = useMemo(() => {
+        const anchors = labeled
+            .map((point) => ({
+                x: xScaleTransformed(point.x),
+                y: yScaleTransformed(point.y),
+                r: point.r ?? 3,
+                label: point.label!,
+            }))
+            .filter(({ x, y }) => x >= 0 && x <= boundedWidth && y >= 0 && y <= boundedHeight);
+        return placeLabels(anchors, boundedWidth, boundedHeight).map((placement, i) => ({
+            placement,
+            label: anchors[i].label,
+        }));
+    }, [labeled, xScaleTransformed, yScaleTransformed, boundedWidth, boundedHeight]);
+
+    if (labeled.length === 0) return null;
 
     return (
         <Group top={margin.top} left={margin.left}>
-            {pointData.map((point, i) => {
-                if (!point.label) return null;
-                const cx = xScaleTransformed(point.x);
-                const cy = yScaleTransformed(point.y);
-                if (cx < 0 || cx > boundedWidth || cy < 0 || cy > boundedHeight) return null;
-
-                const lineLen = 15;
-                const estTextWidth = point.label.length * 7;
-                const circleR = (point.r ?? 3);
-                const angle = Math.atan2(cy - boundedHeight / 2, cx - boundedWidth / 2);
-                let cosA = Math.cos(angle);
-                let sinA = Math.sin(angle);
-
-                // Flip horizontal if text would overflow left/right
-                const lxRaw = cx + cosA * lineLen;
-                const textEndX = cosA >= 0 ? lxRaw + 4 + estTextWidth : lxRaw - 4 - estTextWidth;
-                if (textEndX > boundedWidth || textEndX < 0) cosA = -cosA;
-
-                // Flip vertical if line endpoint would overflow top/bottom
-                const lyRaw = cy + sinA * lineLen;
-                if (lyRaw < 0 || lyRaw > boundedHeight) sinA = -sinA;
-
-                const lx = cx + cosA * lineLen;
-                const ly = cy + sinA * lineLen;
-                const anchor = cosA >= 0 ? "start" : "end";
-
-                return (
-                    <g key={`lbl-${i}`} pointerEvents="none">
-                        <line x1={cx + cosA * circleR} y1={cy + sinA * circleR} x2={lx} y2={ly} stroke="#555" strokeWidth={1} />
-                        <text x={lx + (cosA >= 0 ? 4 : -4)} y={ly} textAnchor={anchor} dominantBaseline="middle" fontSize={11} fontWeight="bold" fill="#1c1917">
-                            {point.label}
-                        </text>
-                    </g>
-                );
-            })}
+            {labels.map(({ placement, label }, i) => placement && (
+                <g key={`lbl-${i}`} pointerEvents="none">
+                    <line {...placement.line} stroke="#555" strokeWidth={1} />
+                    <text x={placement.text.x} y={placement.text.y} textAnchor={placement.text.anchor} dominantBaseline="middle" fontSize={11} fontWeight="bold" fill="#1c1917">
+                        {label}
+                    </text>
+                </g>
+            ))}
         </Group>
     );
 };

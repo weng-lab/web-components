@@ -62,7 +62,10 @@ export type Point<T> = {
     stroke?: string;
     /**
      * If provided, renders a callout label with a leader line next to the point.
-     * The label is positioned radially outward from the center of the plot.
+     * The label points outward from the center of the plot where there is room, and is turned
+     * or moved further out where another label, or a labeled point, is in the way. A label with
+     * no clear room at all is left off until a zoom or a pan makes some; points earlier in
+     * pointData get their labels first.
      */
     label?: string;
     /**
