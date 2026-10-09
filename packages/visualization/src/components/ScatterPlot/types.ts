@@ -495,4 +495,10 @@ type ZoomState = {
     isDragging: boolean;
 };
 
-export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState
+export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState & {
+    /**
+     * Tells the zoom the size of the plot area it is moving, in pixels, which it holds panning
+     * inside of. Each plot calls this for the zoom it is given; a zoom without it pans freely.
+     */
+    setPanExtent?: (width: number, height: number) => void;
+}

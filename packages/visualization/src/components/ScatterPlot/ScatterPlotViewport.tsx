@@ -160,6 +160,12 @@ const ScatterPlotViewport = <T extends object>({
         };
     }, []);
 
+    // The zoom holds panning inside the plot area, whose size only the plot knows.
+    const { setPanExtent } = zoom;
+    useEffect(() => {
+        setPanExtent?.(boundedWidth, boundedHeight);
+    }, [setPanExtent, boundedWidth, boundedHeight]);
+
     const xScaleTransformed = useMemo(
         () => rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX),
         [xScale, zoom.transformMatrix]

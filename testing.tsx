@@ -31,7 +31,7 @@ const simtable = (() => {
     for (let i = 0; i < SIM_ITER; i++) {
         for (let j = 0; j < SIM_ITER; j++) {
             const row = i * SIM_ITER + j;
-            NPG[row] = 0.25 + (1.75 * i) / (SIM_ITER - 1);
+            NPG[row] = 0.25 + (2.25 * i) / (SIM_ITER - 1);
             DR_drug[row] = 0.5 + (1.5 * j) / (SIM_ITER - 1);
             L2FC_TRvUT[row] = l2fcTRvUT(NPG[row], DR_drug[row]);
         }
@@ -119,8 +119,8 @@ function MedusaPhaseDiagramTest() {
 
     return (
         <Box sx={{ p: 2 }}>
-            <Box sx={{ width: 700, textAlign: 'center', fontSize: 22 }}>Treated / Untreated</Box>
-            <Box sx={{ width: 700, height: 600 }}>
+            <Box sx={{ width: 1200, textAlign: 'center', fontSize: 22 }}>Treated / Untreated</Box>
+            <Box sx={{ width: 1200, height: 450 }}>
                 <ScatterPlot
                     pointData={medusaGenes}
                     loading={false}
