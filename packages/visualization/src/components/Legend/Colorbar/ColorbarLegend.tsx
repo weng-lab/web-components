@@ -20,8 +20,11 @@ export type ColorbarLegendProps = Omit<
   control?: ColorRangeControl;
   /** What the range panel says about the scale - see ColorRangeButton. */
   notes?: readonly string[];
-  /** How many values on screen have nothing to color by, and the neutral they're drawn in. */
-  missing?: { count: number; color: string };
+  /**
+   * How many values on screen are drawn in a neutral rather than on the ramp, the neutral, and what it
+   * stands for: "No value" by default, or a cutoff the ramp starts at, say.
+   */
+  missing?: { count: number; color: string; label?: string };
   /** The bar's length: by default a chip row's worth of room, lying down. */
   length?: number;
   /** How the end labels are written. The theme's caption by default - see themeLabelStyle. */
@@ -90,7 +93,7 @@ const ColorbarLegend = ({
       {missing && missing.count > 0 && (
         <Stack direction="row" alignItems="center" gap={0.75}>
           <Swatch color={missing.color} />
-          <Typography variant="caption">No value</Typography>
+          <Typography variant="caption">{missing.label ?? "No value"}</Typography>
           <Typography variant="caption" color="text.secondary">
             {missing.count}
           </Typography>
