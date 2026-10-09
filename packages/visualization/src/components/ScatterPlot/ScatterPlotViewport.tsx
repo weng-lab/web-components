@@ -8,7 +8,7 @@ import { Text } from "@visx/text";
 import { curveBasis } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { BackgroundGradient, ChartProps, CrosshairPosition, DimStyle, Point, SelectionMode, ZoomType } from "./types";
+import { BackgroundField, ChartProps, CrosshairPosition, DimStyle, Point, SelectionMode, ZoomType } from "./types";
 import { DEFAULT_HOVER_STYLE, drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, pointKey, prepareCanvas, rescaleX, rescaleY } from "./helpers";
 import { useStableCallback } from "../../hooks";
 import AnimatedPoints from "./AnimatedPoints";
@@ -16,6 +16,8 @@ import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
 import Crosshair from "./Crosshair";
 import { useDragSelection } from "./hooks/useDragSelection";
+import { useFieldRaster } from "./hooks/useFieldRaster";
+import { DEFAULT_FIELD_COLORS, FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH, drawField, getFieldTicks } from "./backgroundField";
 
 type ScatterPlotViewportProps<T extends object> = {
     width: number;
@@ -51,7 +53,7 @@ type ScatterPlotViewportProps<T extends object> = {
     bottomAxisLabel?: string;
     border: boolean;
     originLine?: boolean;
-    backgroundGradient?: BackgroundGradient;
+    backgroundField?: BackgroundField;
     /** Crosshair position in data coordinates, or null for no crosshair. */
     crosshair?: CrosshairPosition | null;
     divRef: React.RefObject<HTMLDivElement | null>;
@@ -102,7 +104,7 @@ const ScatterPlotViewport = <T extends object>({
     bottomAxisLabel,
     border,
     originLine,
-    backgroundGradient,
+    backgroundField,
     crosshair,
     divRef,
 }: ScatterPlotViewportProps<T>) => {
@@ -158,6 +160,12 @@ const ScatterPlotViewport = <T extends object>({
         };
     }, []);
 
+    // The zoom holds panning inside the plot area, whose size only the plot knows.
+    const { setPanExtent } = zoom;
+    useEffect(() => {
+        setPanExtent?.(boundedWidth, boundedHeight);
+    }, [setPanExtent, boundedWidth, boundedHeight]);
+
     const xScaleTransformed = useMemo(
         () => rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX),
         [xScale, zoom.transformMatrix]
@@ -184,6 +192,12 @@ const ScatterPlotViewport = <T extends object>({
         [hoverGrowth, hoverStroke]
     );
 
+    // Held by its parts, so a field built inline on each render doesn't redraw every point.
+    const fieldRaster = useFieldRaster(backgroundField);
+    const fieldX = backgroundField?.x;
+    const fieldY = backgroundField?.y;
+    const fieldOpacity = backgroundField?.opacity;
+
     const drawPoints = useCallback((
         xST: ScaleLinear<number, number, never>,
         yST: ScaleLinear<number, number, never>,
@@ -196,21 +210,8 @@ const ScatterPlotViewport = <T extends object>({
 
         prepareCanvas(context, boundedWidth, boundedHeight);
 
-        if (backgroundGradient) {
-            const [colorLow, colorMid, colorHigh] = backgroundGradient.colorScale ?? ["red", "white", "blue"];
-            const W = boundedWidth;
-            const H = boundedHeight;
-            const x0 = xST(0);
-            const y0 = yST(0);
-            const fraction = Math.max(0.001, Math.min(0.999, (x0 * W - y0 * H + H * H) / (W * W + H * H)));
-            const gradient = context.createLinearGradient(0, H, W, 0);
-            gradient.addColorStop(0, colorLow);
-            gradient.addColorStop(fraction, colorMid);
-            gradient.addColorStop(1, colorHigh);
-            context.globalAlpha = backgroundGradient.opacity ?? 1;
-            context.fillStyle = gradient;
-            context.fillRect(0, 0, W, H);
-            context.globalAlpha = 1;
+        if (fieldRaster && fieldX && fieldY) {
+            drawField(context, fieldRaster, fieldX, fieldY, xST, yST, boundedWidth, boundedHeight, fieldOpacity);
         }
 
         const { nonHovered, hovered } = partitionPointsByHover(pointData, hoveredPointKeys);
@@ -232,7 +233,7 @@ const ScatterPlotViewport = <T extends object>({
         hovered.forEach((point) =>
             drawRenderedPoint(point, hoverAmountAt(starts.get(pointKey(point)), now), point.dimmed ? dimStyle : undefined)
         );
-    }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, backgroundGradient, hoverStyle, spotlit, dimStyle]);
+    }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, fieldRaster, fieldX, fieldY, fieldOpacity, hoverStyle, spotlit, dimStyle]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -406,6 +407,23 @@ const ScatterPlotViewport = <T extends object>({
         }
     }, [currentDisplayedPoints, onDisplayedPointsChange]);
 
+    const legendLeft = margin.left + boundedWidth + FIELD_LEGEND_GAP;
+    const fieldLegend = backgroundField?.legend;
+    const legend = typeof fieldLegend === "function" ? (
+        <Group top={margin.top} left={legendLeft}>
+            {fieldLegend({ width: FIELD_LEGEND_WIDTH, height: boundedHeight })}
+        </Group>
+    ) : backgroundField && fieldLegend ? (
+        <GradientLegend
+            colors={backgroundField.colorScale ?? DEFAULT_FIELD_COLORS}
+            ticks={getFieldTicks(backgroundField.domain, boundedHeight, fieldLegend.format)}
+            label={fieldLegend.label}
+            boundedHeight={boundedHeight}
+            barLeft={legendLeft}
+            marginTop={margin.top}
+        />
+    ) : null;
+
     return (
         <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>
             <Box sx={{ width, height }}>
@@ -561,14 +579,7 @@ const ScatterPlotViewport = <T extends object>({
                                 boundedHeight={boundedHeight}
                                 margin={margin}
                             />
-                            {backgroundGradient?.legend && (
-                                <GradientLegend
-                                    backgroundGradient={backgroundGradient}
-                                    boundedHeight={boundedHeight}
-                                    barLeft={margin.left + boundedWidth + 25}
-                                    marginTop={margin.top}
-                                />
-                            )}
+                            {legend}
                         </svg>
                     </div>
                 )}

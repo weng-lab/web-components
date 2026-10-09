@@ -1,6 +1,6 @@
 import { ScaleLinear } from '@visx/vendor/d3-scale';
 import { ProvidedZoom } from "@visx/zoom";
-import { CSSProperties, ReactElement } from "react";
+import { CSSProperties, ReactElement, ReactNode } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 import { ManualSizeProps } from '../../responsive';
 
@@ -62,7 +62,10 @@ export type Point<T> = {
     stroke?: string;
     /**
      * If provided, renders a callout label with a leader line next to the point.
-     * The label is positioned radially outward from the center of the plot.
+     * The label points outward from the center of the plot where there is room, and is turned
+     * or moved further out where another label, or a labeled point, is in the way. A label with
+     * no clear room at all is left off until a zoom or a pan makes some; points earlier in
+     * pointData get their labels first.
      */
     label?: string;
     /**
@@ -330,10 +333,18 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     originLine?: boolean;
     /**
-     * If provided, renders a diagonal gradient background (bottom-left → top-right)
-     * centered at the data origin (0, 0), plus an optional colorbar legend.
+     * A grid of values painted behind the points as a heatmap, plus an optional legend beside the
+     * plot. It sits in the points' own coordinates, so it pans and zooms with them - a model's
+     * surface the points are read against, say.
+     *
+     * The axis domains still come from pointData (or xDomain/yDomain), so a grid reaching past
+     * the points is cropped to them.
+     *
+     * Keep x, y and values the same arrays between renders (memoize them): the grid is rasterized
+     * once and reused across pans, zooms and hovers, and a new array rasterizes again. The object
+     * itself can be built inline.
      */
-    backgroundGradient?: BackgroundGradient;
+    backgroundField?: BackgroundField;
     /**
      * If true, renders thin crosshair lines tracking the mouse across the full plot area.
      * @default
@@ -397,17 +408,37 @@ export type DimStyle = {
     opacity: number;
 };
 
-export type BackgroundGradient = {
-    /** Three-stop color scale [low, mid, high]. Defaults to ["red", "white", "blue"]. */
-    colorScale?: [string, string, string];
-    /** Opacity of the gradient layer (0–1). Default: 1 */
+/** The room beside the plot that a backgroundField's legend is given, in pixels. */
+export type BackgroundFieldLegendSlot = { width: number; height: number };
+
+export type BackgroundField = {
+    /** Where the grid's columns sit along the x axis, in the points' units, ascending. At least two. */
+    x: ArrayLike<number>;
+    /** Where the grid's rows sit along the y axis, in the points' units, ascending. At least two. */
+    y: ArrayLike<number>;
+    /**
+     * The grid's values, a row of x at a time from the lowest y up: `values[j * x.length + i]` is
+     * the value at `(x[i], y[j])`. NaN leaves that part of the plot unpainted. getFieldGrid builds
+     * x, y and values from a table with a row per grid point.
+     */
+    values: ArrayLike<number>;
+    /** The values the color scale spans, low to high. Values beyond take the end colors. */
+    domain: [number, number];
+    /** Colors from the low end of the domain to the high, spaced evenly. Defaults to ["blue", "white", "red"]. */
+    colorScale?: string[];
+    /** Opacity of the field (0–1). Default: 1 */
     opacity?: number;
-    legend?: {
-        label?: string;
-        minLabel?: string;
-        midLabel?: string;
-        maxLabel?: string;
-    };
+    /**
+     * A legend to the right of the plot. Either the built-in color bar, ticked across the domain
+     * with an optional title and tick format, or a component of the caller's own: a function
+     * handed the room there is, as tall as the plot area, whose result is drawn inside the plot's
+     * `<svg>` - so it returns SVG, as Colorbar does, and a download keeps it.
+     *
+     * Unless the plot is `square`, room for the legend is taken out of the plot's width.
+     */
+    legend?:
+        | { label?: string; format?: (value: number) => string }
+        | ((slot: BackgroundFieldLegendSlot) => ReactNode);
 };
 
 export type Line = { x: number; y: number }[];
@@ -467,4 +498,10 @@ type ZoomState = {
     isDragging: boolean;
 };
 
-export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState
+export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState & {
+    /**
+     * Tells the zoom the size of the plot area it is moving, in pixels, which it holds panning
+     * inside of. Each plot calls this for the zoom it is given; a zoom without it pans freely.
+     */
+    setPanExtent?: (width: number, height: number) => void;
+}
