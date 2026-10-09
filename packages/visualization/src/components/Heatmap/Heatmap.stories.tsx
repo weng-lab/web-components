@@ -1,8 +1,10 @@
-import { useId, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
 import { Box, Button, Stack } from '@mui/material';
-import { RowDatum, ColumnDatum, HeatmapCellId, HeatmapLegendFrame } from './types';
+import { RowDatum, ColumnDatum, HeatmapCellId, HeatmapProps } from './types';
+import { Colorbar } from '../Legend/Colorbar/Colorbar';
+import { evenStops, sweptValues, type RampRange } from '../Legend/colorbarAxis';
 import type { AnyBin } from './HeatmapCanvasCells';
 
 const meta = {
@@ -308,60 +310,38 @@ const zScoreData: ColumnDatum[] = Array.from({ length: 120 }, (_, colIndex) => (
 const Z_COLORS: [string, string, ...string[]] = ['#00766c', '#70b9af', '#eeeeee', '#e0946f', '#a34604'];
 const Z_DOMAIN: [number, number] = [-3, 3];
 
+const Z_STOPS = evenStops(Z_COLORS);
+const formatZ = (z: number) => z.toFixed(1);
+/** Every cell's count, sorted ascending: what the colorbar's histogram and sweeps count. */
+const sortedCounts = (data: ColumnDatum[]) =>
+    Float64Array.from(data.flatMap(({ rows }) => rows.flatMap(({ count }) => (count === null ? [] : [count])))).sort();
+
 /**
- * A minimal custom legend: sweeping the bar hands the heatmap the stretch of the scale under the
- * cursor, open-ended at either end to take in the clamped cells.
+ * The library's Colorbar as a custom legend: sweeping it hands the heatmap the stretch of the scale
+ * under the cursor, open-ended at either end to take in the clamped cells.
  */
-const SweepLegend = ({ frame, onSweep }: { frame: HeatmapLegendFrame; onSweep: (range: [number, number] | null) => void }) => {
-    const [sweepWindow, setSweepWindow] = useState<[number, number] | null>(null);
-    // Unique per instance: the expanded minimap draws a second copy.
-    const gradientId = `sweep-legend-${useId().replace(/:/g, "")}`;
-    const horizontal = frame.orientation === "horizontal";
-    // Room for a label at either end: above and below standing up, either side lying down.
-    const length = Math.max(0, horizontal ? frame.width - 80 : frame.height - 40);
-    const [low, high] = Z_DOMAIN;
-    // Places along the bar run from 0 at its low end to 1 at its high end, whichever way it lies.
-    const valueAt = (t: number) => low + t * (high - low);
-    const sweep = (t: number) => {
-        const from = Math.min(Math.max(t - 0.075, 0), 0.85);
-        setSweepWindow([from, from + 0.15]);
-        onSweep([from <= 0 ? -Infinity : valueAt(from), from + 0.15 >= 1 ? Infinity : valueAt(from + 0.15)]);
-    };
-    // A stretch of the bar, and a band across it: rightward lying down, upward standing up.
-    const box = (t0: number, t1: number, across: number, thickness: number) =>
-        horizontal
-            ? { x: t0 * length, y: across, width: (t1 - t0) * length, height: thickness }
-            : { x: across, y: (1 - t1) * length, width: thickness, height: (t1 - t0) * length };
+const SweepableHeatmap = (props: Omit<HeatmapProps, 'colorDomain' | 'highlightRange' | 'legendWidth' | 'renderLegend'>) => {
+    const [sweep, setSweep] = useState<RampRange | null>(null);
+    const values = useMemo(() => sortedCounts(props.data), [props.data]);
     return (
-        <g transform={horizontal ? `translate(40,${frame.height / 2 - 6})` : "translate(0,20)"}>
-            <defs>
-                <linearGradient id={gradientId} x1="0" y1={horizontal ? "0" : "1"} x2={horizontal ? "1" : "0"} y2="0">
-                    {Z_COLORS.map((color, i) => <stop key={i} offset={`${(i / (Z_COLORS.length - 1)) * 100}%`} stopColor={color} />)}
-                </linearGradient>
-            </defs>
-            {horizontal ? (
-                <>
-                    <text x={-6} y={6} textAnchor="end" dominantBaseline="middle" fontSize={11} fontFamily="sans-serif">≤ {low}</text>
-                    <text x={length + 6} y={6} dominantBaseline="middle" fontSize={11} fontFamily="sans-serif">≥ {high}</text>
-                </>
-            ) : (
-                <>
-                    <text x={0} y={-8} fontSize={11} fontFamily="sans-serif">≥ {high}</text>
-                    <text x={0} y={length + 16} fontSize={11} fontFamily="sans-serif">≤ {low}</text>
-                </>
+        <Heatmap
+            {...props}
+            colorDomain={Z_DOMAIN}
+            highlightRange={sweep && sweptValues(Z_DOMAIN, sweep)}
+            legendWidth={56}
+            renderLegend={(frame) => (
+                <Colorbar
+                    {...frame}
+                    stops={Z_STOPS}
+                    range={Z_DOMAIN}
+                    values={values}
+                    format={formatZ}
+                    noun="cell"
+                    sweep={sweep}
+                    onSweep={setSweep}
+                />
             )}
-            <rect {...box(0, 1, 0, 12)} rx={6} fill={`url(#${gradientId})`} />
-            {sweepWindow && <rect {...box(sweepWindow[0], sweepWindow[1], -3, 18)} rx={3} fill="none" stroke="#1a1c1e" strokeWidth={2} />}
-            <rect
-                {...box(0, 1, -8, 28)}
-                fill="transparent"
-                onMouseMove={(event) => {
-                    const bar = event.currentTarget.getBoundingClientRect();
-                    sweep(horizontal ? (event.clientX - bar.left) / bar.width : 1 - (event.clientY - bar.top) / bar.height);
-                }}
-                onMouseLeave={() => { setSweepWindow(null); onSweep(null); }}
-            />
-        </g>
+        />
     );
 };
 
@@ -372,25 +352,18 @@ export const LegendSweepHighlight: Story = {
         data: zScoreData,
         colors: Z_COLORS,
     },
-    render: () => {
-        const [highlightRange, setHighlightRange] = useState<[number, number] | null>(null);
-        return (
-            <Heatmap
-                data={zScoreData}
-                xLabel="Sample"
-                yLabel="Feature"
-                colors={Z_COLORS}
-                colorDomain={Z_DOMAIN}
-                cellWidth={14}
-                cellHeight={12}
-                showMiniMap
-                highlightRange={highlightRange}
-                legendWidth={48}
-                renderLegend={(frame) => <SweepLegend frame={frame} onSweep={setHighlightRange} />}
-                tooltipBody={(bin) => <Box>{bin.count?.toFixed(2)}</Box>}
-            />
-        );
-    },
+    render: () => (
+        <SweepableHeatmap
+            data={zScoreData}
+            xLabel="Sample"
+            yLabel="Feature"
+            colors={Z_COLORS}
+            cellWidth={14}
+            cellHeight={12}
+            showMiniMap
+            tooltipBody={(bin) => <Box>{bin.count?.toFixed(2)}</Box>}
+        />
+    ),
 };
 
 // The same legend on a grid sized to fit its container, which doesn't scroll.
@@ -399,19 +372,5 @@ export const LegendSweepHighlightStatic: Story = {
         data: zScoreData.slice(0, 24).map((column) => ({ ...column, rows: column.rows.slice(0, 16) })),
         colors: Z_COLORS,
     },
-    render: (args) => {
-        const [highlightRange, setHighlightRange] = useState<[number, number] | null>(null);
-        return (
-            <Heatmap
-                data={args.data}
-                xLabel="Sample"
-                yLabel="Feature"
-                colors={Z_COLORS}
-                colorDomain={Z_DOMAIN}
-                highlightRange={highlightRange}
-                legendWidth={48}
-                renderLegend={(frame) => <SweepLegend frame={frame} onSweep={setHighlightRange} />}
-            />
-        );
-    },
+    render: (args) => <SweepableHeatmap data={args.data} xLabel="Sample" yLabel="Feature" colors={Z_COLORS} />,
 };

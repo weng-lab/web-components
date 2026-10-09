@@ -5,6 +5,7 @@ import {
   useGridApiRef,
   type GridApi,
   type GridColDef,
+  type GridFilterModel,
   type GridRowSelectionModel,
   type GridSortModel,
 } from "@mui/x-data-grid-premium";
@@ -12,6 +13,7 @@ import type { RefObject } from "react";
 import { TableProps } from "../Table";
 import AutoSortSwitch from "./AutoSortSwitch";
 import { useAutoSort } from "./useAutoSort";
+import { useTableFilters } from "./useTableFilters";
 
 /**
  * Shallow equality check for arrays by element reference.
@@ -40,10 +42,17 @@ type UseTablePlotSyncOptions<T> = {
   initialSort?: GridSortModel;
   /** True when rows are pre-sorted (e.g. tissue grouping) — disables column sorting. */
   isPresorted?: boolean;
+  /**
+   * The table's filters until the reader changes them, and what clearing them goes back to.
+   * @default { items: [] }
+   */
+  initialFilters?: GridFilterModel;
 };
 
 const NO_SELECTION: GridRowSelectionModel = { type: "include", ids: new Set() };
 const NO_SORT: GridSortModel = [];
+const NO_FILTERS: GridFilterModel = { items: [] };
+const NO_ROWS: never[] = [];
 
 /** The checkbox column stays out of the columns panel, so it can't be hidden and selection lost with it. */
 const togglableColumns = (columns: GridColDef[]) =>
@@ -56,6 +65,8 @@ const togglableColumns = (columns: GridColDef[]) =>
  * Handles:
  * - Selection state (bidirectional between table checkboxes and plot clicks), group rows included
  * - Syncing the table's sorted/filtered rows to plots via DataGrid events
+ * - The table's filters, held here so a plot can read and edit them as chips and dim the rows the
+ *   table filters out - see useTableFilters
  * - Auto sort: selected rows kept at the top, toggled from the table's toolbar, and read back as
  *   `autoSort` for plots that follow the table's order
  * - The table's initial sort, and turning column sorting off for pre-sorted rows
@@ -65,6 +76,7 @@ export function useTablePlotSync<T>({
   getRowId,
   initialSort = NO_SORT,
   isPresorted = false,
+  initialFilters = NO_FILTERS,
 }: UseTablePlotSyncOptions<T>) {
   /**
    * The grid's own selection model, group rows included. It's kept whole rather than rebuilt from the
@@ -73,7 +85,8 @@ export function useTablePlotSync<T>({
    * select - which it already is.
    */
   const [selectionModel, setSelectionModel] = useState<GridRowSelectionModel>(NO_SELECTION);
-  const [sortedFilteredData, setSortedFilteredData] = useState<T[]>([]);
+  // Null until the grid first reports its rows.
+  const [sortedFilteredData, setSortedFilteredData] = useState<T[] | null>(null);
   const apiRef = useGridApiRef();
 
   // Use refs so stable callbacks always access current values
@@ -92,6 +105,16 @@ export function useTablePlotSync<T>({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value, as above
   const sortBase = useMemo(() => initialSort, [sortKey]);
   const { autoSort, setAutoSort, onReady: autoSortOnReady } = useAutoSort(apiRef, sortBase, isPresorted);
+  const {
+    filters,
+    tableProps: { filterModel, onFilterModelChange, filterPanel },
+  } = useTableFilters({
+    apiRef,
+    rows,
+    listedRows: sortedFilteredData,
+    getRowId: stableGetRowId,
+    initialModel: initialFilters,
+  });
 
   /**
    * Called via Table's `onReady` prop once the DataGrid has mounted, when its events can be
@@ -106,7 +129,7 @@ export function useTablePlotSync<T>({
         const newRows = gridFilteredSortedRowEntriesSelector(readyApiRef)
           .filter(({ id }) => readyApiRef.current.getRowNode(id)?.type === "leaf")
           .map((x) => x.model) as T[];
-        setSortedFilteredData((prev) => (arraysShallowEqual(prev, newRows) ? prev : newRows));
+        setSortedFilteredData((prev) => (prev && arraysShallowEqual(prev, newRows) ? prev : newRows));
       };
       sync(); // initial sync
       return [
@@ -177,9 +200,12 @@ export function useTablePlotSync<T>({
       onReady: onTableReady,
       disableColumnSorting: isPresorted,
       initialState: { sorting: { sortModel: sortBase } },
+      filterModel,
+      onFilterModelChange,
       slotProps: {
         toolbar: { extra: <AutoSortSwitch autoSort={autoSort} setAutoSort={setAutoSort} /> },
         columnsManagement: { getTogglableColumns: togglableColumns },
+        filterPanel,
       },
     }),
     [
@@ -192,6 +218,9 @@ export function useTablePlotSync<T>({
       sortBase,
       autoSort,
       setAutoSort,
+      filterModel,
+      onFilterModelChange,
+      filterPanel,
     ]
   ) satisfies Partial<TableProps>;
 
@@ -200,7 +229,10 @@ export function useTablePlotSync<T>({
     setSelected,
     toggleSelection,
     getRowId: stableGetRowId,
-    sortedFilteredData,
+    /** The rows the table lists, in its order: none until it first reports them. */
+    sortedFilteredData: sortedFilteredData ?? (NO_ROWS as T[]),
+    /** The table's filters, for a plot to read and edit as chips. */
+    filters,
     /** Whether the table keeps selected rows at the top - which a plot following its order can read. */
     autoSort,
     setAutoSort,

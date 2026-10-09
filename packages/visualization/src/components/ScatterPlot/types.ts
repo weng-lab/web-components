@@ -72,6 +72,14 @@ export type Point<T> = {
      */
     opacity?: number;
     /**
+     * Fades the point and draws it beneath the rest - one a filter leaves out, say, kept on the plot
+     * because its place means something beside the others. Drawn in the plot's dimStyle in place of
+     * its own color and opacity, and passed over by the hover where a point that isn't dimmed is as near.
+     * @default
+     * false
+     */
+    dimmed?: boolean;
+    /**
      * Any and all metadata the user wishes to include with the point.
      * this will be used to display the tooltip on the hover of the point
      * @example
@@ -228,6 +236,23 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     hoveredPoints?: Point<T>[];
     /**
+     * While hoveredPoints is set, dims every other point, so a legend entry's points stand out from
+     * the rest. An empty hoveredPoints dims them all - a colorbar window with nothing in it, say.
+     *
+     * Done in the draw, so moving the highlight doesn't rebuild pointData or restart the hover growth.
+     *
+     * @default
+     * false
+     */
+    spotlight?: boolean;
+    /**
+     * How dimmed points are drawn: those marked `dimmed`, and the rest while spotlit.
+     *
+     * @default
+     * { color: "#BDBDBD", opacity: 0.4 }
+     */
+    dimStyle?: DimStyle;
+    /**
      * Radius added to a hovered point, in pixels, eased in over the hover animation.
      *
      * Turn it down where points are dense enough that a growing point covers its neighbours, or
@@ -366,6 +391,12 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     square?: boolean;
 };
 
+/** How a dimmed point is drawn, in place of its own color and opacity. */
+export type DimStyle = {
+    color: string;
+    opacity: number;
+};
+
 export type BackgroundGradient = {
     /** Three-stop color scale [low, mid, high]. Defaults to ["red", "white", "blue"]. */
     colorScale?: [string, string, string];
@@ -391,6 +422,9 @@ export type MapProps<T> = {
     yScale: ScaleLinear<number, number, never>;
     zoom: ZoomType;
     crosshair?: CrosshairPosition | null;
+    dimStyle: DimStyle;
+    /** While spotlit, the keys of the points left undimmed - see ChartProps' spotlight. */
+    spotlitKeys: Set<string> | null;
 }
 
 export type TooltipProps<T> = {

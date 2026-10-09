@@ -1,5 +1,5 @@
 export { ScatterPlot, ScatterPlotSync, getSharedDomains, getShapePoints, POINT_SHAPES } from './components/ScatterPlot';
-export type { MiniMapProps, ChartProps, Point, PointShape, CrosshairPosition, ZoomType, ScatterPlotSyncProps, SyncedPlotProps } from './components/ScatterPlot';
+export type { MiniMapProps, ChartProps, Point, PointShape, CrosshairPosition, ZoomType, DimStyle, ScatterPlotSyncProps, SyncedPlotProps } from './components/ScatterPlot';
 
 export { Graph } from './components/Graph';
 export type { GraphProps } from './components/Graph';
@@ -25,6 +25,8 @@ export * from './components/DotPlot'
 export * from './components/SequenceAlignmentPlot'
 
 export * from './components/Heatmap'
+
+export * from './components/Legend'
 
 export { Histogram } from './components/Histogram';
 export type { HistogramProps, HistogramBin } from './components/Histogram';

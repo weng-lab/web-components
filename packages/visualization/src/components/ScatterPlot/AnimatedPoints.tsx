@@ -2,11 +2,12 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { AnimationType, getAnimationProps } from "../../utility";
-import { Point } from "./types";
+import { DimStyle, Point } from "./types";
 import { getShapePoints } from "./helpers";
 
 type AnimatedPointsProps<T extends object> = {
     pointData: Point<T>[];
+    dimStyle: DimStyle;
     animation: AnimationType;
     animationGroupSize?: number;
     animationBuffer?: number;
@@ -18,6 +19,7 @@ type AnimatedPointsProps<T extends object> = {
 
 const AnimatedPoints = <T extends object>({
     pointData,
+    dimStyle,
     animation,
     animationGroupSize,
     animationBuffer,
@@ -38,23 +40,20 @@ const AnimatedPoints = <T extends object>({
             // The same vertices the canvas renderer draws from, so a point does not change shape
             // or size as the entry animation hands over to the canvas.
             const shapePoints = getShapePoints(point.shape, cx, cy, radius);
+            const fill = point.dimmed ? dimStyle.color : point.color ?? "black";
+            const opacity = point.dimmed ? dimStyle.opacity : point.opacity ?? 1;
             return (
                 <Wrapper key={`pt-${index}`} {...animationProps}>
                     {shapePoints ? (
-                        <polygon
-                            points={shapePoints}
-                            fill={point.color ?? "black"}
-                            stroke={point.stroke}
-                            opacity={point.opacity ?? 1}
-                        />
+                        <polygon points={shapePoints} fill={fill} stroke={point.stroke} opacity={opacity} />
                     ) : (
                         <circle
                             cx={cx}
                             cy={cy}
                             r={radius}
-                            fill={point.color ?? "black"}
+                            fill={fill}
                             stroke={point.stroke}
-                            opacity={point.opacity ?? 1}
+                            opacity={opacity}
                         />
                     )}
                 </Wrapper>

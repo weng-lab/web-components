@@ -1,5 +1,5 @@
 import { ScaleLinear } from "@visx/vendor/d3-scale";
-import { Line, Point, PointShape, TransformMatrix } from "./types";
+import { DimStyle, Line, Point, PointShape, TransformMatrix } from "./types";
 
 //rescale x and y scales when zooming
 //converts to pixel values before applying transformations
@@ -288,6 +288,9 @@ export type HoverStyle = {
 
 export const DEFAULT_HOVER_STYLE: HoverStyle = { growth: 2, stroke: "black" };
 
+/** Pale enough to read as background, and translucent so dense patches still show their shape. */
+export const DEFAULT_DIM_STYLE: DimStyle = { color: "#BDBDBD", opacity: 0.4 };
+
 export const drawCanvasPoint = <T extends object>(
     context: CanvasRenderingContext2D,
     point: Point<T>,
@@ -295,8 +298,11 @@ export const drawCanvasPoint = <T extends object>(
     y: number,
     /** How far into its hover growth this point is: 0 at rest, 1 fully hovered. */
     hoverAmount: number,
-    hoverStyle: HoverStyle = DEFAULT_HOVER_STYLE
+    hoverStyle: HoverStyle = DEFAULT_HOVER_STYLE,
+    /** Draws the point dimmed, in this color and opacity rather than its own. */
+    dim?: DimStyle
 ) => {
+    const opacity = dim ? dim.opacity : point.opacity ?? 1;
     const size = (point.r || 3) + hoverStyle.growth * hoverAmount;
     context.beginPath();
 
@@ -308,8 +314,8 @@ export const drawCanvasPoint = <T extends object>(
         context.arc(x, y, size, 0, Math.PI * 2);
     }
 
-    context.fillStyle = point.color ? point.color : "black";
-    context.globalAlpha = point.opacity !== undefined ? point.opacity : 1;
+    context.fillStyle = dim ? dim.color : point.color ? point.color : "black";
+    context.globalAlpha = opacity;
     context.fill();
 
     if (hoverAmount > 0 || point.stroke) {
@@ -318,7 +324,7 @@ export const drawCanvasPoint = <T extends object>(
             // Fade the hover ring in alongside the growth. Snapping it to full opacity on the
             // first frame reads as a flicker against a point that is still growing.
             context.strokeStyle = hoverStyle.stroke;
-            context.globalAlpha = (point.opacity ?? 1) * hoverAmount;
+            context.globalAlpha = opacity * hoverAmount;
         } else {
             context.strokeStyle = point.stroke!;
         }

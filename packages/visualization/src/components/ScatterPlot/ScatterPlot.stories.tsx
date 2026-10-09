@@ -4,6 +4,7 @@ import ScatterPlot from './scatterplot';
 import ScatterPlotSync from './ScatterPlotSync';
 import { getSharedDomains } from './helpers';
 import { MiniMapProps, POINT_SHAPES, PointShape } from './types';
+import ChipLegend from '../Legend/ChipLegend/ChipLegend';
 
 const meta = {
     title: 'visualization/ScatterPlot',
@@ -697,6 +698,69 @@ export const HoveredPointChange: Story = {
                     hovered group: <strong>{hoveredGroup ?? "none"}</strong>
                     {"  |  "}
                     from the legend: <strong>{hoveredLegend ?? "none"}</strong>
+                </div>
+            </div>
+        );
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: 850, height: 560 }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+// ChipLegend wired to the plot. Switching a chip off marks its points `dimmed`, kept on the plot but
+// faded beneath the rest; hovering a chip hands the plot its group with `spotlight` on, which dims
+// every other point. Both are drawn by the plot, so hovering never rebuilds pointData.
+export const DimmedAndSpotlit: Story = {
+    args: {
+        pointData: groupedData,
+        loading: false,
+    },
+    render: () => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [plotHover, setPlotHover] = useState<string | null>(null);
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [legendHover, setLegendHover] = useState<string | null>(null);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const pointData = useMemo(
+            () => groupedData.map((point) => ({ ...point, dimmed: hidden.has(point.metaData.group) })),
+            [hidden],
+        );
+        // A switched-off group has nothing to spotlight, so its chip leaves the plot be.
+        const group = legendHover ? pointData.filter((point) => point.metaData.group === legendHover && !point.dimmed) : [];
+
+        const toggle = (value: string) => {
+            const next = new Set(hidden);
+            if (!next.delete(value)) next.add(value);
+            setHidden(next);
+        };
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}>
+                <ChipLegend
+                    groups={HOVER_GROUPS.map(({ name, color }) => ({ value: name, label: name, color, count: 160 }))}
+                    hidden={hidden}
+                    onToggle={toggle}
+                    highlighted={legendHover ?? plotHover}
+                    onHover={setLegendHover}
+                />
+                <div style={{ flex: 1, minHeight: 0 }}>
+                    <ScatterPlot
+                        pointData={pointData}
+                        loading={false}
+                        hoveredPoints={group.length > 0 ? group : undefined}
+                        spotlight
+                        onHoveredPointChange={(point) => setPlotHover(point?.metaData?.group ?? null)}
+                        leftAxisLabel="Y-Axis Label"
+                        bottomAxisLabel="X-Axis Label"
+                        miniMap={miniMap}
+                    />
                 </div>
             </div>
         );

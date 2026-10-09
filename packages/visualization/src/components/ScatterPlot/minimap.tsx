@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { MapProps } from "./types";
+import { MapProps, Point } from "./types";
+import { pointKey } from "./helpers";
 import { CROSSHAIR_DASH, CROSSHAIR_STROKE, CROSSHAIR_STROKE_WIDTH } from "./Crosshair";
 import { useStableCallback } from "../../hooks";
 
@@ -17,7 +18,9 @@ const MiniMap = <T,>({
     xScale,
     yScale,
     zoom,
-    crosshair
+    crosshair,
+    dimStyle,
+    spotlitKeys,
 }: MapProps<T>) => {
     // The minimap frame is the whole plot area untransformed, so a data coordinate maps onto it
     // through the base scales - no need to undo the current zoom.
@@ -116,15 +119,21 @@ const MiniMap = <T,>({
                             context.lineWidth = 4;
                             context.strokeRect(0, 0, scaledWidth, scaledHeight);
 
-                            // Draw points
-                            pointData.forEach(point => {
+                            // Draw points, the dimmed ones first so they sit beneath the rest
+                            const isDimmed = (point: Point<T>) =>
+                                point.dimmed || (spotlitKeys !== null && !spotlitKeys.has(pointKey(point)));
+                            const drawPoint = (point: Point<T>, dim: boolean) => {
                                 const transformedX = xScale(point.x) * scaleFactor;
                                 const transformedY = yScale(point.y) * scaleFactor;
                                 context.beginPath();
                                 context.arc(transformedX, transformedY, 3 * scaleFactor, 0, Math.PI * 2);
-                                context.fillStyle = point.color ?? "black";
+                                context.fillStyle = dim ? dimStyle.color : point.color ?? "black";
+                                context.globalAlpha = dim ? dimStyle.opacity : 1;
                                 context.fill();
-                            });
+                            };
+                            pointData.filter(isDimmed).forEach((point) => drawPoint(point, true));
+                            pointData.filter((point) => !isDimmed(point)).forEach((point) => drawPoint(point, false));
+                            context.globalAlpha = 1;
                         }
                     }
                 }}

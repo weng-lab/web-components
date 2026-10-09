@@ -13,8 +13,8 @@ export type * from "./components/BiosampleTable";
 export { GenomeSearch, useEntityAutocomplete } from "./components/GenomeSearch";
 export type { GenomeSearchProps, Result, Domain, ResultType, StaticListOption } from "./components/GenomeSearch";
 
-export { TwoPaneLayout, useTablePlotSync } from "./components/TwoPaneLayout";
-export type { TwoPanePlotConfig, TwoPaneLayoutProps, SyncedTableProps } from "./components/TwoPaneLayout";
+export { TwoPaneLayout, useTablePlotSync, excludedValues, withExcludedValues } from "./components/TwoPaneLayout";
+export type { TwoPanePlotConfig, TwoPaneLayoutProps, SyncedTableProps, TableFilters } from "./components/TwoPaneLayout";
 
 export { ResizablePanes, useResizablePanes } from "./components/ResizablePanes";
 export type { ResizablePanesProps, Direction, ResponsiveDirection } from "./components/ResizablePanes";
