@@ -28,7 +28,7 @@ const ControlButtons = ({
 }: ControlButtonsProps) => {
     const theme = useTheme();
     const color = highlight ?? theme.palette.primary.main;
-    // Towards the plot, rather than off the container's edge.
+    // Toward the plot, rather than off the container's edge.
     const tooltipPlacement = side === "right" ? "left" : "right";
 
     const buttonSx = {

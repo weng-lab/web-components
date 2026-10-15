@@ -92,9 +92,9 @@ export const getPlotLayout = ({ parentWidth, parentHeight, square, controls, leg
         const hang = legend ? Math.max(0, LEGEND_REACH - size * rightMarginFraction) : 0;
         const bounded = Math.max(0, size * SQUARE_PLOT_FRACTION - MARGIN.left);
 
-        // Centred in the container where there's room, and pushed clear of the panel where there isn't.
-        const centred = (parentWidth - size) / 2;
-        const left = Math.max(gutterLeft, Math.min(centred, parentWidth - gutterRight - size - hang));
+        // Centered in the container where there's room, and pushed clear of the panel where there isn't.
+        const centered = (parentWidth - size) / 2;
+        const left = Math.max(gutterLeft, Math.min(centered, parentWidth - gutterRight - size - hang));
 
         plot = {
             left,

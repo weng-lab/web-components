@@ -498,7 +498,7 @@ export type ControlButtonsProps = {
     highlight?: string;
     downloadButton: boolean;
     downloadPlot: () => void;
-    /** The side of the plot the panel is on, so its tooltips can open towards the plot. */
+    /** The side of the plot the panel is on, so its tooltips can open toward the plot. */
     side: "left" | "right";
     /** The minimap toggle, shown when the plot has a minimap. */
     miniMap?: {
