@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapProps, Point } from "./types";
-import { pointKey } from "./helpers";
+import { pickMiniMapCorner, pointKey, rescaleX, rescaleY } from "./helpers";
 import { CROSSHAIR_DASH, CROSSHAIR_STROKE, CROSSHAIR_STROKE_WIDTH } from "./Crosshair";
+import { drawField } from "./backgroundField";
 import { useStableCallback } from "../../hooks";
 
 const MINIMAP_SCALE_FACTOR = 0.25;
@@ -9,11 +10,14 @@ const MINIMAP_SCALE_FACTOR = 0.25;
 // Scale them back up so it renders identically to the crosshair on the plot itself.
 const MINIMAP_CROSSHAIR_STROKE_WIDTH = CROSSHAIR_STROKE_WIDTH / MINIMAP_SCALE_FACTOR;
 const MINIMAP_CROSSHAIR_DASH = CROSSHAIR_DASH.map((dash) => dash / MINIMAP_SCALE_FACTOR).join(",");
+/** Between the minimap and the edges of the plot area. */
+const MINIMAP_INSET = 8;
 
 const MiniMap = <T,>({
-    miniMap,
-    width,
-    height,
+    boundedWidth,
+    boundedHeight,
+    plotLeft,
+    plotTop,
     pointData,
     xScale,
     yScale,
@@ -21,13 +25,30 @@ const MiniMap = <T,>({
     crosshair,
     dimStyle,
     spotlitKeys,
+    backgroundField,
+    fieldRaster,
 }: MapProps<T>) => {
     // The minimap frame is the whole plot area untransformed, so a data coordinate maps onto it
     // through the base scales - no need to undo the current zoom.
     const crosshairX = crosshair ? xScale(crosshair.x) : null;
     const crosshairY = crosshair ? yScale(crosshair.y) : null;
-    const frameWidth = width - 100;
-    const frameHeight = height - 100;
+    const mapWidth = boundedWidth * MINIMAP_SCALE_FACTOR;
+    const mapHeight = boundedHeight * MINIMAP_SCALE_FACTOR;
+
+    // Picked once, as the minimap appears: it is mounted only while the plot is zoomed, so each
+    // appearance is a fresh pick, and one that held still while the user pans is easier to find
+    // again than one that jumps whenever the points under it change.
+    const [corner] = useState(() => {
+        const { translateX, translateY, scaleX, scaleY } = zoom.transformMatrix;
+        return pickMiniMapCorner(
+            pointData,
+            rescaleX(xScale, translateX, scaleX),
+            rescaleY(yScale, translateY, scaleY),
+            boundedWidth,
+            boundedHeight,
+            { width: mapWidth + MINIMAP_INSET, height: mapHeight + MINIMAP_INSET }
+        );
+    });
 
     /**
      * Dragging the window is coalesced to one zoom update per animation frame.
@@ -94,30 +115,38 @@ const MiniMap = <T,>({
         <div
             style={{
                 position: 'absolute',
-                bottom: miniMap.position ? miniMap.position.bottom : 10,
-                right: miniMap.position ? miniMap.position.right : 10,
+                left: plotLeft + (corner.left ? MINIMAP_INSET : boundedWidth - mapWidth - MINIMAP_INSET),
+                top: plotTop + (corner.top ? MINIMAP_INSET : boundedHeight - mapHeight - MINIMAP_INSET),
             }}
         >
             {/* Canvas for rendering points on minimap */}
             <canvas
-                width={frameWidth * MINIMAP_SCALE_FACTOR}
-                height={frameHeight * MINIMAP_SCALE_FACTOR}
+                width={mapWidth}
+                height={mapHeight}
                 ref={(canvas) => {
                     if (canvas) {
                         const context = canvas.getContext('2d');
                         const scaleFactor = MINIMAP_SCALE_FACTOR;
-                        const scaledWidth = frameWidth * scaleFactor;
-                        const scaledHeight = frameHeight * scaleFactor;
                         if (context) {
                             // Clear canvas
                             context.clearRect(0, 0, canvas.width, canvas.height);
 
                             // Draw background and outline
                             context.fillStyle = 'white';
-                            context.fillRect(0, 0, scaledWidth, scaledHeight);
+                            context.fillRect(0, 0, mapWidth, mapHeight);
+
+                            // The field under the points, as on the plot: the same bitmap, drawn
+                            // through the base scales at the minimap's scale.
+                            if (fieldRaster && backgroundField) {
+                                context.save();
+                                context.scale(scaleFactor, scaleFactor);
+                                drawField(context, fieldRaster, backgroundField.x, backgroundField.y, xScale, yScale, boundedWidth, boundedHeight, backgroundField.opacity);
+                                context.restore();
+                            }
+
                             context.strokeStyle = 'grey';
                             context.lineWidth = 4;
-                            context.strokeRect(0, 0, scaledWidth, scaledHeight);
+                            context.strokeRect(0, 0, mapWidth, mapHeight);
 
                             // Draw points, the dimmed ones first so they sit beneath the rest
                             const isDimmed = (point: Point<T>) =>
@@ -142,14 +171,14 @@ const MiniMap = <T,>({
 
             {/* SVG for rendering the zoom window */}
             <svg
-                width={frameWidth * MINIMAP_SCALE_FACTOR}
-                height={frameHeight * MINIMAP_SCALE_FACTOR}
+                width={mapWidth}
+                height={mapHeight}
                 style={{ position: 'absolute', top: 0, left: 0 }}
             >
                 <g transform={`scale(${MINIMAP_SCALE_FACTOR})`}>
                     <rect
-                        width={frameWidth}
-                        height={frameHeight}
+                        width={boundedWidth}
+                        height={boundedHeight}
                         fill="#0d0f98"
                         fillOpacity={0.2}
                         stroke="#0d0f98"
@@ -190,10 +219,10 @@ const MiniMap = <T,>({
                             movePan(touch.clientX, touch.clientY);
                         }}
                     />
-                    {crosshairY !== null && crosshairY >= 0 && crosshairY <= frameHeight && (
+                    {crosshairY !== null && crosshairY >= 0 && crosshairY <= boundedHeight && (
                         <line
                             x1={0}
-                            x2={frameWidth}
+                            x2={boundedWidth}
                             y1={crosshairY}
                             y2={crosshairY}
                             stroke={CROSSHAIR_STROKE}
@@ -202,12 +231,12 @@ const MiniMap = <T,>({
                             pointerEvents="none"
                         />
                     )}
-                    {crosshairX !== null && crosshairX >= 0 && crosshairX <= frameWidth && (
+                    {crosshairX !== null && crosshairX >= 0 && crosshairX <= boundedWidth && (
                         <line
                             x1={crosshairX}
                             x2={crosshairX}
                             y1={0}
-                            y2={frameHeight}
+                            y2={boundedHeight}
                             stroke={CROSSHAIR_STROKE}
                             strokeWidth={MINIMAP_CROSSHAIR_STROKE_WIDTH}
                             strokeDasharray={MINIMAP_CROSSHAIR_DASH}

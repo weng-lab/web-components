@@ -1,5 +1,6 @@
 import { AnimationType, DownloadPlotHandle } from "../../utility";
 import { ManualSizeProps } from "../../responsive";
+import type { PlotTooltipRef } from "../../tooltip";
 
 export interface BarData<T> {
   category?: string;
@@ -67,7 +68,7 @@ export interface SingleBarProps<T> {
     bar: BarData<T>;
     index: number;
     onBarClicked?: (bar: BarData<T>) => void;
-    TooltipContents?: (bar: BarData<T>) => React.ReactNode;
+    tooltipRef: PlotTooltipRef<BarData<T>>;
     cutoffNegativeValues: boolean;
     negativeCutoff: number;
     xScale: any;

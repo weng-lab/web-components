@@ -2,13 +2,11 @@ import React, { useCallback, useImperativeHandle, useMemo, useRef } from 'react'
 import { ChartProps, Point, ZoomType } from './types';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
-import { IconButton, Stack, Tooltip, useTheme } from '@mui/material';
-import { HighlightAlt } from '@mui/icons-material';
+import { Stack, useTheme } from '@mui/material';
 import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import { DEFAULT_DIM_STYLE, getDomains, getPointExtents, isSameTransform } from './helpers';
-import { FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH } from './backgroundField';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
@@ -18,8 +16,8 @@ import { useMiniMapToggle } from './hooks/useMiniMapToggle';
 import { useHoverTooltip } from './hooks/useHoverTooltip';
 import { useCrosshair } from './hooks/useCrosshair';
 import { useHoveredPointKeys } from './hooks/useHoveredPointKeys';
-
-const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
+import { getPlotLayout } from './layout';
+import { useFieldRaster } from './hooks/useFieldRaster';
 
 const ScatterPlot = <T extends object, S extends boolean | undefined = undefined, Z extends boolean | undefined = undefined>(
     props: ChartProps<T, S, Z>
@@ -28,27 +26,21 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const tooltipRef = useRef<PlotTooltipHandle<Point<T>>>(null);
 
     const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
-    const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
+    const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
-    // The square path is kept exactly as it was, so turning `square` on is a no-op against
-    // previous versions. Unsquared, the plot takes the whole container and only the axis
-    // margins are held back.
-    const square = props.square ?? false;
-    const size = Math.min(parentHeight, parentWidth)
-    const plotWidth = square ? size : parentWidth;
-    const plotHeight = square ? size : parentHeight;
+    const controlsPosition = props.controlsPosition ?? "left";
+    const layout = getPlotLayout({
+        parentWidth,
+        parentHeight,
+        square: props.square ?? false,
+        controls: props.disableZoom ? null : controlsPosition,
+        legend: Boolean(props.backgroundField?.legend),
+    });
+    const { margin, boundedWidth, boundedHeight } = layout;
 
     const divRef = React.useRef<HTMLDivElement>(null);
     const selectable = props.selectable ?? false;
-    // A field's legend is given room inside the container rather than spilling out of its right edge.
-    const marginRight = props.backgroundField?.legend ? FIELD_LEGEND_GAP + FIELD_LEGEND_WIDTH : MARGIN.right;
-    const boundedWidth = square
-        ? size * 0.9 - MARGIN.left
-        : Math.max(0, plotWidth - MARGIN.left - marginRight);
-    const boundedHeight = square
-        ? size * 0.9 - MARGIN.left
-        : Math.max(0, plotHeight - MARGIN.top - MARGIN.bottom);
     const downloadButton = props.downloadButton ?? false
 
     const { selectMode, handleSelectionModeChange } = useSelectionMode({ initialSelectionMode });
@@ -79,7 +71,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     const { hoveredPoint, handleMouseMove, handleMouseLeave } = useHoverTooltip({
         pointData: props.pointData,
-        margin: MARGIN,
+        margin,
         xScale,
         yScale,
         onHoveredPointChange: props.onHoveredPointChange,
@@ -99,11 +91,14 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const dimOpacity = props.dimStyle?.opacity ?? DEFAULT_DIM_STYLE.opacity;
     const dimStyle = useMemo(() => ({ color: dimColor, opacity: dimOpacity }), [dimColor, dimOpacity]);
 
+    // Rasterized here rather than in the viewport, so the minimap draws the same bitmap.
+    const fieldRaster = useFieldRaster(props.backgroundField);
+
     const crosshairEnabled = props.crosshair ?? false;
 
     const { crosshairPosition, handleCrosshairMove, handleCrosshairLeave } = useCrosshair({
         enabled: crosshairEnabled,
-        margin: MARGIN,
+        margin,
         boundedWidth,
         boundedHeight,
         xScale,
@@ -146,26 +141,23 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2, point: zoomCenter }); }
         const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8, point: zoomCenter }); }
         const handleZoomReset = () => { zoom.reset(); }
-
-        const controlsPosition = props.controlsPosition ?? "left";
+        const zoomed = !isSameTransform(zoom.transformMatrix, zoom.initialTransformMatrix);
 
         return (
             <>
-                {!props.disableZoom && (
+                {layout.controlsLeft !== null && (
                     <Stack
                         direction="column"
                         sx={{
                             position: 'absolute',
-                            ...(controlsPosition === "right"
-                                ? { right: square ? `max(10px, calc(45% - ${size / 2}px))` : "10px" }
-                                : { left: square ? `max(10px, calc(45% - ${size / 2}px))` : "10px" }),
-                            top: square ? `calc(50% - ${size / 2}px + ${MARGIN.top}px)` : `${MARGIN.top}px`,
+                            left: layout.controlsLeft,
+                            top: margin.top,
                             zIndex: 10
                         }}
                     >
                         <ControlButtons
                             selectable={selectable}
-                            resetable={!isSameTransform(zoom.transformMatrix, zoom.initialTransformMatrix)}
+                            resetable={zoomed}
                             handleSelectionModeChange={handleSelectionModeChange}
                             selectMode={selectMode}
                             zoomIn={handleZoomIn}
@@ -174,13 +166,16 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                             highlight={props.controlsHighlight}
                             downloadButton={downloadButton}
                             downloadPlot={handleDownload}
+                            side={controlsPosition}
+                            miniMap={props.disableMiniMap ? undefined : { open: showMiniMap, toggle: toggleMiniMap }}
                         />
                     </Stack>
                 )}
                 <ScatterPlotViewport
-                    width={plotWidth}
-                    height={plotHeight}
-                    margin={MARGIN}
+                    left={layout.left}
+                    width={layout.width}
+                    height={layout.height}
+                    margin={margin}
                     boundedWidth={boundedWidth}
                     boundedHeight={boundedHeight}
                     loading={props.loading}
@@ -210,33 +205,17 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     border={props.border ?? false}
                     originLine={props.originLine}
                     backgroundField={props.backgroundField}
+                    fieldRaster={fieldRaster}
                     crosshair={crosshair}
                     divRef={divRef}
                 />
-                {props.miniMap && !props.disableZoom && (
-                    <Tooltip title="Toggle Minimap">
-                        <IconButton
-                            sx={{
-                                position: "absolute",
-                                right: 10,
-                                bottom: 10,
-                                zIndex: 10,
-                                width: "auto",
-                                height: "auto",
-                                color: showMiniMap ? props.controlsHighlight ?? "primary.main" : "default",
-                            }}
-                            size="small"
-                            onClick={toggleMiniMap}
-                        >
-                            <HighlightAlt />
-                        </IconButton>
-                    </Tooltip>
-                )}
-                {showMiniMap && props.miniMap && !props.disableZoom && !props.loading && (
+                {/* At the initial view the minimap would only repeat the plot, so it waits for a zoom or pan. */}
+                {showMiniMap && zoomed && !props.disableMiniMap && !props.disableZoom && !props.loading && (
                     <MiniMap
-                        miniMap={props.miniMap}
-                        width={plotWidth}
-                        height={plotHeight}
+                        boundedWidth={boundedWidth}
+                        boundedHeight={boundedHeight}
+                        plotLeft={layout.left + margin.left}
+                        plotTop={margin.top}
                         pointData={props.pointData}
                         xScale={xScale}
                         yScale={yScale}
@@ -244,13 +223,14 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         crosshair={crosshair}
                         dimStyle={dimStyle}
                         spotlitKeys={spotlit ? hoveredPointKeys : null}
+                        backgroundField={props.backgroundField}
+                        fieldRaster={fieldRaster}
                     />
                 )}
                 {!props.disableTooltip && (
-                    // Above the controls and the minimap toggle, which sit at z-index 10 in the
-                    // root stacking context and would otherwise win against the portalled
-                    // tooltip's auto z-index. The theme's tooltip layer also matches the MUI
-                    // tooltips on those same controls.
+                    // Above the controls, which sit at z-index 10 in the root stacking context
+                    // and would otherwise win against the portalled tooltip's auto z-index. The
+                    // theme's tooltip layer also matches the MUI tooltips on those same controls.
                     <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
                         {(point) =>
                             props.tooltipBody ? props.tooltipBody(point) : <DefaultTooltipBody point={point} />

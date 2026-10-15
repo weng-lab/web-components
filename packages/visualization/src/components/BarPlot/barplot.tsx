@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, us
 import { scaleBand, scaleLinear, scaleLog } from '@visx/scale';
 import { AxisTop } from '@visx/axis';
 import { Group } from '@visx/group';
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, useTheme } from '@mui/material';
 import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
 import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
+import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import SingleBar from './singleBar';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
@@ -38,9 +39,20 @@ const BarPlot = <T,>({
 }: BarPlotProps<T>) => {
     const [spaceForLabel, setSpaceForLabel] = useState(200)
     const [labelSpaceDecided, setLabelSpaceDecided] = useState(false)
-    // State to control whether animation is enabled so that if scrollling too fast through a long list of bars,
-    // you dont have to wait for the animation to catch up
-    const [animationEnabled, setAnimationEnabled] = useState(true);
+
+    // The rows on show, in order. framer-motion plays a bar's entry animation only when the bar mounts,
+    // so the bars are remounted under this key whenever it changes - otherwise a row shared with the
+    // previous data keeps its mounted bar and skips the animation the new rows get.
+    const rowsKey = useMemo(() => JSON.stringify(data.map((d) => d.id)), [data])
+
+    // Scrolling turns the animation off, so that if scrolling too fast through a long list of bars you
+    // don't have to wait for the animation to catch up. Held against the rows that were scrolled, so
+    // the next set of rows animates in again.
+    const [animationDisabledFor, setAnimationDisabledFor] = useState<string | null>(null);
+    const animationEnabled = animationDisabledFor !== rowsKey;
+
+    const theme = useTheme();
+    const tooltipRef = useRef<PlotTooltipHandle<BarData<unknown>>>(null);
 
     const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -50,12 +62,23 @@ const BarPlot = <T,>({
     useEffect(() => {
         if (!node) return;
 
-        const handleScroll = () => setAnimationEnabled(false);
+        // Where these rows start out scrolled to. Rows shorter than the last ones make the browser clamp
+        // the scroll position, and the scroll event it fires for that is not the user scrolling - so only
+        // a scroll that moves away from here turns the animation off. Reading the position lays out the
+        // new rows first, so it is the clamped one.
+        const startTop = node.scrollTop;
+        const startLeft = node.scrollLeft;
 
-        node.addEventListener("scroll", handleScroll, { once: true });
+        const handleScroll = () => {
+            if (node.scrollTop === startTop && node.scrollLeft === startLeft) return;
+            setAnimationDisabledFor(rowsKey);
+            node.removeEventListener("scroll", handleScroll);
+        };
+
+        node.addEventListener("scroll", handleScroll);
 
         return () => node.removeEventListener("scroll", handleScroll);
-    }, [node]);
+    }, [node, rowsKey]);
 
     const lollipopValues = data
         .map(d => d.lollipopValue)
@@ -228,15 +251,16 @@ const BarPlot = <T,>({
                             }}
                         />
 
-                        {bars.map((d, i) => {
-
-                            return (
+                        {/* Keyed by the rows on show, so every bar remounts, and replays its entry animation, when they
+                            change. Without an animation there is nothing to replay, so the bars are kept. */}
+                        <React.Fragment key={animation ? rowsKey : undefined}>
+                            {bars.map((d, i) => (
                                 <SingleBar
                                     key={d.id}
                                     bar={d}
                                     index={i}
                                     onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}
-                                    TooltipContents={TooltipContents as unknown as ((bar: BarData<unknown>) => React.ReactNode) | undefined}
+                                    tooltipRef={tooltipRef}
                                     cutoffNegativeValues={cutoffNegativeValues}
                                     negativeCutoff={negativeCutoff}
                                     xScale={xScale}
@@ -249,8 +273,8 @@ const BarPlot = <T,>({
                                     animationEnabled={animationEnabled}
                                     animationBuffer={animationBuffer}
                                 />
-                            );
-                        })}
+                            ))}
+                        </React.Fragment>
                         <>
                             <line
                                 x1={xScale(0)}
@@ -273,6 +297,13 @@ const BarPlot = <T,>({
                     </Group>
                 </svg>
             }
+            {TooltipContents && (
+                // Matches the MUI tooltip layer, as ScatterPlot's does, so the portalled tooltip
+                // sits above the overlays of whatever page the plot is placed in.
+                <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+                    {(bar) => <TooltipContents {...bar as BarData<T>} />}
+                </PlotTooltip>
+            )}
             {/* Loading Wheel for resizing */}
             {!labelSpaceDecided &&
                 <div style={{ display: "flex", position: "absolute", inset: 0, justifyContent: "center" }}>

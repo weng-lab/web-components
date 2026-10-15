@@ -1,5 +1,5 @@
 export { ScatterPlot, ScatterPlotSync, getSharedDomains, getShapePoints, getFieldGrid, POINT_SHAPES } from './components/ScatterPlot';
-export type { MiniMapProps, ChartProps, Point, PointShape, CrosshairPosition, ZoomType, DimStyle, BackgroundField, BackgroundFieldLegendSlot, ScatterPlotSyncProps, SyncedPlotProps } from './components/ScatterPlot';
+export type { ChartProps, Point, PointShape, CrosshairPosition, ZoomType, DimStyle, BackgroundField, BackgroundFieldLegendSlot, ScatterPlotSyncProps, SyncedPlotProps } from './components/ScatterPlot';
 
 export { Graph } from './components/Graph';
 export type { GraphProps } from './components/Graph';

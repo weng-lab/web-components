@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
 import ScatterPlotSync from './ScatterPlotSync';
 import { getSharedDomains } from './helpers';
-import { MiniMapProps, POINT_SHAPES, PointShape } from './types';
+import { POINT_SHAPES, PointShape, type Point as PlotPoint } from './types';
 import ChipLegend from '../Legend/ChipLegend/ChipLegend';
+import { Colorbar, evenStops, sweptValues, type RampRange } from '../Legend';
 
 const meta = {
     title: 'visualization/ScatterPlot',
@@ -81,7 +82,7 @@ const shapeData: Point[] = [
 ];
 
 /**
- * Every shape at a run of radii, one shape per row. All one colour on purpose: shape is the only
+ * Every shape at a run of radii, one shape per row. All one color on purpose: shape is the only
  * thing varying, so a column should read as evenly weighted down the rows rather than the
  * triangles and crosses looking lighter than the circles - each is drawn to the same area as a
  * circle of the same r.
@@ -96,52 +97,13 @@ const shapeScaleData: Point[] = POINT_SHAPES.flatMap((shape, row) =>
     }))
 );
 
-// Mock for the map prop
-const miniMap: MiniMapProps = {
-    position: { right: 50, bottom: 50 }
-};
-
-// Default story with scatter data
+// Default story with scatter data, and nothing but the props it needs
 export const Default: Story = {
     args: {
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
-        disableTooltip: true,
-        downloadButton: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
-    },
-    render: () => {
-        return (
-            <ScatterPlot
-                pointData={scatterData}
-                loading={false}
-                leftAxisLabel=""
-                bottomAxisLabel=""
-                miniMap={miniMap}
-                disableTooltip
-                initialState={
-                    {
-                        minimap: {
-                            open: true,
-                        },
-                        controls: {
-                            selectionType: "pan"
-                        }
-                    }
-                }
-            />
-
-        )
     }
 };
 
@@ -150,7 +112,6 @@ export const CustomTooltip: Story = {
     args: {
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         tooltipBody: (point) => (
@@ -161,22 +122,32 @@ export const CustomTooltip: Story = {
                 <p>Color: {point.color}</p>
             </div>
         ),
+    }
+};
+
+// The minimap toggle starts on here. Zoom in or pan to bring the minimap up: it takes whichever
+// corner of the plot area covers the fewest points, and hides again once the view is reset.
+export const MiniMap: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
         initialState: {
             minimap: {
-                open: true,
+                showWhileZoomed: true,
             },
-            controls: {
-                selectionType: "pan"
-            }
         }
     }
 };
 
-// Default story with no mini map
+// No minimap toggle in the control panel
 export const WithoutMiniMap: Story = {
     args: {
         pointData: scatterData,
         loading: false,
+        disableMiniMap: true,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
@@ -194,18 +165,9 @@ export const SelectablePoints: Story = {
         },
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
     }
 };
 
@@ -219,18 +181,9 @@ export const ClickablePoints: Story = {
         },
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
     }
 };
 
@@ -240,18 +193,9 @@ export const HoverMultiplePoints: Story = {
         groupPointsAnchor: "color",
         pointData: moreScatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        },
     }
 };
 
@@ -265,17 +209,12 @@ export const PointShapes: Story = {
         loading: false,
         leftAxisLabel: "Shape",
         bottomAxisLabel: "Radius",
-        initialState: {
-            controls: {
-                selectionType: "pan"
-            }
-        }
     }
 };
 
 /**
- * Hover styling turned down from the default (+2px, black) to a subtler grey ring, for plots
- * dense enough that a growing point covers its neighbours.
+ * Hover styling turned down from the default (+2px, black) to a subtler gray ring, for plots
+ * dense enough that a growing point covers its neighbors.
  */
 export const CustomHoverStyle: Story = {
     args: {
@@ -285,11 +224,6 @@ export const CustomHoverStyle: Story = {
         hoverStroke: "#555555",
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
-        initialState: {
-            controls: {
-                selectionType: "pan"
-            }
-        }
     }
 };
 
@@ -298,18 +232,9 @@ export const OtherShapes: Story = {
     args: {
         pointData: shapeData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
     }
 };
 
@@ -318,43 +243,10 @@ export const ZoomDisabled: Story = {
     args: {
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableZoom: true,
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "none"
-            }
-        }
-    },
-    render: () => {
-        return (
-            <ScatterPlot
-                pointData={scatterData}
-                loading={false}
-                leftAxisLabel=""
-                bottomAxisLabel=""
-                miniMap={miniMap}
-                disableTooltip
-                disableZoom
-                initialState={
-                    {
-                        minimap: {
-                            open: true,
-                        },
-                        controls: {
-                            selectionType: "none"
-                        }
-                    }
-                }
-            />
-
-        )
     }
 };
 
@@ -363,7 +255,6 @@ export const ZoomDisabledButSelectable: Story = {
     args: {
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableZoom: true,
@@ -374,14 +265,6 @@ export const ZoomDisabledButSelectable: Story = {
             );
         },
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "select"
-            }
-        }
     }
 };
 
@@ -391,7 +274,6 @@ export const ControlsHighlight: Story = {
         controlsHighlight: "red",
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         selectable: true,
@@ -401,59 +283,37 @@ export const ControlsHighlight: Story = {
             );
         },
         disableTooltip: true,
+        // The minimap toggle starts on, so it shows the highlight alongside the selection toggle.
         initialState: {
             minimap: {
-                open: true,
+                showWhileZoomed: true,
             },
-            controls: {
-                selectionType: "pan"
-            }
         }
+    }
+};
+
+// The controls on the right of the plot, which is narrowed to give them a lane of their own.
+export const ControlsRight: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        controlsPosition: "right",
     }
 };
 
 export const Animation: Story = {
     args: {
-        pointData: scatterData,
+        pointData: points,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
-    },
-    render: () => {
-        return (
-            <ScatterPlot
-                pointData={points}
-                loading={false}
-                leftAxisLabel=""
-                bottomAxisLabel=""
-                miniMap={miniMap}
-                disableTooltip
-                initialState={
-                    {
-                        minimap: {
-                            open: true,
-                        },
-                        controls: {
-                            selectionType: "pan"
-                        }
-                    }
-                }
-                animation="slideUp"
-                animationBuffer={0.02}
-                animationGroupSize={10}
-            />
-
-        )
+        animation: "slideUp",
+        animationBuffer: 0.02,
+        animationGroupSize: 10,
     }
 };
 
@@ -463,20 +323,11 @@ export const ManualSize: Story = {
     args: {
         pointData: scatterData,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
         width: 350,
         height: 350,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
     },
     decorators: [
         (Story) => (
@@ -488,8 +339,8 @@ export const ManualSize: Story = {
 };
 
 // Two plots over the same coordinate space, linked by ScatterPlotSync: hovering either one draws
-// the same crosshair on both, and zooming or panning either one moves both. Only the hovered
-// plot shows a tooltip.
+// the same crosshair on both, and zooming or panning either one moves both - their minimaps start
+// on, so the shared view shows in each. Only the hovered plot shows a tooltip.
 const syncedDataA: Point[] = generatePoints(600);
 const syncedDataB: Point[] = generatePoints(600)
     .map((point, index) => ({
@@ -519,9 +370,8 @@ export const SyncedPlots: Story = {
                                 loading={false}
                                 leftAxisLabel="Y-Axis Label"
                                 bottomAxisLabel="Sample A"
-                                miniMap={miniMap}
                                 disableTooltip
-                                initialState={{ minimap: { open: true }, controls: { selectionType: "pan" } }}
+                                initialState={{ minimap: { showWhileZoomed: true } }}
                                 {...sync}
                             />
                         </div>
@@ -531,10 +381,9 @@ export const SyncedPlots: Story = {
                                 loading={false}
                                 leftAxisLabel="Y-Axis Label"
                                 bottomAxisLabel="Sample B"
-                                miniMap={miniMap}
                                 disableTooltip
                                 controlsPosition="right"
-                                initialState={{ minimap: { open: true }, controls: { selectionType: "pan" } }}
+                                initialState={{ minimap: { showWhileZoomed: true } }}
                                 {...sync}
                             />
                         </div>
@@ -558,18 +407,9 @@ export const Crosshairs: Story = {
         pointData: points,
         loading: false,
         crosshair: true,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        initialState: {
-            minimap: {
-                open: true,
-            },
-            controls: {
-                selectionType: "pan"
-            }
-        }
     },
 };
 
@@ -747,7 +587,6 @@ export const DimmedAndSpotlit: Story = {
                         onHoveredPointChange={(point) => setPlotHover(point?.metaData?.group ?? null)}
                         leftAxisLabel="Y-Axis Label"
                         bottomAxisLabel="X-Axis Label"
-                        miniMap={miniMap}
                     />
                 </div>
             </div>
@@ -762,7 +601,7 @@ export const DimmedAndSpotlit: Story = {
     ],
 };
 
-// square locks the plot to the shorter side of its container and centres it, which is what you
+// square locks the plot to the shorter side of its container and centers it, which is what you
 // want when both axes are in the same units and a circular cluster has to stay circular - a PCA
 // or UMAP embedding. Off by default: the plot fills the container instead.
 //
@@ -772,7 +611,6 @@ export const Square: Story = {
         pointData: points,
         loading: false,
         square: true,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
@@ -790,7 +628,6 @@ export const FillsContainer: Story = {
     args: {
         pointData: points,
         loading: false,
-        miniMap: miniMap,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
@@ -889,6 +726,131 @@ export const HoveredPointsSweep: Story = {
                     />
                 </div>
             </div>
+        );
+    },
+};
+
+// backgroundField paints a grid of values behind the points - a model's surface the points are read
+// against, say - in the points' own coordinates, so it pans and zooms with them and shows in the
+// minimap. The grid is built once, here, so its arrays are the same on every render: a new array
+// rasterizes the grid again. getFieldGrid builds one from a table with a row per grid point instead.
+const FIELD_EXTENT: [number, number] = [0, 100];
+const FIELD_LINES = 80;
+const FIELD_DOMAIN: [number, number] = [-1, 1];
+const FIELD_COLORS = ["blue", "white", "red"];
+
+const fieldSurface = (x: number, y: number) => Math.sin(x / 16) * Math.cos(y / 22);
+
+const fieldGrid = (() => {
+    const lines = Array.from({ length: FIELD_LINES }, (_, i) => (i / (FIELD_LINES - 1)) * FIELD_EXTENT[1]);
+    return {
+        x: lines,
+        y: lines,
+        // A row of x at a time, from the lowest y up.
+        values: lines.flatMap((y) => lines.map((x) => fieldSurface(x, y))),
+    };
+})();
+
+type FieldPoint = PlotPoint<{ value: number }>;
+
+/** Scattered over the surface, each carrying the surface's value where it sits. Seeded, so the story draws the same each time. */
+const fieldPoints: FieldPoint[] = (() => {
+    let seed = 7;
+    const random = () => (seed = (seed * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
+    return Array.from({ length: 400 }, () => {
+        const x = 3 + random() * 94;
+        const y = 3 + random() * 94;
+        return { x, y, r: 3, color: "#37474f", metaData: { value: fieldSurface(x, y) } };
+    });
+})();
+
+const FIELD_STOPS = evenStops(FIELD_COLORS);
+/** Every point's value, sorted: what the colorbar's histogram counts. */
+const FIELD_POINT_VALUES = fieldPoints.map(({ metaData }) => metaData!.value).sort((a, b) => a - b);
+
+/** The built-in legend: a color bar ticked across the domain, titled and formatted from `legend`. */
+export const BackgroundField: Story = {
+    args: {
+        pointData: fieldPoints,
+        loading: false,
+        // The grid covers exactly this, so the plot shows all of it and nothing beyond.
+        xDomain: FIELD_EXTENT,
+        yDomain: FIELD_EXTENT,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        backgroundField: {
+            ...fieldGrid,
+            domain: FIELD_DOMAIN,
+            colorScale: FIELD_COLORS,
+            opacity: 0.8,
+            legend: { label: "Predicted value", format: (value) => value.toFixed(1) },
+        },
+    },
+};
+
+// A legend of the caller's own: a function handed the room beside the plot, whose SVG is drawn in
+// the plot's <svg> (so a download keeps it). Here it's the library's Colorbar, with a histogram of
+// the points' values: sweeping along it spotlights the points in that stretch, and hovering a point
+// marks its value on the bar.
+export const BackgroundFieldCustomLegend: Story = {
+    args: {
+        pointData: fieldPoints,
+        loading: false,
+    },
+    render: () => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [sweep, setSweep] = useState<RampRange | null>(null);
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [hovered, setHovered] = useState<FieldPoint | null>(null);
+
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const swept = useMemo(() => {
+            if (!sweep) return undefined;
+            const [low, high] = sweptValues(FIELD_DOMAIN, sweep);
+            return fieldPoints.filter(({ metaData }) => metaData!.value >= low && metaData!.value <= high);
+        }, [sweep]);
+
+        return (
+            <ScatterPlot
+                pointData={fieldPoints}
+                loading={false}
+                xDomain={FIELD_EXTENT}
+                yDomain={FIELD_EXTENT}
+                leftAxisLabel="Y-Axis Label"
+                bottomAxisLabel="X-Axis Label"
+                disableTooltip
+                hoveredPoints={swept}
+                spotlight
+                onHoveredPointChange={setHovered}
+                backgroundField={{
+                    ...fieldGrid,
+                    domain: FIELD_DOMAIN,
+                    colorScale: FIELD_COLORS,
+                    opacity: 0.8,
+                    legend: ({ width, height }) => (
+                        <>
+                            <Colorbar
+                                orientation="vertical"
+                                width={width}
+                                height={height}
+                                stops={FIELD_STOPS}
+                                range={FIELD_DOMAIN}
+                                values={FIELD_POINT_VALUES}
+                                format={(value) => value.toFixed(1)}
+                                noun="point"
+                                sweep={sweep}
+                                onSweep={setSweep}
+                                marker={hovered?.metaData?.value ?? null}
+                            />
+                            {/* Rotated to read down the slot's right edge: 14px in, its font size. */}
+                            <text transform={`translate(${width - 14},${height / 2}) rotate(90)`} textAnchor="middle" fontSize={14}>
+                                Predicted value
+                            </text>
+                        </>
+                    ),
+                }}
+            />
         );
     },
 };
