@@ -23,15 +23,8 @@ type UseHoverTooltipProps<T extends object> = {
     tooltipRef: PlotTooltipRef<Point<T>>;
 };
 
-/**
- * Every point's pixel position, kept between moves. Keyed on everything those positions are worked
- * out from - the scales included, since a resize rebuilds them while the points and the zoom
- * transform stay the same, and positions from before it would hit-test against the old size.
- */
+/** Every point's pixel position under one zoom transform, kept between moves. */
 type TransformedPointCache<T extends object> = {
-    pointData: Point<T>[];
-    xScale: ScaleLinear<number, number, never>;
-    yScale: ScaleLinear<number, number, never>;
     translateX: number;
     translateY: number;
     scaleX: number;
@@ -48,7 +41,12 @@ export const useHoverTooltip = <T extends object>({
     tooltipRef,
 }: UseHoverTooltipProps<T>) => {
     const [tooltipData, setTooltipData] = useState<Point<T> | null>(null);
-    const transformedPointCacheRef = useRef<TransformedPointCache<T> | null>(null);
+    // Started afresh whenever the points or the scales change - a resize rebuilds the scales - so a
+    // lookup only has to check the zoom transform, the one input that changes as the plot is panned.
+    const transformedPointCache = useMemo<{ current: TransformedPointCache<T> | null }>(
+        () => ({ current: null }),
+        [pointData, xScale, yScale]
+    );
 
     const hoveredPoint = useMemo(
         () => tooltipData
@@ -91,12 +89,9 @@ export const useHoverTooltip = <T extends object>({
         const adjustedY = point.y - margin.top;
         const { translateX, translateY, scaleX, scaleY } = zoom.transformMatrix;
 
-        const cachedTransformedPoints = transformedPointCacheRef.current;
+        const cachedTransformedPoints = transformedPointCache.current;
         const shouldReuseCachedPoints =
             cachedTransformedPoints &&
-            cachedTransformedPoints.pointData === pointData &&
-            cachedTransformedPoints.xScale === xScale &&
-            cachedTransformedPoints.yScale === yScale &&
             cachedTransformedPoints.translateX === translateX &&
             cachedTransformedPoints.translateY === translateY &&
             cachedTransformedPoints.scaleX === scaleX &&
@@ -113,10 +108,7 @@ export const useHoverTooltip = <T extends object>({
                     y: yScaleTransformed(curr.y),
                 }));
 
-                transformedPointCacheRef.current = {
-                    pointData,
-                    xScale,
-                    yScale,
+                transformedPointCache.current = {
                     translateX,
                     translateY,
                     scaleX,
@@ -143,7 +135,7 @@ export const useHoverTooltip = <T extends object>({
         setTooltipData(nextHoveredPoint);
         if (nextHoveredPoint) tooltipRef.current?.show(nextHoveredPoint, event);
         else tooltipRef.current?.hide();
-    }, [margin.left, margin.top, pointData, xScale, yScale, tooltipRef]);
+    }, [margin.left, margin.top, pointData, xScale, yScale, tooltipRef, transformedPointCache]);
 
     const handleMouseLeave = useCallback(() => {
         tooltipRef.current?.hide();

@@ -1,18 +1,16 @@
 import { GRADIENT_LEGEND_WIDTH } from "./GradientLegend";
+import { CONTROLS_WIDTH } from "./controls";
 
-export const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
+const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
 
 /** Unsquared, a gradient legend takes the right margin in place of the default one. */
 const LEGEND_MARGIN = { ...MARGIN, right: GRADIENT_LEGEND_WIDTH };
 
 /**
- * Padding around each control button's small (20px) icon. In pixels rather than theme spacing,
- * since the gutter below is held back to fit it exactly.
+ * Squared, the plot area is this fraction of the box, less the left margin, on both axes. What's
+ * left of the box past it is the right margin.
  */
-export const CONTROL_BUTTON_PADDING = 6;
-
-/** The control panel's width: an icon, its padding, and the panel's 1px border either side. */
-export const CONTROLS_WIDTH = 20 + CONTROL_BUTTON_PADDING * 2 + 2;
+const SQUARE_PLOT_FRACTION = 0.9;
 
 /** Between the control panel and the container's edge. */
 const CONTROLS_INSET = 10;
@@ -27,7 +25,7 @@ const CONTROLS_GAP = 6;
  */
 const CONTROLS_GUTTER = CONTROLS_INSET + CONTROLS_WIDTH + CONTROLS_GAP;
 
-export type PlotLayout = {
+type PlotLayout = {
     /** The plot's box - the svg the axes and points are drawn in - within the container. */
     left: number;
     width: number;
@@ -59,55 +57,63 @@ export const getPlotLayout = ({ parentWidth, parentHeight, square, controls, leg
     const gutterRight = controls === "right" ? CONTROLS_GUTTER : 0;
     const available = Math.max(0, parentWidth - gutterLeft - gutterRight);
 
-    // The panel sits just outside whatever is drawn on its side: the box on the left, and the box
-    // or a legend hanging past it on the right.
-    const controlsBeside = (left: number, contentRight: number) =>
-        controls === "left"
-            ? left - CONTROLS_GAP - CONTROLS_WIDTH
-            : controls === "right"
-                ? contentRight + CONTROLS_GAP
-                : null;
+    let plot: Omit<PlotLayout, "controlsLeft">;
+    /** The right edge of whatever is drawn: the box, or a legend hanging past it. */
+    let contentRight: number;
 
     if (!square) {
         // The plot takes the whole width left beside the panel, and only the axis margins (and
         // the legend, if there is one) are held back.
         const margin = legend ? LEGEND_MARGIN : MARGIN;
-        return {
+        plot = {
             left: gutterLeft,
             width: available,
             height: parentHeight,
             margin,
             boundedWidth: Math.max(0, available - margin.left - margin.right),
             boundedHeight: Math.max(0, parentHeight - margin.top - margin.bottom),
-            controlsLeft: controlsBeside(gutterLeft, gutterLeft + available),
         };
+        contentRight = gutterLeft + available;
+    } else {
+        // The square path keeps its original proportions, so it only differs from previous
+        // versions where the panel or the legend would otherwise have been drawn over it.
+        //
+        // A legend hangs past the box by however much it outgrows the box's right margin. Below
+        // the size where that margin fits it, the overhang grows as the box shrinks, so the
+        // largest box that fits is solved for rather than read off.
+        const rightMarginFraction = 1 - SQUARE_PLOT_FRACTION;
+        const widest = legend && available < GRADIENT_LEGEND_WIDTH / rightMarginFraction
+            ? (available - GRADIENT_LEGEND_WIDTH) / SQUARE_PLOT_FRACTION
+            : available;
+        const size = Math.max(0, Math.min(parentHeight, widest));
+        const hang = legend ? Math.max(0, GRADIENT_LEGEND_WIDTH - size * rightMarginFraction) : 0;
+        const bounded = Math.max(0, size * SQUARE_PLOT_FRACTION - MARGIN.left);
+
+        // Centred in the container where there's room, and pushed clear of the panel where there isn't.
+        const centred = (parentWidth - size) / 2;
+        const left = Math.max(gutterLeft, Math.min(centred, parentWidth - gutterRight - size - hang));
+
+        plot = {
+            left,
+            width: size,
+            height: size,
+            margin: {
+                ...MARGIN,
+                right: size - MARGIN.left - bounded,
+                bottom: size - MARGIN.top - bounded,
+            },
+            boundedWidth: bounded,
+            boundedHeight: bounded,
+        };
+        contentRight = left + size + hang;
     }
 
-    // The square path keeps its original proportions - a plot area of 0.9 of the box, less the
-    // left margin, on both axes - so it only differs from previous versions where the panel or
-    // the legend would otherwise have been drawn over it.
-    //
-    // A legend hangs past the box by however much it outgrows the box's own right margin, a tenth
-    // of the box. Below ten legends wide that overhang grows as the box shrinks, so the largest box
-    // that fits is solved for rather than read off.
-    const overhang = (size: number) => (legend ? Math.max(0, GRADIENT_LEGEND_WIDTH - size * 0.1) : 0);
-    const widest = legend && available < GRADIENT_LEGEND_WIDTH * 10
-        ? (available - GRADIENT_LEGEND_WIDTH) / 0.9
-        : available;
-    const size = Math.max(0, Math.min(parentHeight, widest));
-    const bounded = Math.max(0, size * 0.9 - MARGIN.left);
+    // The panel sits just outside whatever is drawn on its side.
+    const controlsLeft = controls === "left"
+        ? plot.left - CONTROLS_GAP - CONTROLS_WIDTH
+        : controls === "right"
+            ? contentRight + CONTROLS_GAP
+            : null;
 
-    // Centred in the container where there's room, and pushed clear of the panel where there isn't.
-    const centred = (parentWidth - size) / 2;
-    const left = Math.max(gutterLeft, Math.min(centred, parentWidth - gutterRight - size - overhang(size)));
-
-    return {
-        left,
-        width: size,
-        height: size,
-        margin: MARGIN,
-        boundedWidth: bounded,
-        boundedHeight: bounded,
-        controlsLeft: controlsBeside(left, left + size + overhang(size)),
-    };
+    return { ...plot, controlsLeft };
 };

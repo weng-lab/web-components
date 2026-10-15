@@ -251,31 +251,29 @@ const BarPlot = <T,>({
                             }}
                         />
 
-                        {/* Keyed by the rows on show, so every bar remounts, and replays its entry animation, when they change */}
-                        <React.Fragment key={rowsKey}>
-                            {bars.map((d, i) => {
-
-                                return (
-                                    <SingleBar
-                                        key={d.id}
-                                        bar={d}
-                                        index={i}
-                                        onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}
-                                        tooltipRef={tooltipRef}
-                                        cutoffNegativeValues={cutoffNegativeValues}
-                                        negativeCutoff={negativeCutoff}
-                                        xScale={xScale}
-                                        yScale={yScale}
-                                        barSize={barSize}
-                                        barSpacing={barSpacing}
-                                        gapBetweenTextAndBar={gapBetweenTextAndBar}
-                                        getLollipopRadius={getlollipopRadius}
-                                        animation={animation}
-                                        animationEnabled={animationEnabled}
-                                        animationBuffer={animationBuffer}
-                                    />
-                                );
-                            })}
+                        {/* Keyed by the rows on show, so every bar remounts, and replays its entry animation, when they
+                            change. Without an animation there is nothing to replay, so the bars are kept. */}
+                        <React.Fragment key={animation ? rowsKey : undefined}>
+                            {bars.map((d, i) => (
+                                <SingleBar
+                                    key={d.id}
+                                    bar={d}
+                                    index={i}
+                                    onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}
+                                    tooltipRef={tooltipRef}
+                                    cutoffNegativeValues={cutoffNegativeValues}
+                                    negativeCutoff={negativeCutoff}
+                                    xScale={xScale}
+                                    yScale={yScale}
+                                    barSize={barSize}
+                                    barSpacing={barSpacing}
+                                    gapBetweenTextAndBar={gapBetweenTextAndBar}
+                                    getLollipopRadius={getlollipopRadius}
+                                    animation={animation}
+                                    animationEnabled={animationEnabled}
+                                    animationBuffer={animationBuffer}
+                                />
+                            ))}
                         </React.Fragment>
                         <>
                             <line

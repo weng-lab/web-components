@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MapProps, Point } from "./types";
-import { MiniMapCorner, pickMiniMapCorner, pointKey, rescaleX, rescaleY } from "./helpers";
+import { pickMiniMapCorner, pointKey, rescaleX, rescaleY } from "./helpers";
 import { CROSSHAIR_DASH, CROSSHAIR_STROKE, CROSSHAIR_STROKE_WIDTH } from "./Crosshair";
 import { useStableCallback } from "../../hooks";
 
@@ -38,8 +38,8 @@ const MiniMap = <T,>({
     // Picked once, as the minimap appears: it is mounted only while the plot is zoomed, so each
     // appearance is a fresh pick, and one that held still while the user pans is easier to find
     // again than one that jumps whenever the points under it change.
-    const [corner] = useState<MiniMapCorner>(() => {
-        if (miniMap.position) return "bottom-right";
+    const [corner] = useState(() => {
+        if (miniMap.position) return { top: false, left: false };
         const { translateX, translateY, scaleX, scaleY } = zoom.transformMatrix;
         return pickMiniMapCorner(
             pointData,
@@ -116,8 +116,8 @@ const MiniMap = <T,>({
         <div
             style={{
                 position: 'absolute',
-                left: plotLeft + (corner.endsWith("left") ? insetX : boundedWidth - mapWidth - insetX),
-                top: plotTop + (corner.startsWith("top") ? insetY : boundedHeight - mapHeight - insetY),
+                left: plotLeft + (corner.left ? insetX : boundedWidth - mapWidth - insetX),
+                top: plotTop + (corner.top ? insetY : boundedHeight - mapHeight - insetY),
             }}
         >
             {/* Canvas for rendering points on minimap */}

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
-import { Box, Stack } from "@mui/material";
+import { Box } from "@mui/material";
 import { Group } from "@visx/group";
 import { AxisBottom, AxisLeft, AxisRight, AxisTop } from "@visx/axis";
 import { LinePath } from "@visx/shape";
@@ -18,6 +18,8 @@ import Crosshair from "./Crosshair";
 import { useDragSelection } from "./hooks/useDragSelection";
 
 type ScatterPlotViewportProps<T extends object> = {
+    /** The plot's offset from the container's left edge - see getPlotLayout. */
+    left: number;
     width: number;
     height: number;
     margin: { top: number; left: number };
@@ -71,6 +73,7 @@ const hoverAmountAt = (start: number | undefined, now: number) =>
     start === undefined ? 0 : easeOutCubic(Math.min(1, Math.max(0, (now - start) / HOVER_GROW_MS)));
 
 const ScatterPlotViewport = <T extends object>({
+    left,
     width,
     height,
     margin,
@@ -192,13 +195,13 @@ const ScatterPlotViewport = <T extends object>({
         now: number
     ) => {
         const context = canvas.getContext('2d');
-        if (!context) return;
+        // Nothing to draw before the plot has been measured - and with no area the gradient's stop
+        // below works out to 0/0, which the canvas refuses by throwing.
+        if (!context || boundedWidth <= 0 || boundedHeight <= 0) return;
 
         prepareCanvas(context, boundedWidth, boundedHeight);
 
-        // Not before the plot has a size: with no area the stop below works out to 0/0, and a
-        // gradient refuses a NaN stop by throwing.
-        if (backgroundGradient && boundedWidth > 0 && boundedHeight > 0) {
+        if (backgroundGradient) {
             const [colorLow, colorMid, colorHigh] = backgroundGradient.colorScale ?? ["red", "white", "blue"];
             const W = boundedWidth;
             const H = boundedHeight;
@@ -409,173 +412,171 @@ const ScatterPlotViewport = <T extends object>({
     }, [currentDisplayedPoints, onDisplayedPointsChange]);
 
     return (
-        <Stack justifyContent="center" alignItems="center" direction="row" sx={{ position: "relative" }}>
-            <Box sx={{ width, height }}>
-                {loading ? (
-                    <Box display="flex" width="100%" height="100%" sx={{ justifyContent: "center", alignItems: "center" }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <div style={{ position: "relative" }} ref={divRef}>
-                        <canvas
-                            ref={canvasRef}
-                            width={boundedWidth * 2}
-                            height={boundedHeight * 2}
-                            style={{
-                                userSelect: "none",
-                                position: "absolute",
-                                top: margin.top,
-                                left: margin.left,
-                                width: boundedWidth,
-                                height: boundedHeight,
-                                backgroundColor: "transparent",
-                            }}
-                        />
-                        <svg
-                            width={width}
-                            height={height}
-                            overflow="visible"
-                            style={{ position: "absolute", userSelect: "none" }}
-                            onMouseMove={(event) => {
-                                if (isDragging) handleMouseLeave();
-                                else handleMouseMove(event, zoom);
-                            }}
-                            onMouseLeave={handleMouseLeave}
-                        >
-                            <Group top={margin.top} left={margin.left}>
-                                {showPointAnimation && animation && (
-                                    <AnimatedPoints
-                                        pointData={pointData}
-                                        dimStyle={dimStyle}
-                                        animation={animation}
-                                        animationGroupSize={animationGroupSize}
-                                        animationBuffer={animationBuffer}
-                                        xScaleTransformed={xScaleTransformed}
-                                        yScaleTransformed={yScaleTransformed}
-                                        boundedWidth={boundedWidth}
-                                        boundedHeight={boundedHeight}
-                                    />
-                                )}
-                                {selectMode === "select" && (
-                                    <>
-                                        {lines.map((line, index) => (
-                                            <LinePath
-                                                key={`line-${index}`}
-                                                fill="transparent"
-                                                stroke="black"
-                                                strokeWidth={3}
-                                                data={line}
-                                                curve={curveBasis}
-                                                x={(datum) => datum.x}
-                                                y={(datum) => datum.y}
-                                            />
-                                        ))}
-                                        {isDragging && (
-                                            <g>
-                                                <line x1={x - margin.left + dx - 6} y1={y - margin.top + dy} x2={x - margin.left + dx + 6} y2={y - margin.top + dy} stroke="black" strokeWidth={1} />
-                                                <line x1={x - margin.left + dx} y1={y - margin.top + dy - 6} x2={x - margin.left + dx} y2={y - margin.top + dy + 6} stroke="black" strokeWidth={1} />
-                                                <circle cx={x - margin.left} cy={y - margin.top} r={4} fill="transparent" stroke="black" pointerEvents="none" />
-                                            </g>
-                                        )}
-                                    </>
-                                )}
-                                {originLine && (() => {
-                                    const x0 = xScaleTransformed(0);
-                                    const y0 = yScaleTransformed(0);
-                                    return (
-                                        <>
-                                            {y0 >= 0 && y0 <= boundedHeight && (
-                                                <line x1={0} x2={boundedWidth} y1={y0} y2={y0} stroke="#000" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
-                                            )}
-                                            {x0 >= 0 && x0 <= boundedWidth && (
-                                                <line x1={x0} x2={x0} y1={0} y2={boundedHeight} stroke="#000" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
-                                            )}
-                                        </>
-                                    );
-                                })()}
-                                <rect
-                                    ref={graphRef}
-                                    fill="transparent"
-                                    width={boundedWidth}
-                                    height={boundedHeight}
-                                    style={{ cursor: surfaceCursor }}
-                                    onMouseDown={onSurfaceMouseDown}
-                                    onMouseUp={onSurfaceMouseUp}
-                                    onMouseMove={onSurfaceMouseMove}
-                                    onMouseLeave={onSurfaceMouseLeave}
-                                    onTouchStart={onSurfaceTouchStart}
-                                    onTouchEnd={onSurfaceTouchEnd}
-                                    onTouchMove={onSurfaceTouchMove}
-                                    onWheel={onSurfaceWheel}
-                                    onClick={handlePointClick}
-                                />
-                                {crosshair && !isDragging && (
-                                    <Crosshair
-                                        position={{
-                                            x: xScaleTransformed(crosshair.x),
-                                            y: yScaleTransformed(crosshair.y),
-                                        }}
-                                        boundedWidth={boundedWidth}
-                                        boundedHeight={boundedHeight}
-                                    />
-                                )}
-                            </Group>
-                            <Group top={margin.top} left={margin.left}>
-                                <AxisLeft
-                                    scale={yScaleTransformed}
-                                    tickLabelProps={() => ({
-                                        fill: "#1c1917",
-                                        fontSize: 10,
-                                        textAnchor: "end",
-                                        verticalAnchor: "middle",
-                                        x: -10,
-                                    })}
-                                    tickValues={getTicks(yScaleTransformed, 5)}
-                                />
-                                <AxisBottom
-                                    top={boundedHeight}
-                                    scale={xScaleTransformed}
-                                    tickLabelProps={() => ({
-                                        fill: "#1c1917",
-                                        fontSize: 11,
-                                        textAnchor: "middle",
-                                    })}
-                                    tickValues={getTicks(xScaleTransformed, 5)}
-                                />
-                                {border && (
-                                    <>
-                                        <AxisTop top={0} scale={xScaleTransformed} tickValues={[]} />
-                                        <AxisRight scale={yScaleTransformed} tickValues={[]} left={boundedWidth} />
-                                    </>
-                                )}
-                                <Text textAnchor="middle" verticalAnchor="end" angle={-90} fontSize={15} y={boundedHeight / 2} x={0} dx={-50}>
-                                    {leftAxisLabel}
-                                </Text>
-                                <Text textAnchor="middle" verticalAnchor="start" fontSize={15} y={boundedHeight} x={boundedWidth / 2} dy={50}>
-                                    {bottomAxisLabel}
-                                </Text>
-                            </Group>
-                            <PointLabels
-                                pointData={pointData}
-                                xScaleTransformed={xScaleTransformed}
-                                yScaleTransformed={yScaleTransformed}
-                                boundedWidth={boundedWidth}
-                                boundedHeight={boundedHeight}
-                                margin={margin}
-                            />
-                            {backgroundGradient?.legend && (
-                                <GradientLegend
-                                    backgroundGradient={backgroundGradient}
+        <Box sx={{ position: "relative", marginLeft: `${left}px`, width, height }}>
+            {loading ? (
+                <Box display="flex" width="100%" height="100%" sx={{ justifyContent: "center", alignItems: "center" }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <div style={{ position: "relative" }} ref={divRef}>
+                    <canvas
+                        ref={canvasRef}
+                        width={boundedWidth * 2}
+                        height={boundedHeight * 2}
+                        style={{
+                            userSelect: "none",
+                            position: "absolute",
+                            top: margin.top,
+                            left: margin.left,
+                            width: boundedWidth,
+                            height: boundedHeight,
+                            backgroundColor: "transparent",
+                        }}
+                    />
+                    <svg
+                        width={width}
+                        height={height}
+                        overflow="visible"
+                        style={{ position: "absolute", userSelect: "none" }}
+                        onMouseMove={(event) => {
+                            if (isDragging) handleMouseLeave();
+                            else handleMouseMove(event, zoom);
+                        }}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <Group top={margin.top} left={margin.left}>
+                            {showPointAnimation && animation && (
+                                <AnimatedPoints
+                                    pointData={pointData}
+                                    dimStyle={dimStyle}
+                                    animation={animation}
+                                    animationGroupSize={animationGroupSize}
+                                    animationBuffer={animationBuffer}
+                                    xScaleTransformed={xScaleTransformed}
+                                    yScaleTransformed={yScaleTransformed}
+                                    boundedWidth={boundedWidth}
                                     boundedHeight={boundedHeight}
-                                    barLeft={margin.left + boundedWidth + 25}
-                                    marginTop={margin.top}
                                 />
                             )}
-                        </svg>
-                    </div>
-                )}
-            </Box>
-        </Stack>
+                            {selectMode === "select" && (
+                                <>
+                                    {lines.map((line, index) => (
+                                        <LinePath
+                                            key={`line-${index}`}
+                                            fill="transparent"
+                                            stroke="black"
+                                            strokeWidth={3}
+                                            data={line}
+                                            curve={curveBasis}
+                                            x={(datum) => datum.x}
+                                            y={(datum) => datum.y}
+                                        />
+                                    ))}
+                                    {isDragging && (
+                                        <g>
+                                            <line x1={x - margin.left + dx - 6} y1={y - margin.top + dy} x2={x - margin.left + dx + 6} y2={y - margin.top + dy} stroke="black" strokeWidth={1} />
+                                            <line x1={x - margin.left + dx} y1={y - margin.top + dy - 6} x2={x - margin.left + dx} y2={y - margin.top + dy + 6} stroke="black" strokeWidth={1} />
+                                            <circle cx={x - margin.left} cy={y - margin.top} r={4} fill="transparent" stroke="black" pointerEvents="none" />
+                                        </g>
+                                    )}
+                                </>
+                            )}
+                            {originLine && (() => {
+                                const x0 = xScaleTransformed(0);
+                                const y0 = yScaleTransformed(0);
+                                return (
+                                    <>
+                                        {y0 >= 0 && y0 <= boundedHeight && (
+                                            <line x1={0} x2={boundedWidth} y1={y0} y2={y0} stroke="#000" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
+                                        )}
+                                        {x0 >= 0 && x0 <= boundedWidth && (
+                                            <line x1={x0} x2={x0} y1={0} y2={boundedHeight} stroke="#000" strokeWidth={1} strokeDasharray="4,4" pointerEvents="none" />
+                                        )}
+                                    </>
+                                );
+                            })()}
+                            <rect
+                                ref={graphRef}
+                                fill="transparent"
+                                width={boundedWidth}
+                                height={boundedHeight}
+                                style={{ cursor: surfaceCursor }}
+                                onMouseDown={onSurfaceMouseDown}
+                                onMouseUp={onSurfaceMouseUp}
+                                onMouseMove={onSurfaceMouseMove}
+                                onMouseLeave={onSurfaceMouseLeave}
+                                onTouchStart={onSurfaceTouchStart}
+                                onTouchEnd={onSurfaceTouchEnd}
+                                onTouchMove={onSurfaceTouchMove}
+                                onWheel={onSurfaceWheel}
+                                onClick={handlePointClick}
+                            />
+                            {crosshair && !isDragging && (
+                                <Crosshair
+                                    position={{
+                                        x: xScaleTransformed(crosshair.x),
+                                        y: yScaleTransformed(crosshair.y),
+                                    }}
+                                    boundedWidth={boundedWidth}
+                                    boundedHeight={boundedHeight}
+                                />
+                            )}
+                        </Group>
+                        <Group top={margin.top} left={margin.left}>
+                            <AxisLeft
+                                scale={yScaleTransformed}
+                                tickLabelProps={() => ({
+                                    fill: "#1c1917",
+                                    fontSize: 10,
+                                    textAnchor: "end",
+                                    verticalAnchor: "middle",
+                                    x: -10,
+                                })}
+                                tickValues={getTicks(yScaleTransformed, 5)}
+                            />
+                            <AxisBottom
+                                top={boundedHeight}
+                                scale={xScaleTransformed}
+                                tickLabelProps={() => ({
+                                    fill: "#1c1917",
+                                    fontSize: 11,
+                                    textAnchor: "middle",
+                                })}
+                                tickValues={getTicks(xScaleTransformed, 5)}
+                            />
+                            {border && (
+                                <>
+                                    <AxisTop top={0} scale={xScaleTransformed} tickValues={[]} />
+                                    <AxisRight scale={yScaleTransformed} tickValues={[]} left={boundedWidth} />
+                                </>
+                            )}
+                            <Text textAnchor="middle" verticalAnchor="end" angle={-90} fontSize={15} y={boundedHeight / 2} x={0} dx={-50}>
+                                {leftAxisLabel}
+                            </Text>
+                            <Text textAnchor="middle" verticalAnchor="start" fontSize={15} y={boundedHeight} x={boundedWidth / 2} dy={50}>
+                                {bottomAxisLabel}
+                            </Text>
+                        </Group>
+                        <PointLabels
+                            pointData={pointData}
+                            xScaleTransformed={xScaleTransformed}
+                            yScaleTransformed={yScaleTransformed}
+                            boundedWidth={boundedWidth}
+                            boundedHeight={boundedHeight}
+                            margin={margin}
+                        />
+                        {backgroundGradient?.legend && (
+                            <GradientLegend
+                                backgroundGradient={backgroundGradient}
+                                boundedHeight={boundedHeight}
+                                plotRight={margin.left + boundedWidth}
+                                marginTop={margin.top}
+                            />
+                        )}
+                    </svg>
+                </div>
+            )}
+        </Box>
     );
 };
 

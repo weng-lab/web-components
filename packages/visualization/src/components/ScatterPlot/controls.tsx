@@ -3,7 +3,14 @@ import { ControlButtonsProps } from "./types";
 import { IconButton, Stack, Tooltip } from "@mui/material";
 import { Add, Remove, BackHand, Edit, SettingsBackupRestore, Download, HighlightAlt } from "@mui/icons-material"
 import { useTheme } from "@mui/material/styles";
-import { CONTROL_BUTTON_PADDING } from "./layout";
+
+/** MUI's small icon, which every button uses. */
+const ICON_SIZE = 20;
+const BUTTON_PADDING = 6;
+const PANEL_BORDER = 1;
+
+/** The panel's width, which getPlotLayout holds a lane of beside the plot. */
+export const CONTROLS_WIDTH = ICON_SIZE + BUTTON_PADDING * 2 + PANEL_BORDER * 2;
 
 const ControlButtons = ({
     selectable,
@@ -27,7 +34,7 @@ const ControlButtons = ({
     const buttonSx = {
         borderRadius: 0,
         color: theme.palette.text.primary,
-        padding: `${CONTROL_BUTTON_PADDING}px`,
+        padding: `${BUTTON_PADDING}px`,
     };
 
     useEffect(() => {
@@ -80,10 +87,12 @@ const ControlButtons = ({
                     alignItems="flex-start"
                     justifyContent={"center"}
                     sx={{
+                        boxSizing: "border-box",
+                        width: CONTROLS_WIDTH,
                         background: "rgba(255, 255, 255, 0.6)",
                         backdropFilter: "blur(2px)",
                         WebkitBackdropFilter: "blur(2px)",
-                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                        border: `${PANEL_BORDER}px solid rgba(255, 255, 255, 0.3)`,
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                         overflow: "hidden",
                     }}

@@ -167,45 +167,43 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         />
                     </Stack>
                 )}
-                {/* Placed explicitly, clear of the lane held for the controls. */}
-                <div style={{ marginLeft: layout.left, width: layout.width }}>
-                    <ScatterPlotViewport
-                        width={layout.width}
-                        height={layout.height}
-                        margin={margin}
-                        boundedWidth={boundedWidth}
-                        boundedHeight={boundedHeight}
-                        loading={props.loading}
-                        pointData={props.pointData}
-                        animation={props.animation}
-                        animationGroupSize={props.animationGroupSize}
-                        animationBuffer={props.animationBuffer}
-                        xScale={xScale}
-                        yScale={yScale}
-                        zoom={zoom}
-                        selectMode={selectMode}
-                        selectable={selectable}
-                        disableZoom={props.disableZoom}
-                        hoveredPoint={hoveredPoint}
-                        hoveredPointKeys={hoveredPointKeys}
-                        spotlit={spotlit}
-                        dimStyle={dimStyle}
-                        hoverGrowth={props.hoverGrowth}
-                        hoverStroke={props.hoverStroke}
-                        handleMouseMove={handlePointerMove}
-                        handleMouseLeave={handlePointerLeave}
-                        onDisplayedPointsChange={props.onDisplayedPointsChange}
-                        onSelectionChange={props.onSelectionChange}
-                        onPointClicked={props.onPointClicked}
-                        leftAxisLabel={props.leftAxisLabel}
-                        bottomAxisLabel={props.bottomAxisLabel}
-                        border={props.border ?? false}
-                        originLine={props.originLine}
-                        backgroundGradient={props.backgroundGradient}
-                        crosshair={crosshair}
-                        divRef={divRef}
-                    />
-                </div>
+                <ScatterPlotViewport
+                    left={layout.left}
+                    width={layout.width}
+                    height={layout.height}
+                    margin={margin}
+                    boundedWidth={boundedWidth}
+                    boundedHeight={boundedHeight}
+                    loading={props.loading}
+                    pointData={props.pointData}
+                    animation={props.animation}
+                    animationGroupSize={props.animationGroupSize}
+                    animationBuffer={props.animationBuffer}
+                    xScale={xScale}
+                    yScale={yScale}
+                    zoom={zoom}
+                    selectMode={selectMode}
+                    selectable={selectable}
+                    disableZoom={props.disableZoom}
+                    hoveredPoint={hoveredPoint}
+                    hoveredPointKeys={hoveredPointKeys}
+                    spotlit={spotlit}
+                    dimStyle={dimStyle}
+                    hoverGrowth={props.hoverGrowth}
+                    hoverStroke={props.hoverStroke}
+                    handleMouseMove={handlePointerMove}
+                    handleMouseLeave={handlePointerLeave}
+                    onDisplayedPointsChange={props.onDisplayedPointsChange}
+                    onSelectionChange={props.onSelectionChange}
+                    onPointClicked={props.onPointClicked}
+                    leftAxisLabel={props.leftAxisLabel}
+                    bottomAxisLabel={props.bottomAxisLabel}
+                    border={props.border ?? false}
+                    originLine={props.originLine}
+                    backgroundGradient={props.backgroundGradient}
+                    crosshair={crosshair}
+                    divRef={divRef}
+                />
                 {/* At the initial view the minimap would only repeat the plot, so it waits for a zoom or pan. */}
                 {showMiniMap && zoomed && props.miniMap && !props.disableZoom && !props.loading && (
                     <MiniMap
