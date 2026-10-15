@@ -104,12 +104,19 @@ export type CrosshairPosition = {
 export type SelectionMode = "select" | "pan" | "none";
 
 /**
-    Positioning props given to the minimap in realtion to the container
+    Positioning props given to the minimap
     @todo
     remove the seperate type since position is now the only
     prop in here
 **/
 export type MiniMapProps = {
+    /**
+     * Pins the minimap to the plot area's bottom-right corner, inset by this many pixels from
+     * each edge of it.
+     *
+     * Left out, the minimap sits 8px inside whichever corner of the plot area covers the fewest
+     * points at the moment it appears, and stays there until it is hidden again.
+     */
     position?: {
         right: number;
         bottom: number
@@ -306,6 +313,11 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
         }}
      */
     tooltipBody?: (point: Point<T>) => ReactElement;
+    /**
+     * Adds a minimap toggle to the control panel. While it's on, the minimap appears whenever the
+     * plot is zoomed or panned away from its initial view - at that view it would only repeat the
+     * plot - and hides again once the view is reset.
+     */
     miniMap?: MiniMapProps;
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
@@ -372,7 +384,8 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     yDomain?: [number, number];
     /**
-     * Position of the zoom/selection controls relative to the chart.
+     * Side of the plot the zoom/selection controls sit on. The plot is narrowed to give them a
+     * lane of their own on that side, so they never cover the axis or the points.
      * @default
      * "left"
      */
@@ -415,8 +428,12 @@ export type Lines = Line[];
 
 export type MapProps<T> = {
     miniMap: MiniMapProps;
-    width: number;
-    height: number;
+    /** The plot area's size, which the minimap shows a quarter-scale copy of. */
+    boundedWidth: number;
+    boundedHeight: number;
+    /** The plot area's top-left corner within the container the minimap is positioned in. */
+    plotLeft: number;
+    plotTop: number;
     pointData: Point<T>[];
     xScale: ScaleLinear<number, number, never>;
     yScale: ScaleLinear<number, number, never>;
@@ -450,6 +467,13 @@ export type ControlButtonsProps = {
     highlight?: string;
     downloadButton: boolean;
     downloadPlot: () => void;
+    /** The side of the plot the panel is on, so its tooltips can open towards the plot. */
+    side: "left" | "right";
+    /** The minimap toggle, shown when the plot has a minimap. */
+    miniMap?: {
+        open: boolean;
+        toggle: () => void;
+    };
 }
 
 export interface TransformMatrix {

@@ -267,6 +267,46 @@ export const isPointVisible = (
     y <= height
 );
 
+export type MiniMapCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
+
+/** In order of preference, so a tie - an empty plot, say - leaves the minimap bottom-right. */
+const MINIMAP_CORNERS: MiniMapCorner[] = ["bottom-right", "bottom-left", "top-right", "top-left"];
+
+/**
+ * The corner of the plot area where a minimap of the given footprint would cover the fewest
+ * visible points, as matplotlib's loc="best" places a legend.
+ */
+export const pickMiniMapCorner = (
+    pointData: { x: number; y: number }[],
+    xScaleTransformed: ScaleLinear<number, number, never>,
+    yScaleTransformed: ScaleLinear<number, number, never>,
+    boundedWidth: number,
+    boundedHeight: number,
+    footprint: { width: number; height: number }
+): MiniMapCorner => {
+    const covered = [0, 0, 0, 0];
+    for (const point of pointData) {
+        const x = xScaleTransformed(point.x);
+        const y = yScaleTransformed(point.y);
+        if (!isPointVisible(x, y, boundedWidth, boundedHeight)) continue;
+
+        const left = x <= footprint.width;
+        const right = x >= boundedWidth - footprint.width;
+        const top = y <= footprint.height;
+        const bottom = y >= boundedHeight - footprint.height;
+        if (bottom && right) covered[0]++;
+        if (bottom && left) covered[1]++;
+        if (top && right) covered[2]++;
+        if (top && left) covered[3]++;
+    }
+
+    let best = 0;
+    for (let i = 1; i < covered.length; i++) {
+        if (covered[i] < covered[best]) best = i;
+    }
+    return MINIMAP_CORNERS[best];
+};
+
 /** Identifies a point by its position, which is what hover tracks it by. */
 export const pointKey = (point: { x: number; y: number }) => `${point.x},${point.y}`;
 

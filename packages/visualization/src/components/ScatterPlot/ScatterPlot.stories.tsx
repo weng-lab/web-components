@@ -96,10 +96,8 @@ const shapeScaleData: Point[] = POINT_SHAPES.flatMap((shape, row) =>
     }))
 );
 
-// Mock for the map prop
-const miniMap: MiniMapProps = {
-    position: { right: 50, bottom: 50 }
-};
+// No position, so the minimap takes whichever corner of the plot area covers the fewest points.
+const miniMap: MiniMapProps = {};
 
 // Default story with scatter data
 export const Default: Story = {

@@ -1,8 +1,7 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useState } from "react";
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
-import { BarData, SingleBarProps } from "./types";
-import { defaultStyles as defaultTooltipStyles, useTooltip, TooltipWithBounds, Portal } from '@visx/tooltip';
+import { SingleBarProps } from "./types";
 import { Bar, Circle } from "@visx/shape";
 import { getAnimationProps } from "../../utility";
 import { motion } from "framer-motion";
@@ -13,7 +12,7 @@ const SingleBar = <T,>({
     index,
     bar,
     onBarClicked,
-    TooltipContents,
+    tooltipRef,
     cutoffNegativeValues,
     negativeCutoff,
     xScale,
@@ -26,25 +25,26 @@ const SingleBar = <T,>({
     animationEnabled,
     animationBuffer,
 }: SingleBarProps<T>) => {
-    const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } = useTooltip<BarData<T>>({});
+    // Only whether this bar is hovered is state here, and it changes on entering and leaving the
+    // bar. The tooltip's position is PlotTooltip's own, so moving across a bar re-renders nothing.
+    const [hovered, setHovered] = useState(false);
 
-    const handleMouseMove = useCallback((event: React.MouseEvent<SVGGElement, MouseEvent>, data: BarData<T>) => {
-        showTooltip({
-            tooltipData: data,
-            tooltipLeft: event.pageX,
-            tooltipTop: event.pageY,
-        });
-    }, [showTooltip]);
+    const handleMouseEnter = useCallback(() => {
+        setHovered(true);
+    }, []);
+
+    const handleMouseMove = useCallback((event: React.MouseEvent<SVGGElement>) => {
+        tooltipRef.current?.show(bar, event);
+    }, [tooltipRef, bar]);
 
     const handleClick = useCallback(() => {
         onBarClicked?.(bar);
     }, [onBarClicked, bar]);
 
     const handleMouseLeave = useCallback(() => {
-        hideTooltip();
-    }, [hideTooltip]);
-
-    const hovered = bar.id === tooltipData?.id;
+        setHovered(false);
+        tooltipRef.current?.hide();
+    }, [tooltipRef]);
 
     const pointValue = cutoffNegativeValues ? Math.max(bar.value, negativeCutoff) : bar.value;
 
@@ -74,83 +74,68 @@ const SingleBar = <T,>({
     const animProps = getAnimationProps(animation, index, animationBuffer ?? .03);
 
     return (
-        <>
-            <Group
-                onClick={handleClick}
-                style={onBarClicked && { cursor: 'pointer' }}
-                onMouseMove={(event) => handleMouseMove(event, bar)}
-                onMouseLeave={handleMouseLeave}
-                fontFamily={fontFamily}
+        <Group
+            onClick={handleClick}
+            style={onBarClicked && { cursor: 'pointer' }}
+            onMouseEnter={handleMouseEnter}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            fontFamily={fontFamily}
+        >
+            {/* Category label */}
+            <Text
+                x={categoryLabelX}
+                y={categoryLabelY}
+                dy={".35em"}
+                textAnchor={"end"}
+                fill="black"
+                fontSize={12}
             >
-                {/* Category label */}
-                <Text
-                    x={categoryLabelX}
-                    y={categoryLabelY}
-                    dy={".35em"}
-                    textAnchor={"end"}
-                    fill="black"
-                    fontSize={12}
-                >
-                    {bar.category}
-                </Text>
-                <Wrapper {...animProps}>
-                    <Group>
-                        <Bar
-                            x={barX}
-                            y={barY}
-                            width={barWidth}
-                            height={barHeight}
-                            fill={bar.color || "black"}
-                            opacity={cutoffNegativeValues && pointValue === negativeCutoff ? 0.4 : 1}
-                            rx={3}
-                            stroke={hovered ? "black" : (bar.stroke || "none")}
-                        />
-                        {bar.lollipopValue && (
-                            <>
-                                <Circle
-                                    r={getLollipopRadius(bar.lollipopValue) * 1.5}
-                                    cx={bar.value < 0 ? barX : barX + barWidth}
-                                    cy={barY + barHeight / 2}
-                                    fill={bar.color}
-                                    stroke={hovered ? "black" : "none"}
-                                />
-                                <Circle
-                                    r={getLollipopRadius(bar.lollipopValue)}
-                                    cx={bar.value < 0 ? barX : barX + barWidth}
-                                    cy={barY + barHeight / 2}
-                                    fill='black'
-                                />
-                            </>
-                        )}
-                        {/* Value label */}
-                        <Text
-                            x={valueLabelX}
-                            y={valueLabelY}
-                            dy={".35em"}
-                            textAnchor={"start"}
-                            fill="black"
-                            fontSize={12}
-                        >
-                            {bar.label}
-                        </Text>
-                    </Group>
-                </Wrapper>
-            </Group>
-            {/* Maybe should provide a default tooltip */}
-            {TooltipContents && tooltipOpen && (
-                <Portal>
-                    <TooltipWithBounds
-                        top={tooltipTop}
-                        left={tooltipLeft}
-                        style={{ ...defaultTooltipStyles, backgroundColor: '#283238', color: 'white', zIndex: 1000 }}
+                {bar.category}
+            </Text>
+            <Wrapper {...animProps}>
+                <Group>
+                    <Bar
+                        x={barX}
+                        y={barY}
+                        width={barWidth}
+                        height={barHeight}
+                        fill={bar.color || "black"}
+                        opacity={cutoffNegativeValues && pointValue === negativeCutoff ? 0.4 : 1}
+                        rx={3}
+                        stroke={hovered ? "black" : (bar.stroke || "none")}
+                    />
+                    {bar.lollipopValue && (
+                        <>
+                            <Circle
+                                r={getLollipopRadius(bar.lollipopValue) * 1.5}
+                                cx={bar.value < 0 ? barX : barX + barWidth}
+                                cy={barY + barHeight / 2}
+                                fill={bar.color}
+                                stroke={hovered ? "black" : "none"}
+                            />
+                            <Circle
+                                r={getLollipopRadius(bar.lollipopValue)}
+                                cx={bar.value < 0 ? barX : barX + barWidth}
+                                cy={barY + barHeight / 2}
+                                fill='black'
+                            />
+                        </>
+                    )}
+                    {/* Value label */}
+                    <Text
+                        x={valueLabelX}
+                        y={valueLabelY}
+                        dy={".35em"}
+                        textAnchor={"start"}
+                        fill="black"
+                        fontSize={12}
                     >
-                        {tooltipData && (
-                            <TooltipContents {...tooltipData as BarData<T>} />
-                        )}
-                    </TooltipWithBounds>
-                </Portal>
-            )}
-        </>
+                        {bar.label}
+                    </Text>
+                </Group>
+            </Wrapper>
+        </Group>
     )
 }
 

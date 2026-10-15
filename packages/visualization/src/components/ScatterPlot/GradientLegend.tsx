@@ -3,6 +3,12 @@ import { Group } from "@visx/group";
 import { Text } from "@visx/text";
 import { BackgroundGradient } from "./types";
 
+/**
+ * How far the legend reaches past the plot area's right edge: the bar starts 25px out, and the
+ * title's line ends about 80px past that.
+ */
+export const GRADIENT_LEGEND_WIDTH = 110;
+
 type GradientLegendProps = {
     backgroundGradient: BackgroundGradient;
     boundedHeight: number;

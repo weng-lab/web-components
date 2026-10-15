@@ -23,8 +23,15 @@ type UseHoverTooltipProps<T extends object> = {
     tooltipRef: PlotTooltipRef<Point<T>>;
 };
 
+/**
+ * Every point's pixel position, kept between moves. Keyed on everything those positions are worked
+ * out from - the scales included, since a resize rebuilds them while the points and the zoom
+ * transform stay the same, and positions from before it would hit-test against the old size.
+ */
 type TransformedPointCache<T extends object> = {
     pointData: Point<T>[];
+    xScale: ScaleLinear<number, number, never>;
+    yScale: ScaleLinear<number, number, never>;
     translateX: number;
     translateY: number;
     scaleX: number;
@@ -88,6 +95,8 @@ export const useHoverTooltip = <T extends object>({
         const shouldReuseCachedPoints =
             cachedTransformedPoints &&
             cachedTransformedPoints.pointData === pointData &&
+            cachedTransformedPoints.xScale === xScale &&
+            cachedTransformedPoints.yScale === yScale &&
             cachedTransformedPoints.translateX === translateX &&
             cachedTransformedPoints.translateY === translateY &&
             cachedTransformedPoints.scaleX === scaleX &&
@@ -106,6 +115,8 @@ export const useHoverTooltip = <T extends object>({
 
                 transformedPointCacheRef.current = {
                     pointData,
+                    xScale,
+                    yScale,
                     translateX,
                     translateY,
                     scaleX,

@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { ControlButtonsProps } from "./types";
 import { IconButton, Stack, Tooltip } from "@mui/material";
-import { Add, Remove, BackHand, Edit, SettingsBackupRestore, Download } from "@mui/icons-material"
+import { Add, Remove, BackHand, Edit, SettingsBackupRestore, Download, HighlightAlt } from "@mui/icons-material"
 import { useTheme } from "@mui/material/styles";
+import { CONTROL_BUTTON_PADDING } from "./layout";
 
 const ControlButtons = ({
     selectable,
@@ -14,16 +15,19 @@ const ControlButtons = ({
     zoomReset,
     highlight,
     downloadButton,
-    downloadPlot
+    downloadPlot,
+    side,
+    miniMap,
 }: ControlButtonsProps) => {
     const theme = useTheme();
     const color = highlight ?? theme.palette.primary.main;
-    const tooltipPlacement = "right";
-    
+    // Towards the plot, rather than off the container's edge.
+    const tooltipPlacement = side === "right" ? "left" : "right";
+
     const buttonSx = {
         borderRadius: 0,
         color: theme.palette.text.primary,
-        padding: theme.spacing(1),
+        padding: `${CONTROL_BUTTON_PADDING}px`,
     };
 
     useEffect(() => {
@@ -55,14 +59,14 @@ const ControlButtons = ({
         };
     }, [handleSelectionModeChange, selectMode, selectable]);
 
-    const getToggleButtonSx = (mode: "pan" | "select") => ({
+    const getToggleButtonSx = (active: boolean) => ({
         ...buttonSx,
-        color: selectMode === mode ? highlight || "primary.main" : theme.palette.text.primary,
-        backgroundColor: selectMode === mode
+        color: active ? highlight || "primary.main" : theme.palette.text.primary,
+        backgroundColor: active
             ? `color-mix(in srgb, ${color} 15%, transparent)`
             : "transparent",
         '&:hover': {
-            backgroundColor: selectMode === mode
+            backgroundColor: active
                 ? `color-mix(in srgb, ${color} 25%, transparent)`
                 : theme.palette.action.hover,
         },
@@ -90,7 +94,7 @@ const ControlButtons = ({
                                 <IconButton
                                     aria-label="pan"
                                     onClick={() => handleSelectionModeChange('pan')}
-                                    sx={getToggleButtonSx("pan")}
+                                    sx={getToggleButtonSx(selectMode === "pan")}
                                 >
                                     <BackHand fontSize="small" />
                                 </IconButton>
@@ -103,7 +107,7 @@ const ControlButtons = ({
                                 <IconButton
                                     aria-label="edit"
                                     onClick={() => handleSelectionModeChange('select')}
-                                    sx={getToggleButtonSx("select")}
+                                    sx={getToggleButtonSx(selectMode === "select")}
                                 >
                                     <Edit fontSize="small" />
                                 </IconButton>
@@ -129,6 +133,18 @@ const ControlButtons = ({
                             </IconButton>
                         </span>
                     </Tooltip>
+                    {miniMap && (
+                        <Tooltip title={miniMap.open ? "Hide Minimap" : "Show Minimap While Zoomed"} placement={tooltipPlacement}>
+                            <IconButton
+                                aria-label="minimap"
+                                aria-pressed={miniMap.open}
+                                onClick={miniMap.toggle}
+                                sx={getToggleButtonSx(miniMap.open)}
+                            >
+                                <HighlightAlt fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
                     {downloadButton && (
                         <Tooltip title="Download Plot as SVG" placement={tooltipPlacement}>
                             <IconButton aria-label="download" onClick={() => downloadPlot()} sx={buttonSx}>

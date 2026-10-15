@@ -196,7 +196,9 @@ const ScatterPlotViewport = <T extends object>({
 
         prepareCanvas(context, boundedWidth, boundedHeight);
 
-        if (backgroundGradient) {
+        // Not before the plot has a size: with no area the stop below works out to 0/0, and a
+        // gradient refuses a NaN stop by throwing.
+        if (backgroundGradient && boundedWidth > 0 && boundedHeight > 0) {
             const [colorLow, colorMid, colorHigh] = backgroundGradient.colorScale ?? ["red", "white", "blue"];
             const W = boundedWidth;
             const H = boundedHeight;
