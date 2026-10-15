@@ -234,6 +234,20 @@ export const getSharedDomains = (...pointDataSets: readonly { x: number; y: numb
 };
 
 /**
+ * Holds one axis of a pan inside what the plot shows when zoomed all the way out (to `scaleMin`)
+ * about its center: the translate, in pixels, nearest the one asked for that keeps the view
+ * within that stretch. At `scaleMin` itself there is one such translate, the centered one.
+ */
+export const clampTranslate = (translate: number, scale: number, size: number, scaleMin: number) => {
+    const center = size / 2;
+    // How far either side of the center the fully zoomed out view reaches, in unzoomed pixels.
+    const reach = size / (2 * scaleMin);
+    const max = scale * (reach - center);
+    const min = size - scale * (reach + center);
+    return Math.min(Math.max(translate, min), max);
+};
+
+/**
  * Value comparison for transform matrices. Reference comparison is not enough once a matrix can
  * come from outside the component (a shared zoom, a restored view) rather than only from visx.
  */

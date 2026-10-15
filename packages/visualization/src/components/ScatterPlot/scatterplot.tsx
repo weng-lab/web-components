@@ -34,7 +34,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
         parentHeight,
         square: props.square ?? false,
         controls: props.disableZoom ? null : controlsPosition,
-        legend: Boolean(props.backgroundGradient?.legend),
+        legend: Boolean(props.backgroundField?.legend),
     });
     const { margin, boundedWidth, boundedHeight } = layout;
 
@@ -200,7 +200,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     bottomAxisLabel={props.bottomAxisLabel}
                     border={props.border ?? false}
                     originLine={props.originLine}
-                    backgroundGradient={props.backgroundGradient}
+                    backgroundField={props.backgroundField}
                     crosshair={crosshair}
                     divRef={divRef}
                 />

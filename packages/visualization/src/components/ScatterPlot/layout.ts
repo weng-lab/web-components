@@ -1,10 +1,13 @@
-import { GRADIENT_LEGEND_WIDTH } from "./GradientLegend";
+import { FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH } from "./backgroundField";
 import { CONTROLS_WIDTH } from "./controls";
 
 const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
 
-/** Unsquared, a gradient legend takes the right margin in place of the default one. */
-const LEGEND_MARGIN = { ...MARGIN, right: GRADIENT_LEGEND_WIDTH };
+/** How far a backgroundField's legend reaches past the plot area's right edge. */
+const LEGEND_REACH = FIELD_LEGEND_GAP + FIELD_LEGEND_WIDTH;
+
+/** Unsquared, a legend takes the right margin in place of the default one. */
+const LEGEND_MARGIN = { ...MARGIN, right: LEGEND_REACH };
 
 /**
  * Squared, the plot area is this fraction of the box, less the left margin, on both axes. What's
@@ -44,7 +47,7 @@ type PlotLayoutInput = {
     square: boolean;
     /** The side the control panel is on, or null when there is none. */
     controls: "left" | "right" | null;
-    /** Whether a gradient legend is drawn to the right of the plot area. */
+    /** Whether a backgroundField legend is drawn to the right of the plot area. */
     legend: boolean;
 };
 
@@ -82,11 +85,11 @@ export const getPlotLayout = ({ parentWidth, parentHeight, square, controls, leg
         // the size where that margin fits it, the overhang grows as the box shrinks, so the
         // largest box that fits is solved for rather than read off.
         const rightMarginFraction = 1 - SQUARE_PLOT_FRACTION;
-        const widest = legend && available < GRADIENT_LEGEND_WIDTH / rightMarginFraction
-            ? (available - GRADIENT_LEGEND_WIDTH) / SQUARE_PLOT_FRACTION
+        const widest = legend && available < LEGEND_REACH / rightMarginFraction
+            ? (available - LEGEND_REACH) / SQUARE_PLOT_FRACTION
             : available;
         const size = Math.max(0, Math.min(parentHeight, widest));
-        const hang = legend ? Math.max(0, GRADIENT_LEGEND_WIDTH - size * rightMarginFraction) : 0;
+        const hang = legend ? Math.max(0, LEGEND_REACH - size * rightMarginFraction) : 0;
         const bounded = Math.max(0, size * SQUARE_PLOT_FRACTION - MARGIN.left);
 
         // Centred in the container where there's room, and pushed clear of the panel where there isn't.
