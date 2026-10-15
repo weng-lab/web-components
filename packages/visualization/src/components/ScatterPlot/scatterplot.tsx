@@ -17,6 +17,7 @@ import { useHoverTooltip } from './hooks/useHoverTooltip';
 import { useCrosshair } from './hooks/useCrosshair';
 import { useHoveredPointKeys } from './hooks/useHoveredPointKeys';
 import { getPlotLayout } from './layout';
+import { useFieldRaster } from './hooks/useFieldRaster';
 
 const ScatterPlot = <T extends object, S extends boolean | undefined = undefined, Z extends boolean | undefined = undefined>(
     props: ChartProps<T, S, Z>
@@ -25,7 +26,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const tooltipRef = useRef<PlotTooltipHandle<Point<T>>>(null);
 
     const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
-    const initialMiniMapOpen = props.initialState?.minimap?.open ?? false;
+    const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const controlsPosition = props.controlsPosition ?? "left";
@@ -89,6 +90,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const dimColor = props.dimStyle?.color ?? DEFAULT_DIM_STYLE.color;
     const dimOpacity = props.dimStyle?.opacity ?? DEFAULT_DIM_STYLE.opacity;
     const dimStyle = useMemo(() => ({ color: dimColor, opacity: dimOpacity }), [dimColor, dimOpacity]);
+
+    // Rasterized here rather than in the viewport, so the minimap draws the same bitmap.
+    const fieldRaster = useFieldRaster(props.backgroundField);
 
     const crosshairEnabled = props.crosshair ?? false;
 
@@ -163,7 +167,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                             downloadButton={downloadButton}
                             downloadPlot={handleDownload}
                             side={controlsPosition}
-                            miniMap={props.miniMap ? { open: showMiniMap, toggle: toggleMiniMap } : undefined}
+                            miniMap={props.disableMiniMap ? undefined : { open: showMiniMap, toggle: toggleMiniMap }}
                         />
                     </Stack>
                 )}
@@ -201,13 +205,13 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                     border={props.border ?? false}
                     originLine={props.originLine}
                     backgroundField={props.backgroundField}
+                    fieldRaster={fieldRaster}
                     crosshair={crosshair}
                     divRef={divRef}
                 />
                 {/* At the initial view the minimap would only repeat the plot, so it waits for a zoom or pan. */}
-                {showMiniMap && zoomed && props.miniMap && !props.disableZoom && !props.loading && (
+                {showMiniMap && zoomed && !props.disableMiniMap && !props.disableZoom && !props.loading && (
                     <MiniMap
-                        miniMap={props.miniMap}
                         boundedWidth={boundedWidth}
                         boundedHeight={boundedHeight}
                         plotLeft={layout.left + margin.left}
@@ -219,6 +223,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         crosshair={crosshair}
                         dimStyle={dimStyle}
                         spotlitKeys={spotlit ? hoveredPointKeys : null}
+                        backgroundField={props.backgroundField}
+                        fieldRaster={fieldRaster}
                     />
                 )}
                 {!props.disableTooltip && (

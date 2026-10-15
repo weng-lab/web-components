@@ -16,7 +16,6 @@ import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
 import Crosshair from "./Crosshair";
 import { useDragSelection } from "./hooks/useDragSelection";
-import { useFieldRaster } from "./hooks/useFieldRaster";
 import { DEFAULT_FIELD_COLORS, FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH, drawField, getFieldTicks } from "./backgroundField";
 
 type ScatterPlotViewportProps<T extends object> = {
@@ -56,6 +55,8 @@ type ScatterPlotViewportProps<T extends object> = {
     border: boolean;
     originLine?: boolean;
     backgroundField?: BackgroundField;
+    /** backgroundField as a bitmap - see useFieldRaster - shared with the minimap. */
+    fieldRaster: HTMLCanvasElement | null;
     /** Crosshair position in data coordinates, or null for no crosshair. */
     crosshair?: CrosshairPosition | null;
     divRef: React.RefObject<HTMLDivElement | null>;
@@ -108,6 +109,7 @@ const ScatterPlotViewport = <T extends object>({
     border,
     originLine,
     backgroundField,
+    fieldRaster,
     crosshair,
     divRef,
 }: ScatterPlotViewportProps<T>) => {
@@ -196,7 +198,6 @@ const ScatterPlotViewport = <T extends object>({
     );
 
     // Held by its parts, so a field built inline on each render doesn't redraw every point.
-    const fieldRaster = useFieldRaster(backgroundField);
     const fieldX = backgroundField?.x;
     const fieldY = backgroundField?.y;
     const fieldOpacity = backgroundField?.opacity;

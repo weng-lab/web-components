@@ -107,34 +107,17 @@ export type CrosshairPosition = {
 export type SelectionMode = "select" | "pan" | "none";
 
 /**
-    Positioning props given to the minimap
-    @todo
-    remove the seperate type since position is now the only
-    prop in here
-**/
-export type MiniMapProps = {
-    /**
-     * Pins the minimap to the plot area's bottom-right corner, inset by this many pixels from
-     * each edge of it.
-     *
-     * Left out, the minimap sits 8px inside whichever corner of the plot area covers the fewest
-     * points at the moment it appears, and stays there until it is hidden again.
-     */
-    position?: {
-        right: number;
-        bottom: number
-    };
-};
-
-/**
  * Initial state of the component controling the initial state variables on first load
  */
 export type InitialState<S, Z> = {
     minimap?: {
         /**
-         * Initial minimap state (open or closed)
+         * Whether the minimap toggle starts on, showing the minimap while the plot is zoomed or
+         * panned away from its initial view. At that view it stays hidden either way.
+         * @default
+         * false
          */
-        open?: boolean;
+        showWhileZoomed?: boolean;
     };
     controls?: {
         /**
@@ -184,6 +167,17 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      * false
      */
     disableTooltip?: boolean;
+    /**
+     * Removes the minimap toggle from the control panel.
+     *
+     * Otherwise the toggle is there whenever zoom is, and while it's on the minimap appears
+     * whenever the plot is zoomed or panned away from its initial view - at that view it would
+     * only repeat the plot - in whichever corner of the plot area covers the fewest points.
+     * initialState.minimap.showWhileZoomed sets whether it starts on.
+     * @default
+     * false
+     */
+    disableMiniMap?: boolean;
     /**
      * Can specify a certain color to display what controls are being selected
      * (Pan/Select and Minimap open/closed)
@@ -316,12 +310,6 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
         }}
      */
     tooltipBody?: (point: Point<T>) => ReactElement;
-    /**
-     * Adds a minimap toggle to the control panel. While it's on, the minimap appears whenever the
-     * plot is zoomed or panned away from its initial view - at that view it would only repeat the
-     * plot - and hides again once the view is reset.
-     */
-    miniMap?: MiniMapProps;
     leftAxisLabel?: string;
     bottomAxisLabel?: string;
     initialState?: InitialState<S, Z>;
@@ -458,7 +446,6 @@ export type Line = { x: number; y: number }[];
 export type Lines = Line[];
 
 export type MapProps<T> = {
-    miniMap: MiniMapProps;
     /** The plot area's size, which the minimap shows a quarter-scale copy of. */
     boundedWidth: number;
     boundedHeight: number;
@@ -473,6 +460,9 @@ export type MapProps<T> = {
     dimStyle: DimStyle;
     /** While spotlit, the keys of the points left undimmed - see ChartProps' spotlight. */
     spotlitKeys: Set<string> | null;
+    backgroundField?: BackgroundField;
+    /** backgroundField as a bitmap - see useFieldRaster - shared with the plot. */
+    fieldRaster: HTMLCanvasElement | null;
 }
 
 export type TooltipProps<T> = {

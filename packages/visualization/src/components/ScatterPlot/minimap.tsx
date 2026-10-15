@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapProps, Point } from "./types";
 import { pickMiniMapCorner, pointKey, rescaleX, rescaleY } from "./helpers";
 import { CROSSHAIR_DASH, CROSSHAIR_STROKE, CROSSHAIR_STROKE_WIDTH } from "./Crosshair";
+import { drawField } from "./backgroundField";
 import { useStableCallback } from "../../hooks";
 
 const MINIMAP_SCALE_FACTOR = 0.25;
@@ -9,11 +10,10 @@ const MINIMAP_SCALE_FACTOR = 0.25;
 // Scale them back up so it renders identically to the crosshair on the plot itself.
 const MINIMAP_CROSSHAIR_STROKE_WIDTH = CROSSHAIR_STROKE_WIDTH / MINIMAP_SCALE_FACTOR;
 const MINIMAP_CROSSHAIR_DASH = CROSSHAIR_DASH.map((dash) => dash / MINIMAP_SCALE_FACTOR).join(",");
-/** Between the minimap and the edges of the plot area, unless the consumer pins it with position. */
+/** Between the minimap and the edges of the plot area. */
 const MINIMAP_INSET = 8;
 
 const MiniMap = <T,>({
-    miniMap,
     boundedWidth,
     boundedHeight,
     plotLeft,
@@ -25,6 +25,8 @@ const MiniMap = <T,>({
     crosshair,
     dimStyle,
     spotlitKeys,
+    backgroundField,
+    fieldRaster,
 }: MapProps<T>) => {
     // The minimap frame is the whole plot area untransformed, so a data coordinate maps onto it
     // through the base scales - no need to undo the current zoom.
@@ -32,14 +34,11 @@ const MiniMap = <T,>({
     const crosshairY = crosshair ? yScale(crosshair.y) : null;
     const mapWidth = boundedWidth * MINIMAP_SCALE_FACTOR;
     const mapHeight = boundedHeight * MINIMAP_SCALE_FACTOR;
-    const insetX = miniMap.position?.right ?? MINIMAP_INSET;
-    const insetY = miniMap.position?.bottom ?? MINIMAP_INSET;
 
     // Picked once, as the minimap appears: it is mounted only while the plot is zoomed, so each
     // appearance is a fresh pick, and one that held still while the user pans is easier to find
     // again than one that jumps whenever the points under it change.
     const [corner] = useState(() => {
-        if (miniMap.position) return { top: false, left: false };
         const { translateX, translateY, scaleX, scaleY } = zoom.transformMatrix;
         return pickMiniMapCorner(
             pointData,
@@ -47,7 +46,7 @@ const MiniMap = <T,>({
             rescaleY(yScale, translateY, scaleY),
             boundedWidth,
             boundedHeight,
-            { width: mapWidth + insetX, height: mapHeight + insetY }
+            { width: mapWidth + MINIMAP_INSET, height: mapHeight + MINIMAP_INSET }
         );
     });
 
@@ -116,8 +115,8 @@ const MiniMap = <T,>({
         <div
             style={{
                 position: 'absolute',
-                left: plotLeft + (corner.left ? insetX : boundedWidth - mapWidth - insetX),
-                top: plotTop + (corner.top ? insetY : boundedHeight - mapHeight - insetY),
+                left: plotLeft + (corner.left ? MINIMAP_INSET : boundedWidth - mapWidth - MINIMAP_INSET),
+                top: plotTop + (corner.top ? MINIMAP_INSET : boundedHeight - mapHeight - MINIMAP_INSET),
             }}
         >
             {/* Canvas for rendering points on minimap */}
@@ -135,6 +134,16 @@ const MiniMap = <T,>({
                             // Draw background and outline
                             context.fillStyle = 'white';
                             context.fillRect(0, 0, mapWidth, mapHeight);
+
+                            // The field under the points, as on the plot: the same bitmap, drawn
+                            // through the base scales at the minimap's scale.
+                            if (fieldRaster && backgroundField) {
+                                context.save();
+                                context.scale(scaleFactor, scaleFactor);
+                                drawField(context, fieldRaster, backgroundField.x, backgroundField.y, xScale, yScale, boundedWidth, boundedHeight, backgroundField.opacity);
+                                context.restore();
+                            }
+
                             context.strokeStyle = 'grey';
                             context.lineWidth = 4;
                             context.strokeRect(0, 0, mapWidth, mapHeight);
