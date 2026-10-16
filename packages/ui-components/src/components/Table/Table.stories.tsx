@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
-import { Table } from "../..";
+import { Table, withValueOptions, capitalizeOption, type TableColDef } from "../..";
 import { LicenseInfo } from "@mui/x-license";
 import { GridColDef } from "@mui/x-data-grid-premium";
 import { Box, Button, MenuItem, Popper, PopperProps, Select, Stack, Tooltip, Typography } from "@mui/material";
@@ -278,5 +278,32 @@ export const columnTooltips: Story = {
     rows,
     label: "Table Title",
     slotProps: { toolbar: { labelTooltip: "This is a tooltip" } },
+  },
+};
+
+const samples = [
+  { id: 1, name: "K562", tissue: "blood", sampleType: "cell line" },
+  { id: 2, name: "HepG2", tissue: "liver", sampleType: "cell line" },
+  { id: 3, name: "T-helper 17 cell", tissue: "blood", sampleType: "primary cell" },
+  { id: 4, name: "Upper lobe of left lung", tissue: "lung", sampleType: "tissue" },
+  { id: 5, name: "Right lobe of liver", tissue: "liver", sampleType: "tissue" },
+  { id: 6, name: "Placenta", tissue: "placenta", sampleType: "tissue" },
+];
+
+const sampleColumns: TableColDef<(typeof samples)[number]>[] = [
+  { field: "name", headerName: "Sample", width: 200 },
+  { field: "tissue", headerName: "Organ/Tissue", type: "singleSelect", getOptionLabel: capitalizeOption },
+  { field: "sampleType", headerName: "Sample Type", type: "singleSelect", getOptionLabel: capitalizeOption },
+];
+
+/**
+ * Columns marked `type: "singleSelect"` get their filter options from the rows with `withValueOptions`,
+ * labeled with `capitalizeOption`. Open the filter panel on Organ/Tissue to see them.
+ */
+export const CategoryFilters: Story = {
+  args: {
+    columns: withValueOptions(sampleColumns, samples),
+    rows: samples,
+    label: "Samples",
   },
 };

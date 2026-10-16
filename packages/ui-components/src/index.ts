@@ -4,7 +4,7 @@ export type { SliderProps } from "./components/RangeSlider";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, DataTableColumn } from "./components/DataTable";
 
-export { Table } from "./components/Table";
+export { Table, withValueOptions, capitalizeOption } from "./components/Table";
 export type { TableColDef, TableProps } from "./components/Table";
 
 export * from "./components/BiosampleTable";
