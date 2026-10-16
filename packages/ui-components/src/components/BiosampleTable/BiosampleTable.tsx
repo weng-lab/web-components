@@ -1,5 +1,6 @@
 import { capitalize } from "@mui/material";
 import Table from "../Table/Table";
+import { withValueOptions } from "../Table/withValueOptions";
 import { columns as defaultCols } from "./columns";
 import { BiosampleTableProps, EncodeBiosample } from "./types";
 import { useEncodeBiosampleData } from "./useEncodeBiosampleData";
@@ -158,7 +159,10 @@ export function BiosampleTable(props: BiosampleTableProps): JSX.Element {
     onSelectionChange(internalRows.filter((row) => rowSelectionModel.ids.has(getRowId(row))));
   };
 
-  const internalFlexColumns: GridColDef[] = columns.map((x) => ({ ...x, display: "flex" }));
+  const internalFlexColumns: GridColDef[] = withValueOptions(columns, internalRows).map((x) => ({
+    ...x,
+    display: "flex",
+  }));
 
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel | undefined>(undefined);
 
