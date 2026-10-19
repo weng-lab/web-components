@@ -1,6 +1,6 @@
 import React, { useImperativeHandle, useState } from 'react';
 import { TooltipWithBounds } from '@visx/tooltip';
-import { HistogramBin } from './types';
+import { HistogramBin, HistogramNormalize } from './types';
 
 export interface HistogramTooltipHandle {
     show: (bin: HistogramBin, left: number, top: number) => void;
@@ -9,11 +9,20 @@ export interface HistogramTooltipHandle {
 
 interface HistogramTooltipProps {
     multiSeries: boolean;
+    normalize: HistogramNormalize;
     tooltipBody?: (bin: HistogramBin) => React.ReactElement;
     ref: React.Ref<HistogramTooltipHandle>;
 }
 
-const HistogramTooltip = ({ multiSeries, tooltipBody, ref }: HistogramTooltipProps) => {
+const normalizeLabels: Record<HistogramNormalize, string> = {
+    count: 'Count',
+    probability: 'Probability',
+    density: 'Density',
+};
+
+const formatHeight = (v: number) => `${Number(v.toPrecision(4))}`;
+
+const HistogramTooltip = ({ multiSeries, normalize, tooltipBody, ref }: HistogramTooltipProps) => {
     const [state, setState] = useState<{ open: boolean; data?: HistogramBin; left?: number; top?: number }>({ open: false });
 
     useImperativeHandle(ref, () => ({
@@ -24,6 +33,8 @@ const HistogramTooltip = ({ multiSeries, tooltipBody, ref }: HistogramTooltipPro
     if (!state.open || !state.data) return null;
 
     const { data, left, top } = state;
+    const normalized = normalize !== 'count';
+    const singleValue = data.series[0]?.value;
 
     return (
         <TooltipWithBounds left={left} top={top}>
@@ -38,11 +49,19 @@ const HistogramTooltip = ({ multiSeries, tooltipBody, ref }: HistogramTooltipPro
                         data.series.map((s) => (
                             <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: s.color, display: 'inline-block' }} />
-                                <span><strong>{s.label}:</strong> {s.count}</span>
+                                <span>
+                                    <strong>{s.label}:</strong> {s.count}
+                                    {normalized && s.value !== undefined && ` (${normalizeLabels[normalize].toLowerCase()} ${formatHeight(s.value)})`}
+                                </span>
                             </div>
                         ))
                     ) : (
-                        <div><strong>Count:</strong> {data.count}</div>
+                        <>
+                            <div><strong>Count:</strong> {data.count}</div>
+                            {normalized && singleValue !== undefined && (
+                                <div><strong>{normalizeLabels[normalize]}:</strong> {formatHeight(singleValue)}</div>
+                            )}
+                        </>
                     )}
                 </div>
             )}
