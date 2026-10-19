@@ -1,5 +1,7 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
 import Histogram from './Histogram';
+import { binHistogram } from './binning';
 
 const meta = {
     title: 'visualization/Histogram',
@@ -146,4 +148,125 @@ export const ManualSize: Story = {
             </div>
         ),
     ],
+};
+
+// MEDUSA general mode: matplotlib's `ax.hist(values, density=True)` called once for the pooled
+// controls and once for a gene. Each series gets its own 10 equal-width bins, scaled so its
+// bar areas sum to 1, with the gene drawn over the controls.
+const medusaControls = Float64Array.from({ length: 300_000 }, () => normalSample(0, 1));
+const medusaGene = Array.from({ length: 129 }, () => normalSample(-4, 0.05));
+
+const barArea = (heights: number[], edges: number[]) =>
+    heights.reduce((sum, h, i) => sum + h * (edges[i + 1] - edges[i]), 0);
+
+export const DensityOverlay: Story = {
+    name: 'Density overlay (MEDUSA general mode)',
+    args: {
+        data: [
+            { values: medusaControls, label: 'Controls', color: '#a3a3a3' },
+            { values: medusaGene, label: 'Gene', color: '#7b3294' },
+        ],
+        normalize: 'density',
+        seriesLayout: 'overlay',
+        binning: 'perSeries',
+        binEdges: 'equalWidth',
+        thresholds: 10,
+        xLabel: 'Relative death rate (z-scored)',
+        yLabel: 'Probability density',
+        title: 'Density Overlay',
+    },
+    play: async ({ canvasElement }) => {
+        const binned = binHistogram([medusaControls, medusaGene], {
+            normalize: 'density', binning: 'perSeries', binEdges: 'equalWidth', thresholds: 10,
+        })!;
+        for (const s of binned.series) {
+            expect(s.counts).toHaveLength(10);
+            expect(barArea(s.heights, s.edges)).toBeCloseTo(1, 10);
+        }
+        // 10 bars per series plus the legend's box and two swatches
+        expect(canvasElement.querySelectorAll('svg rect').length).toBe(23);
+    },
+};
+
+// Expected values from `np.histogram(values, bins=10, density=True)` (numpy 1.24)
+const numpyCases = [
+    {
+        values: [0, 0.1, 0.2, 0.30000000000000004, 0.7, 1.0],
+        edges: [0, 1],
+        // 0.7 lands in bin 6 because numpy's computed edge 7 is just above 0.7
+        counts: [1, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+        density: [5 / 3, 5 / 3, 5 / 3, 5 / 3, 0, 0, 5 / 3, 0, 0, 5 / 3],
+    },
+    {
+        values: [2, 2, 2],
+        edges: [1.5, 2.5],
+        counts: [0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+        density: [0, 0, 0, 0, 0, 10, 0, 0, 0, 0],
+    },
+    {
+        values: [-1, 0, 0, 1, 3],
+        edges: [-1, 3],
+        counts: [1, 0, 2, 0, 0, 1, 0, 0, 0, 1],
+        density: [0.5, 0, 1, 0, 0, 0.5, 0, 0, 0, 0.5],
+    },
+];
+
+export const EqualWidthBins: Story = {
+    args: {
+        data: numpyCases[2].values,
+        normalize: 'density',
+        binEdges: 'equalWidth',
+        xLabel: 'Value',
+        yLabel: 'Density',
+        title: 'Equal-Width Bins (numpy)',
+    },
+    play: async () => {
+        for (const c of numpyCases) {
+            const binned = binHistogram([c.values], { normalize: 'density', binEdges: 'equalWidth' })!;
+            const [s] = binned.series;
+            expect(s.counts).toEqual(c.counts);
+            expect(s.edges[0]).toBe(c.edges[0]);
+            expect(s.edges[10]).toBe(c.edges[1]);
+            s.heights.forEach((h, i) => expect(h).toBeCloseTo(c.density[i], 10));
+
+            const probability = binHistogram([c.values], { normalize: 'probability', binEdges: 'equalWidth' })!;
+            expect(probability.series[0].heights.reduce((a, h) => a + h, 0)).toBeCloseTo(1, 10);
+        }
+    },
+};
+
+const largeControls = Float64Array.from({ length: 500_000 }, () => normalSample(0, 1));
+
+export const LargeInput: Story = {
+    args: {
+        data: [
+            { values: largeControls, label: 'Controls (500,000)', color: '#a3a3a3', opacity: 0.6 },
+            { values: medusaGene, label: 'Gene (129)', color: '#7b3294' },
+        ],
+        normalize: 'probability',
+        seriesLayout: 'overlay',
+        binning: 'perSeries',
+        binEdges: 'equalWidth',
+        xLabel: 'Value',
+        yLabel: 'Probability',
+        title: 'Large Input',
+    },
+    play: async ({ canvasElement }) => {
+        expect(canvasElement.querySelectorAll('svg rect').length).toBe(23);
+    },
+};
+
+export const NormalizedStack: Story = {
+    args: {
+        data: [
+            { values: Array.from({ length: 300 }, () => normalSample(-1, 1)), label: 'Group A', color: '#4c78a8' },
+            { values: Array.from({ length: 900 }, () => normalSample(1, 1)), label: 'Group B', color: '#e45c5c' },
+        ],
+        normalize: 'probability',
+        xLabel: 'Value',
+        yLabel: 'Probability',
+        title: 'Stacked, Normalized Per Series',
+        thresholds: 25,
+        densityLine: true,
+    },
 };

@@ -10,6 +10,8 @@ export interface HistogramBarProps {
     x: number;
     barWidth: number;
     yScale: (v: number) => number;
+    /** Opacity of each entry in bin.series */
+    opacities: number[];
     animationType?: AnimationType;
     binIndex: number;
     svgRef: React.RefObject<SVGSVGElement | null>;
@@ -18,17 +20,18 @@ export interface HistogramBarProps {
 }
 
 //memoize so that entire chart doesnt re-render on hover, just the hovered bar
-const HistogramBar = memo(({ bin, x, barWidth, yScale, animationType, binIndex, svgRef, tooltipRef, onBarClicked }: HistogramBarProps) => {
+const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType, binIndex, svgRef, tooltipRef, onBarClicked }: HistogramBarProps) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const Wrapper = animationType ? motion.g : 'g';
     const animProps = getAnimationProps(animationType, binIndex);
 
-    let totCount = 0;
+    let total = 0;
     const segments = bin.series.map((s, si) => {
-        const start = totCount;
-        totCount += s.count;
-        return { s, si, segY: yScale(start + s.count), segHeight: Math.max(yScale(start) - yScale(start + s.count), 0) };
+        const start = total;
+        const height = s.value ?? s.count;
+        total += height;
+        return { s, si, segY: yScale(start + height), segHeight: Math.max(yScale(start) - yScale(start + height), 0) };
     });
 
     return (
@@ -56,7 +59,7 @@ const HistogramBar = memo(({ bin, x, barWidth, yScale, animationType, binIndex, 
                     width={barWidth}
                     height={segHeight}
                     fill={s.color}
-                    opacity={0.85}
+                    opacity={opacities[si]}
                     stroke={isHovered ? '#000000' : 'none'}
                     style={{ cursor: onBarClicked ? 'pointer' : 'default' }}
                     onClick={() => onBarClicked?.(bin)}

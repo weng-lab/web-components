@@ -26,7 +26,7 @@ const HistogramLegend = ({ series, xMax }: HistogramLegendProps) => {
             <rect width={width} height={height} fill="white" stroke="#d4d4d4" strokeWidth={1} rx={3} />
             {series.map((s, i) => (
                 <Group key={`legend-${i}`} top={PADDING + i * ROW_HEIGHT}>
-                    <rect x={PADDING} y={2} width={SWATCH} height={SWATCH} fill={s.color} opacity={0.85} rx={2} />
+                    <rect x={PADDING} y={2} width={SWATCH} height={SWATCH} fill={s.color} opacity={s.opacity ?? 0.85} rx={2} />
                     <text
                         x={PADDING + SWATCH + GAP}
                         y={SWATCH / 2 + 2}

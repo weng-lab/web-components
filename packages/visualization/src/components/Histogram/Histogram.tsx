@@ -1,4 +1,4 @@
-import { useImperativeHandle, useMemo, useRef } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { scaleLinear } from '@visx/scale';
 import { AxisBottom, AxisLeft } from '@visx/axis';
 import { Group } from '@visx/group';
@@ -6,16 +6,18 @@ import { line } from '@visx/shape';
 import { curveBasis } from '@visx/curve';
 import { motion } from 'framer-motion';
 import { Text } from '@visx/text';
-import { bin as d3bin, range, tickStep } from '@visx/vendor/d3-array';
+import { range, tickStep } from '@visx/vendor/d3-array';
 import { downloadAsSVG, downloadSVGAsPNG } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { kernelDensityEstimator, gaussian, scottRule } from '../ViolinPlot/helpers';
 import { HistogramBin, HistogramProps, HistogramSeries } from './types';
+import { binHistogram } from './binning';
 import HistogramLegend from './HistogramLegend';
 import HistogramTooltip, { HistogramTooltipHandle } from './HistogramTooltip';
 import HistogramBar from './HistogramBar';
 
 const DEFAULT_COLOR = '#4c78a8';
+const DEFAULT_OPACITY = 0.85;
 
 const margin = { top: 40, right: 30, bottom: 80, left: 80 };
 
@@ -32,14 +34,18 @@ function integerTicks(min: number, max: number, count = 10): number[] {
 
 const formatIntegerTick = (v: { valueOf(): number }) => `${v.valueOf()}`;
 
-function isSeriesData(data: number[] | HistogramSeries[]): data is HistogramSeries[] {
-    return data.length > 0 && typeof data[0] === 'object' && 'values' in (data[0] as object);
+function isSeriesData(data: ArrayLike<number> | HistogramSeries[]): data is HistogramSeries[] {
+    return data.length > 0 && typeof data[0] === 'object' && data[0] !== null && 'values' in data[0];
 }
 
 const Histogram = ({
     data,
     ref,
     thresholds,
+    normalize = 'count',
+    seriesLayout,
+    binning = 'shared',
+    binEdges = 'nice',
     color = DEFAULT_COLOR,
     xLabel,
     yLabel,
@@ -61,103 +67,133 @@ const Histogram = ({
 
     const series: HistogramSeries[] = useMemo(() => {
         if (isSeriesData(data)) return data;
-        return [{ values: data as number[], label: '', color }];
+        return [{ values: data as ArrayLike<number>, label: '', color }];
     }, [data, color]);
 
-    const allValues = useMemo(() => series.flatMap((s) => s.values), [series]);
-    const isIntegerData = useMemo(
-        () => allValues.length > 0 && allValues.every(Number.isInteger),
-        [allValues]
-    );
+    // Per-series bins have different edges, so they can't be stacked
+    const layout = binning === 'perSeries' ? 'overlay' : (seriesLayout ?? 'stack');
+    useEffect(() => {
+        if (binning === 'perSeries' && seriesLayout === 'stack') {
+            console.warn('Histogram: binning="perSeries" can\'t be stacked, drawing with seriesLayout="overlay" instead');
+        }
+    }, [binning, seriesLayout]);
 
     const xMax = Math.max(width - margin.left - margin.right, 0);
     const yMax = Math.max(height - margin.top - margin.bottom, 0);
 
+    const binned = useMemo(
+        () => binHistogram(series.map((s) => s.values), { thresholds, binning, binEdges, normalize }),
+        [series, thresholds, binning, binEdges, normalize]
+    );
+    const isIntegerData = binned?.isInteger ?? false;
+
+    // Stacked layout: one bar per shared bin, with a segment per series
     const bins: HistogramBin[] = useMemo(() => {
-        if (allValues.length === 0) return [];
-
-        const dataMin = Math.min(...allValues);
-        const dataMax = Math.max(...allValues);
-        const integerValueCount = dataMax - dataMin + 1;
-
-        let binner;
-        if (Array.isArray(thresholds)) {
-            binner = d3bin().thresholds(thresholds);
-        } else if (isIntegerData && integerValueCount <= (thresholds ?? 20)) {
-            // Requesting ~20 "nice" thresholds over a small integer range (e.g. 0-3) makes d3
-            // pick a fractional step (e.g. 0.2), splintering each integer into its own narrow,
-            // gapped bin. Snap to one bin per integer value instead.
-            const innerEdges = range(dataMin + 1, dataMax + 1);
-            binner = d3bin().domain([dataMin, dataMax + 1]).thresholds(innerEdges);
-        } else {
-            binner = d3bin().thresholds(thresholds ?? 20);
-        }
-        const allBins = binner(allValues);
-
-        const domainX0 = allBins[0]?.x0 ?? 0;
-        const domainX1 = allBins[allBins.length - 1]?.x1 ?? 1;
-        const innerEdges = allBins.map((b) => b.x0!).slice(1);
-        const seriesBinner = d3bin().domain([domainX0, domainX1]).thresholds(innerEdges);
-        const seriesBins = series.map((s) => seriesBinner(s.values));
-
-        return allBins.map((b, i) => ({
-            x0: b.x0 ?? 0,
-            x1: b.x1 ?? 0,
-            count: b.length,
-            values: [...b],
+        if (!binned?.combined || layout !== 'stack') return [];
+        const { edges, counts, values } = binned.combined;
+        return counts.map((count, i) => ({
+            x0: edges[i],
+            x1: edges[i + 1],
+            count,
+            values: values[i],
             series: series.map((s, si) => ({
                 label: s.label,
                 color: s.color,
-                count: seriesBins[si][i]?.length ?? 0,
+                count: binned.series[si].counts[i] ?? 0,
+                value: binned.series[si].heights[i] ?? 0,
             })),
         }));
-    }, [allValues, series, thresholds, isIntegerData]);
+    }, [binned, layout, series]);
+
+    // Overlay layout: each series' own bars, each bin holding only that series
+    const overlayBins: HistogramBin[][] = useMemo(() => {
+        if (!binned || layout !== 'overlay') return [];
+        return binned.series.map(({ edges, counts, values, heights }, si) => counts.map((count, i) => ({
+            x0: edges[i],
+            x1: edges[i + 1],
+            count,
+            values: values[i],
+            series: [{ label: series[si].label, color: series[si].color, count, value: heights[i] }],
+        })));
+    }, [binned, layout, series]);
+
+    const stackOpacities = useMemo(() => series.map((s) => s.opacity ?? DEFAULT_OPACITY), [series]);
+    const overlayOpacities = useMemo(() => series.map((s) => [s.opacity ?? DEFAULT_OPACITY]), [series]);
 
     const kdePoints = useMemo(() => {
-        if (!densityLine || bins.length === 0) return [];
-        const x0 = bins[0].x0;
-        const x1 = bins[bins.length - 1].x1;
-        const avgBinWidth = (x1 - x0) / bins.length;
+        if (!densityLine || !binned) return [];
+        const [x0, x1] = binned.domain;
+        const ticks = range(x0, x1, (x1 - x0) / 200);
 
-        return series.map((s) => {
-            if (s.values.length === 0) return { color: s.color, points: [] };
-            const bandwidth = scottRule(s.values);
-            const ticks = range(x0, x1, (x1 - x0) / 200);
-            const densityPoints = kernelDensityEstimator(gaussian(bandwidth), ticks)(s.values);
-            const scale = s.values.length * avgBinWidth;
+        return series.map((s, si) => {
+            const { edges, counts } = binned.series[si];
+            if (s.values.length === 0 || counts.length === 0) return { color: s.color, points: [] };
+            const values = Array.isArray(s.values) ? s.values : Array.from(s.values);
+            const bandwidth = scottRule(values);
+            // A series of identical values has no spread to estimate
+            if (!(bandwidth > 0)) return { color: s.color, points: [] };
+            const densityPoints = kernelDensityEstimator(gaussian(bandwidth), ticks)(values);
+            // Scale the density to match the bars' normalization
+            const avgBinWidth = (edges[edges.length - 1] - edges[0]) / counts.length;
+            const scale = normalize === 'density' ? 1
+                : normalize === 'probability' ? avgBinWidth
+                : values.length * avgBinWidth;
             return {
                 color: s.color,
                 points: densityPoints.map((d) => ({ x: d.value, y: d.count * scale })),
             };
         });
-    }, [densityLine, bins, series]);
+    }, [densityLine, binned, series, normalize]);
 
     const xScale = useMemo(() => {
-        if (bins.length === 0) return scaleLinear({ domain: [0, 1], range: [0, xMax] });
+        if (!binned) return scaleLinear({ domain: [0, 1], range: [0, xMax] });
         return scaleLinear({
-            domain: [bins[0].x0, bins[bins.length - 1].x1],
+            domain: binned.domain,
             range: [0, xMax],
         });
-    }, [bins, xMax]);
+    }, [binned, xMax]);
 
     const yScale = useMemo(() => {
-        const maxBarCount = Math.max(...bins.map((b) => b.count), 0);
-        const maxKde = kdePoints.flatMap((s) => s.points.map((p) => p.y));
-        const maxKdeVal = maxKde.length > 0 ? Math.max(...maxKde) : 0;
+        let maxY = 0;
+        for (const bin of bins) {
+            // Counts stack to the combined bin count; normalized heights stack to their sum
+            let top = bin.count;
+            if (normalize !== 'count') {
+                top = 0;
+                for (const s of bin.series) top += s.value ?? 0;
+            }
+            if (top > maxY) maxY = top;
+        }
+        for (const seriesBins of overlayBins) {
+            for (const bin of seriesBins) {
+                const top = bin.series[0].value ?? 0;
+                if (top > maxY) maxY = top;
+            }
+        }
+        for (const s of kdePoints) {
+            for (const p of s.points) {
+                if (p.y > maxY) maxY = p.y;
+            }
+        }
         return scaleLinear({
-            domain: [0, Math.max(maxBarCount, maxKdeVal)],
+            domain: [0, maxY],
             range: [yMax, 0],
             nice: true,
         });
-    }, [bins, kdePoints, yMax]);
+    }, [bins, overlayBins, kdePoints, normalize, yMax]);
 
     const xTickValues = useMemo(() => {
-        if (bins.length === 0 || !isIntegerData) return undefined;
-        return integerTicks(bins[0].x0, bins[bins.length - 1].x1);
-    }, [bins, isIntegerData]);
+        if (!binned || !isIntegerData) return undefined;
+        return integerTicks(binned.domain[0], binned.domain[1]);
+    }, [binned, isIntegerData]);
 
     // Bin counts are always whole numbers, so the count axis never needs decimal ticks.
-    const yTickValues = useMemo(() => integerTicks(0, yScale.domain()[1]), [yScale]);
+    // Normalized heights are fractional, so use the scale's own ticks and step-appropriate format.
+    const yTicks = useMemo(() => {
+        if (normalize === 'count') return { values: integerTicks(0, yScale.domain()[1]), format: formatIntegerTick };
+        const format = yScale.tickFormat(10);
+        return { values: yScale.ticks(10), format: (v: { valueOf(): number }) => format(v) };
+    }, [yScale, normalize]);
 
     const lineGenerator = useMemo(
         () => line<{ x: number; y: number }>()
@@ -199,6 +235,7 @@ const Histogram = ({
                             x={xScale(bin.x0)}
                             barWidth={Math.max(xScale(bin.x1) - xScale(bin.x0) - 1, 0)}
                             yScale={yScale}
+                            opacities={stackOpacities}
                             animationType={animationType}
                             binIndex={i}
                             svgRef={svgRef}
@@ -206,6 +243,21 @@ const Histogram = ({
                             onBarClicked={onBarClicked}
                         />
                     ))}
+                    {overlayBins.map((seriesBins, si) => seriesBins.map((bin, i) => (
+                        <HistogramBar
+                            key={`series-${si}-bin-${i}`}
+                            bin={bin}
+                            x={xScale(bin.x0)}
+                            barWidth={Math.max(xScale(bin.x1) - xScale(bin.x0) - 1, 0)}
+                            yScale={yScale}
+                            opacities={overlayOpacities[si]}
+                            animationType={animationType}
+                            binIndex={i}
+                            svgRef={svgRef}
+                            tooltipRef={tooltipRef}
+                            onBarClicked={onBarClicked}
+                        />
+                    )))}
                     {densityLine && kdePoints.map((s, si) => {
                         const pathD = lineGenerator(s.points);
                         if (!pathD) return null;
@@ -244,8 +296,8 @@ const Histogram = ({
                     />
                     <AxisLeft
                         scale={yScale}
-                        tickValues={yTickValues}
-                        tickFormat={formatIntegerTick}
+                        tickValues={yTicks.values}
+                        tickFormat={yTicks.format}
                         label={yLabel}
                         labelProps={{
                             fontSize: 12,
@@ -268,6 +320,7 @@ const Histogram = ({
             <HistogramTooltip
                 ref={tooltipRef}
                 multiSeries={multiSeries}
+                normalize={normalize}
                 tooltipBody={tooltipBody}
             />
         </ResponsiveContainer>

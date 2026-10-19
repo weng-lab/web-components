@@ -29,7 +29,7 @@ export * from './components/Heatmap'
 export * from './components/Legend'
 
 export { Histogram } from './components/Histogram';
-export type { HistogramProps, HistogramBin } from './components/Histogram';
+export type { HistogramProps, HistogramBin, HistogramBinSeries, HistogramSeries, HistogramNormalize, HistogramSeriesLayout, HistogramBinning, HistogramBinEdges } from './components/Histogram';
 
 export { useResponsiveParentSize, ResponsiveContainer } from './responsive';
 export type { ManualSizeProps, UseResponsiveParentSizeResult, ResponsiveContainerProps } from './responsive';
