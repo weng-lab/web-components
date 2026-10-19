@@ -102,6 +102,7 @@ export interface HistogramProps extends ManualSizeProps {
     densityLine?: boolean;
     densityLineColor?: string;
     animationType?: AnimationType;
+    /** Base name for downloads; .svg or .png is appended unless the name already ends in one */
     downloadFileName?: string;
     ref?: React.Ref<DownloadPlotHandle>;
 }

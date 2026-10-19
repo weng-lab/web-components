@@ -34,6 +34,12 @@ function integerTicks(min: number, max: number, count = 10): number[] {
 
 const formatIntegerTick = (v: { valueOf(): number }) => `${v.valueOf()}`;
 
+// downloadFileName is a base name; a name that already ends in an image extension is used as given
+function withExtension(name: string | undefined, extension: 'svg' | 'png'): string {
+    if (!name) return `histogram.${extension}`;
+    return /\.(svg|png)$/i.test(name) ? name : `${name}.${extension}`;
+}
+
 function isSeriesData(data: ArrayLike<number> | HistogramSeries[]): data is HistogramSeries[] {
     return data.length > 0 && typeof data[0] === 'object' && data[0] !== null && 'values' in data[0];
 }
@@ -205,10 +211,10 @@ const Histogram = ({
 
     useImperativeHandle(ref, () => ({
         downloadSVG: () => {
-            if (svgRef.current) downloadAsSVG(svgRef.current, downloadFileName ?? 'histogram.svg');
+            if (svgRef.current) downloadAsSVG(svgRef.current, withExtension(downloadFileName, 'svg'));
         },
         downloadPNG: () => {
-            if (svgRef.current) downloadSVGAsPNG(svgRef.current, downloadFileName ?? 'histogram.png');
+            if (svgRef.current) downloadSVGAsPNG(svgRef.current, withExtension(downloadFileName, 'png'));
         },
     }));
 
