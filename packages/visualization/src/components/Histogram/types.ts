@@ -94,6 +94,11 @@ export interface HistogramProps extends ManualSizeProps {
      */
     binEdges?: HistogramBinEdges;
     color?: string;
+    /**
+     * Show the series legend. Only drawn for multi-series data
+     * @default true
+     */
+    showLegend?: boolean;
     xLabel?: string;
     yLabel?: string;
     title?: string;
