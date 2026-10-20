@@ -53,6 +53,7 @@ const Histogram = ({
     binning = 'shared',
     binEdges = 'nice',
     color = DEFAULT_COLOR,
+    showLegend = true,
     xLabel,
     yLabel,
     title,
@@ -320,7 +321,7 @@ const Histogram = ({
                             dx: -4,
                         }}
                     />
-                    {multiSeries && <HistogramLegend series={series} xMax={xMax} />}
+                    {multiSeries && showLegend && <HistogramLegend series={series} xMax={xMax} />}
                 </Group>
             </svg>
             <HistogramTooltip
