@@ -1,6 +1,6 @@
 import { Tooltip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useId, useState, type MouseEvent } from "react";
+import { useId, useRef, useState, type MouseEvent } from "react";
 import {
   clampOf,
   describeSweep,
@@ -113,8 +113,19 @@ const ColorbarGraphic = ({
   const [over, setOver] = useState(false);
   const sweepTo = useSweep(onSweep);
 
+  // The tooltip follows the cursor through one anchor, moved by hand. followCursor makes a new anchor
+  // on every render and MUI's Popper rebuilds itself for each, which on a fast sweep queued enough
+  // updates to throw "Maximum update depth exceeded" in development.
+  const cursor = useRef({ x: 0, y: 0 });
+  const popper = useRef<{ update: () => void } | null>(null);
+  const [anchor] = useState(() => ({
+    getBoundingClientRect: () => new DOMRect(cursor.current.x, cursor.current.y, 0, 0),
+  }));
+
   const handleMove = (event: MouseEvent<SVGRectElement>) => {
     const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
+    cursor.current = { x: event.clientX, y: event.clientY };
+    popper.current?.update();
     setOver(true);
     sweepTo(rangeAt(horizontal ? (event.clientX - left) / width : 1 - (event.clientY - top) / height));
   };
@@ -180,10 +191,17 @@ const ColorbarGraphic = ({
       <Tooltip
         title={over && sweep ? describeSweep(values, range, sweep, noun, formatValue) : ""}
         open={over && sweep !== null}
-        followCursor
         placement={horizontal ? "top" : "right"}
         disableInteractive
-        slotProps={{ popper: { container: overlayContainer } }}
+        slotProps={{
+          popper: {
+            container: overlayContainer,
+            anchorEl: anchor,
+            popperRef: (instance: { update: () => void } | null) => {
+              popper.current = instance;
+            },
+          },
+        }}
       >
         <rect
           {...box(0, 1, [-4, colorbarDepth(orientation) + 4])}
