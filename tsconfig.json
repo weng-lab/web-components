@@ -1,4 +1,4 @@
-//Config for storybook and test files
+//Config for storybook files
 
 {
   "extends": "./tsconfig.base.json",
@@ -8,7 +8,6 @@
   "include": [
     "stories",
     "packages/**/*.stories.tsx",
-    "packages/*/src/**/*.test.ts",
     "packages/*/src/**/*.d.ts",
     "testing.tsx",
     ".storybook",
