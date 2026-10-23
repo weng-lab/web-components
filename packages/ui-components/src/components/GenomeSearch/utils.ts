@@ -13,14 +13,21 @@ export function getCoordinates(input: string, assembly: string): Result[] {
   let chromosome: string, start: number, end: number;
 
   if (input.includes(":") && input.includes("-")) {
-    chromosome = input.split(":")[0];
-    start = parseInt(input.split(":")[1].split("-")[0]) || 0;
-    end = parseInt(input.split(":")[1].split("-")[1]) || start + 1000;
+    const parts = input.split(":");
+    if (parts.length !== 2) return results;
+    const range = parts[1].split("-");
+    if (range.length !== 2) return results;
+    const [startStr, endStr] = range;
+    chromosome = parts[0];
+    // An empty start or end means the range is still being typed, so suggest one from what is there
+    start = startStr.trim() === "" ? 0 : parseCoordinate(startStr);
+    end = endStr.trim() === "" ? start + 1000 : parseCoordinate(endStr);
   } else if (input.includes("\t")) {
     const [chr, startStr, endStr] = input.split("\t");
+    if (endStr === undefined) return results;
     chromosome = chr;
-    start = parseInt(startStr);
-    end = parseInt(endStr);
+    start = parseCoordinate(startStr);
+    end = parseCoordinate(endStr);
   } else {
     return results;
   }
@@ -43,6 +50,18 @@ export function getCoordinates(input: string, assembly: string): Result[] {
   }
 
   return results;
+}
+
+/**
+ * Parses one coordinate typed by the user, accepting only plain digits.
+ * `parseInt` alone also reads "0x" hex prefixes ("0xA1B2" is 41394) and stops silently at
+ * trailing junk ("100abc" is 100, "1e5" is 1), turning malformed input into a real-looking region.
+ * @param value - One side of the range, with commas already removed
+ * @returns The coordinate, or NaN if the value is not a plain non-negative integer
+ */
+function parseCoordinate(value: string): number {
+  const trimmed = value.trim();
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : NaN;
 }
 
 // Common interface for result formatting options
