@@ -43,7 +43,7 @@ interface PlotTooltipState<T> {
 /**
  * Places the tooltip along one axis: offset from the pointer on the leading side, flipped to the
  * trailing side when the leading one would run off the end, and clamped when it fits on neither -
- * a tooltip larger than the viewport has no good side, so it is pinned rather than centred on a
+ * a tooltip larger than the viewport has no good side, so it is pinned rather than centered on a
  * pointer it cannot clear.
  */
 const placeAlongAxis = (pointer: number, size: number, start: number, end: number) => {

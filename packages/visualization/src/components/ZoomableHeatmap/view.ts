@@ -35,7 +35,17 @@ export const zoomAxis = (start: ViewAxis, span: AxisSpan, factor: number, from: 
   return held({ scale, translate: to - scale * cell }, span);
 };
 
-export const panAxis = (axis: ViewAxis, span: AxisSpan, delta: number): ViewAxis =>
+export type Point = { x: number; y: number };
+/** Which axes a gesture zooms: over the grid both, over one axis's labels that one alone. */
+export type Axes = "both" | "x" | "y";
+
+/** The view zoomed along `axes`, each as zoomAxis zooms it. */
+export const zoomView = (view: View, spans: Spans, axes: Axes, factor: number, from: Point, to = from): View => ({
+  x: axes === "y" ? view.x : zoomAxis(view.x, spans.x, factor, from.x, to.x),
+  y: axes === "x" ? view.y : zoomAxis(view.y, spans.y, factor, from.y, to.y),
+});
+
+export const panAxis =(axis: ViewAxis, span: AxisSpan, delta: number): ViewAxis =>
   held({ scale: axis.scale, translate: axis.translate + delta }, span);
 
 /** The axis with cell `cell` in the middle, at its zoom. */

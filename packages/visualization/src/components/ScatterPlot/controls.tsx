@@ -1,10 +1,7 @@
 import { useEffect } from "react";
 import { ControlButtonsProps } from "./types";
 import { Add, Remove, BackHand, Edit, SettingsBackupRestore, Download, HighlightAlt } from "@mui/icons-material"
-import { ControlPanel, CONTROL_PANEL_WIDTH } from "../../controls";
-
-/** The panel's width, which getPlotLayout holds a lane of beside the plot. */
-export const CONTROLS_WIDTH = CONTROL_PANEL_WIDTH;
+import { ControlPanel } from "../../controls";
 
 const ControlButtons = ({
     selectable,

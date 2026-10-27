@@ -398,4 +398,3 @@ export const MobileScrollable: Story = {
     },
     decorators: [(Story) => <div style={{ height: 420, border: '1px solid black' }}><Story /></div>],
 };
- 

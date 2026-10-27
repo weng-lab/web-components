@@ -16,6 +16,7 @@ const Treemap = <T extends object>(
     const [hovered, setHovered] = useState<string | null>(null);
     const tap = useTapToActivate<string>();
     const tooltipRef = useRef<PlotTooltipHandle<TreemapNode<T>>>(null);
+    const { onNodeClicked } = props;
     const theme = useTheme();
     const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -122,8 +123,8 @@ const Treemap = <T extends object>(
                                             fontSize={style.fontSize ?? 16}
                                             labelPlacement={props.labelPlacement ?? "topLeft"}
                                             tooltipRef={tooltipRef}
-                                            onNodeClicked={props.onNodeClicked && ((data) => {
-                                                if (tap.activates(tapKey)) props.onNodeClicked!(data);
+                                            onNodeClicked={onNodeClicked && ((data) => {
+                                                if (tap.activates(tapKey)) onNodeClicked(data);
                                             })}
                                         />
                                     </Wrapper>

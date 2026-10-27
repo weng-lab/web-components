@@ -27,6 +27,9 @@ export type CellColors = {
   highlight: ColorRange | null;
 };
 
+/** The gap between neighboring cells, once they're big enough to spare one. */
+const gapFor = (cellSize: number) => (cellSize >= 12 ? 2 : cellSize >= 6 ? 1 : 0);
+
 /** How many cells to average into each pixel along an axis, so a pixel is at least a device pixel. */
 const cellsPerPixel = (devicePixelsPerCell: number) =>
   devicePixelsPerCell >= 1 ? 1 : 2 ** Math.ceil(Math.log2(1 / devicePixelsPerCell));
@@ -98,8 +101,14 @@ export class CellRaster {
       x.translate + left * across * x.scale, y.translate + top * down * y.scale,
       (right - left) * across * x.scale, (bottom - top) * down * y.scale
     );
-    clearGaps(ctx, x.scale, firstColumn, endColumn, (i) => x.translate + i * x.scale, (at, gap) => ctx.clearRect(at - gap / 2, 0, gap, height));
-    clearGaps(ctx, y.scale, firstRow, endRow, (i) => y.translate + i * y.scale, (at, gap) => ctx.clearRect(0, at - gap / 2, width, gap));
+    const columnGap = gapFor(x.scale);
+    const rowGap = gapFor(y.scale);
+    if (columnGap) {
+      for (let c = firstColumn + 1; c < endColumn; c++) ctx.clearRect(x.translate + c * x.scale - columnGap / 2, 0, columnGap, height);
+    }
+    if (rowGap) {
+      for (let r = firstRow + 1; r < endRow; r++) ctx.clearRect(0, y.translate + r * y.scale - rowGap / 2, width, rowGap);
+    }
   }
 
   private level(across: number, down: number): HTMLCanvasElement {
@@ -154,22 +163,6 @@ export class CellRaster {
     }
     return out;
   }
-}
-
-/** The gap between neighboring cells, once they're big enough to spare one. */
-const gapFor = (cellSize: number) => (cellSize >= 12 ? 2 : cellSize >= 6 ? 1 : 0);
-
-function clearGaps(
-  ctx: CanvasRenderingContext2D,
-  cellSize: number,
-  first: number,
-  end: number,
-  edgeOf: (cell: number) => number,
-  clear: (at: number, gap: number) => void
-) {
-  const gap = gapFor(cellSize);
-  if (!gap) return;
-  for (let cell = first + 1; cell < end; cell++) clear(edgeOf(cell), gap);
 }
 
 /**

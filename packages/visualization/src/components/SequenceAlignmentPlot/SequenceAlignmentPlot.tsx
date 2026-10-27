@@ -120,6 +120,15 @@ const clampTranslateX = (translateX: number, scaleX: number, canvasWidth: number
   Math.min(0, Math.max(canvasWidth * (1 - scaleX), translateX));
 
 /**
+ * The transform zoomed by `factor`, keeping what was at `from` px across the canvas at `to`: the
+ * wheel's cursor, or a pinch's midpoint as it moves.
+ */
+const zoomAbout = ({ scaleX, translateX }: ZoomTransform, factor: number, canvasWidth: number, from: number, to = from): ZoomTransform => {
+  const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleX * factor));
+  return { scaleX: scale, translateX: clampTranslateX(to - (from - translateX) * (scale / scaleX), scale, canvasWidth) };
+};
+
+/**
  * @todo This component could use some cleanup and maybe manual memoization to handle hover changes to highlight more efficiently
  * Maybe try debouncing the hover changes using requestAnimationFrame like PhyloTree
  */
@@ -197,19 +206,9 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-
-      const rect = canvas.getBoundingClientRect();
-      const cursorX = e.clientX - rect.left;
-      const { scaleX, translateX } = zoomTransformRef.current;
-
-      const zoomDir = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
-      const newScaleX = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleX * zoomDir));
-
-      // Adjust translateX so the data point under the cursor stays fixed
-      const newTranslateX = cursorX - (cursorX - translateX) * (newScaleX / scaleX);
-      const clampedTranslateX = clampTranslateX(newTranslateX, newScaleX, canvasWidth);
-
-      setZoomTransform({ scaleX: newScaleX, translateX: clampedTranslateX });
+      const cursorX = e.clientX - canvas.getBoundingClientRect().left;
+      const factor = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
+      setZoomTransform(zoomAbout(zoomTransformRef.current, factor, canvasWidth, cursorX));
     };
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
@@ -223,10 +222,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
       const canvas = canvasRef.current;
       if (!canvas) return;
       const { left } = canvas.getBoundingClientRect();
-      const scaleX = Math.max(MIN_SCALE, Math.min(MAX_SCALE, start.scaleX * scale));
-      // Keeps the point between the fingers under them, as the wheel does for the cursor.
-      const translateX = to.clientX - left + (scaleX / start.scaleX) * (start.translateX - (from.clientX - left));
-      setZoomTransform({ scaleX, translateX: clampTranslateX(translateX, scaleX, canvasWidth) });
+      setZoomTransform(zoomAbout(start, scale, canvasWidth, from.clientX - left, to.clientX - left));
     },
   });
 

@@ -169,19 +169,19 @@ for (const id of ZOOMS) {
 }
 
 for (const id of ["visualization-legend-colorbarlegend--mobile", "visualization-zoomableheatmap--mobile"]) {
-test(`${storyLabel(storyById(id))} › the range editor opens on the screen`, async ({ page }) => {
-  await gotoStory(page, storyById(id));
-  await page.getByRole("button", { name: "Adjust the color range" }).tap();
-  const panel = page.getByRole("presentation").locator(".MuiPopover-paper");
-  await expect(panel).toBeVisible();
-  const box = (await panel.boundingBox())!;
-  const screen = page.viewportSize()!;
-  expect(box.x, "the panel's left edge").toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width, "the panel's right edge").toBeLessThanOrEqual(screen.width);
-  // Nothing in it wider than the panel.
-  const overflow = await panel.evaluate((el) => el.scrollWidth - el.clientWidth);
-  expect(overflow, "how far its contents run past it").toBeLessThanOrEqual(0);
-});
+  test(`${storyLabel(storyById(id))} › the range editor opens on the screen`, async ({ page }) => {
+    await gotoStory(page, storyById(id));
+    await page.getByRole("button", { name: "Adjust the color range" }).tap();
+    const panel = page.getByRole("presentation").locator(".MuiPopover-paper");
+    await expect(panel).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    const screen = page.viewportSize()!;
+    expect(box.x, "the panel's left edge").toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, "the panel's right edge").toBeLessThanOrEqual(screen.width);
+    // Nothing in it wider than the panel.
+    const overflow = await panel.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(overflow, "how far its contents run past it").toBeLessThanOrEqual(0);
+  });
 }
 
 test("Colorbar › a finger dragged along the bar sweeps it, and lifting ends the sweep", async ({ page }) => {

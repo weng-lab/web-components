@@ -3,7 +3,9 @@ import { Tooltip, useTheme } from "@mui/material";
 import { Add, Remove, SettingsBackupRestore } from "@mui/icons-material";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
-import { useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
+import {
+  useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint, type TwoFingerGestureHandlers,
+} from "../../hooks";
 import { ControlPanel, TwoFingerHint } from "../../controls";
 import { downloadAsSVG, downloadSVGAsPNG, isTouchScreen } from "../../utility";
 import ColorbarLegend from "../Legend/Colorbar/ColorbarLegend";
@@ -13,8 +15,8 @@ import { evenStops, sweptValues, type ColorRange, type RampRange } from "../Lege
 import { CellRaster, drawHoveredCell, drawSelectedColumns, rampLut } from "./cellRaster";
 import { LABEL_FONT_FAMILY, LABEL_FONT_SIZE, axisLabels, fitLabel, widestLabel } from "./axisLabels";
 import {
-  between, cellAt, centerAxis, fitView, isFit, isFullyZoomed, panAxis, resizeAxis, visibleCells, zoomAxis,
-  type AxisSpan, type Spans, type View,
+  between, cellAt, centerAxis, fitView, isFit, isFullyZoomed, panAxis, resizeAxis, visibleCells, zoomView,
+  type Axes, type AxisSpan, type Point, type Spans, type View,
 } from "./view";
 import { sortedValues } from "./values";
 import type { ZoomableHeatmapCell, ZoomableHeatmapProps } from "./types";
@@ -232,12 +234,10 @@ export const ZoomableHeatmap = ({
     };
     animation.current = requestAnimationFrame(step);
   };
-  const zoomBy = (factor: number, at?: { x: number; y: number }) => {
+  const zoomBy = (factor: number, at?: Point) => {
     const v = latest();
     if (!v || !spans) return;
-    const x = at?.x ?? spans.x.size / 2;
-    const y = at?.y ?? spans.y.size / 2;
-    animateTo({ x: zoomAxis(v.x, spans.x, factor, x), y: zoomAxis(v.y, spans.y, factor, y) });
+    animateTo(zoomView(v, spans, "both", factor, at ?? { x: spans.x.size / 2, y: spans.y.size / 2 }));
   };
 
   const leave = () => {
@@ -245,14 +245,15 @@ export const ZoomableHeatmap = ({
     tap.hover(null);
     tooltipRef.current?.hide();
   };
-  const localPoint = (event: { clientX: number; clientY: number }) => {
+  const localPoint = (event: { clientX: number; clientY: number }): Point => {
     const rect = surfaceRef.current!.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
-  const cellUnder = (v: View, point: { x: number; y: number }): ZoomableHeatmapCell | null => {
+  const indexOf = ({ row, column }: { row: number; column: number }) => column * rows + row;
+  const cellUnder = (v: View, point: Point): ZoomableHeatmapCell | null => {
     const column = cellAt(v.x, columns, point.x);
     const row = cellAt(v.y, rows, point.y);
-    return column < 0 || row < 0 ? null : { row, column, value: values[column * rows + row] };
+    return column < 0 || row < 0 ? null : { row, column, value: values[indexOf({ row, column })] };
   };
 
   const hoverAt = (event: MouseEvent) => {
@@ -260,7 +261,7 @@ export const ZoomableHeatmap = ({
     const cell = v && aimable(v, pointer.current) ? cellUnder(v, localPoint(event)) : null;
     if (!cell) return leave();
     if (hovered?.row !== cell.row || hovered?.column !== cell.column) setHovered({ row: cell.row, column: cell.column });
-    tap.hover(cell.column * rows + cell.row);
+    tap.hover(indexOf(cell));
     tooltipRef.current?.show(cell, event);
   };
 
@@ -278,12 +279,12 @@ export const ZoomableHeatmap = ({
       return;
     }
     const cell = cellUnder(v, point);
-    if (cell && tap.activates(cell.column * rows + cell.row)) onCellClick?.(cell);
+    if (cell && tap.activates(indexOf(cell))) onCellClick?.(cell);
   };
 
   // The wheel zooms, over the grid both ways and over an axis's labels that axis alone. Not
   // passive, as React's onWheel is, so it can keep the page from scrolling.
-  const handleWheel = useStableCallback((event: WheelEvent, axes: "both" | "x" | "y") => {
+  const handleWheel = useStableCallback((event: WheelEvent, axes: Axes) => {
     event.preventDefault();
     const v = latest();
     if (!v || !spans) return;
@@ -292,14 +293,10 @@ export const ZoomableHeatmap = ({
     const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
     // A trackpad pinch arrives as a ctrl+wheel of small steps.
     const factor = Math.exp(-pixels * (event.ctrlKey ? 0.01 : 0.002));
-    const { x, y } = localPoint(event);
-    setView({
-      x: axes === "y" ? v.x : zoomAxis(v.x, spans.x, factor, x),
-      y: axes === "x" ? v.y : zoomAxis(v.y, spans.y, factor, y),
-    });
+    setView(zoomView(v, spans, axes, factor, localPoint(event)));
   });
   useEffect(() => {
-    const listen = (element: HTMLElement | null, axes: "both" | "x" | "y") => {
+    const listen = (element: HTMLElement | null, axes: Axes) => {
       const handle = (event: WheelEvent) => handleWheel(event, axes);
       element?.addEventListener("wheel", handle, { passive: false });
       return () => element?.removeEventListener("wheel", handle);
@@ -309,21 +306,14 @@ export const ZoomableHeatmap = ({
   }, [handleWheel, ready]);
 
   // Two fingers pan and pinch, as the wheel zooms: the grid both ways, an axis's labels that axis alone.
-  const pinch = (axes: "both" | "x" | "y") => ({
+  const pinch = (axes: Axes): TwoFingerGestureHandlers<View | null> => ({
     onStart: () => {
       stopAnimation();
       leave();
-      return { view: latest(), rect: surfaceRef.current!.getBoundingClientRect() };
+      return latest();
     },
-    onMove: (
-      { from, to, scale }: { from: { clientX: number; clientY: number }; to: { clientX: number; clientY: number }; scale: number },
-      { view: v, rect }: { view: View | null; rect: DOMRect }
-    ) => {
-      if (!v || !spans) return;
-      setView({
-        x: axes === "y" ? v.x : zoomAxis(v.x, spans.x, scale, from.clientX - rect.left, to.clientX - rect.left),
-        y: axes === "x" ? v.y : zoomAxis(v.y, spans.y, scale, from.clientY - rect.top, to.clientY - rect.top),
-      });
+    onMove: ({ from, to, scale }, v) => {
+      if (v && spans) setView(zoomView(v, spans, axes, scale, localPoint(from), localPoint(to)));
     },
   });
   const surfaceTouchAction = useTwoFingerGestures(surfaceRef, pinch("both"), ready);
@@ -647,7 +637,7 @@ export const ZoomableHeatmap = ({
               noun={legend?.noun ?? "cell"}
               sweep={sweep}
               onSweep={setSweep}
-              marker={hovered ? values[hovered.column * rows + hovered.row] : null}
+              marker={hovered ? values[indexOf(hovered)] : null}
               length={barLength}
               labelStyle={labelStyle}
               notes={legend?.notes}

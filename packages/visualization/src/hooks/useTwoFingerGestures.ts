@@ -67,7 +67,7 @@ export function useTwoFingerGestures<S>(
       if (event.cancelable) event.preventDefault();
       if (fingers) return;
       fingers = [event.touches[0].identifier, event.touches[1].identifier];
-      start = { ...measure([event.touches[0], event.touches[1]]), view: onStart() as S };
+      start = { ...measure([event.touches[0], event.touches[1]]), view: onStart() };
     };
     const handleTouchMove = (event: TouchEvent) => {
       const pair = find(event.touches);

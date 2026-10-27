@@ -390,7 +390,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     controlsPosition?: "left" | "right";
     /**
-     * Lock the plot to a square, sized to the shorter side of its container and centred in it.
+     * Lock the plot to a square, sized to the shorter side of its container and centered in it.
      *
      * Off by default, in which case the plot fills the container and its aspect ratio follows
      * whatever shape that is. Turn it on when the two axes are in the same units and a circle

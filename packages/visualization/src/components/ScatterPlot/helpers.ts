@@ -126,7 +126,7 @@ const rotate = (vertices: UnitVertices, radians: number): UnitVertices => {
 const flipVertically = (vertices: UnitVertices): UnitVertices => vertices.map(([x, y]) => [x, -y]);
 
 /**
- * Vertices of each shape at r = 1, centred on the origin, in the y-down coordinates both canvas
+ * Vertices of each shape at r = 1, centered on the origin, in the y-down coordinates both canvas
  * and SVG use - so one set of vertices drives both renderers and they cannot drift apart.
  */
 const UNIT_VERTICES: Record<Exclude<PointShape, "circle">, UnitVertices> = {
@@ -140,7 +140,7 @@ const UNIT_VERTICES: Record<Exclude<PointShape, "circle">, UnitVertices> = {
 };
 
 /**
- * The polygon a shape is drawn as, centred on (cx, cy) at radius r, or null for a circle - which
+ * The polygon a shape is drawn as, centered on (cx, cy) at radius r, or null for a circle - which
  * has no vertices and is drawn as an arc by whichever renderer asked.
  */
 export const getShapeVertices = (

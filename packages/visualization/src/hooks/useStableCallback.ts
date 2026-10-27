@@ -12,6 +12,10 @@ import { useCallback, useLayoutEffect, useRef } from "react";
  * The returned callback must only be invoked from event handlers or effects, never during
  * render: the ref is updated after commit, so during render it still holds the previous value.
  */
+export function useStableCallback<Args extends unknown[], R>(callback: (...args: Args) => R): (...args: Args) => R;
+export function useStableCallback<Args extends unknown[], R>(
+  callback: ((...args: Args) => R) | undefined
+): (...args: Args) => R | undefined;
 export function useStableCallback<Args extends unknown[], R>(
   callback: ((...args: Args) => R) | undefined
 ): (...args: Args) => R | undefined {

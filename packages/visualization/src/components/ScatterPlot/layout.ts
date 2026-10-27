@@ -1,5 +1,5 @@
 import { FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH } from "./backgroundField";
-import { CONTROLS_WIDTH } from "./controls";
+import { CONTROL_PANEL_WIDTH } from "../../controls";
 
 const MARGIN = { top: 20, right: 20, bottom: 70, left: 70 };
 
@@ -26,7 +26,7 @@ const CONTROLS_GAP = 6;
  * rather than sitting over the axis on the left or the points on the right. The same on either
  * side, so synced plots with their panels on different sides keep plot areas of the same size.
  */
-const CONTROLS_GUTTER = CONTROLS_INSET + CONTROLS_WIDTH + CONTROLS_GAP;
+const CONTROLS_GUTTER = CONTROLS_INSET + CONTROL_PANEL_WIDTH + CONTROLS_GAP;
 
 type PlotLayout = {
     /** The plot's box - the svg the axes and points are drawn in - within the container. */
@@ -113,7 +113,7 @@ export const getPlotLayout = ({ parentWidth, parentHeight, square, controls, leg
 
     // The panel sits just outside whatever is drawn on its side.
     const controlsLeft = controls === "left"
-        ? plot.left - CONTROLS_GAP - CONTROLS_WIDTH
+        ? plot.left - CONTROLS_GAP - CONTROL_PANEL_WIDTH
         : controls === "right"
             ? contentRight + CONTROLS_GAP
             : null;

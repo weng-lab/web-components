@@ -157,8 +157,9 @@ export function useHeatmapCanvasGrid({
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onClick) return;
     const cell = cellAt(event);
-    const bin = cell && buildBin(canvasCellParams, cell);
-    if (bin && tap.activates(cellKey(cell!))) onClick(bin);
+    if (!cell || !tap.activates(cellKey(cell))) return;
+    const bin = buildBin(canvasCellParams, cell);
+    if (bin) onClick(bin);
   }, [canvasCellParams, cellAt, onClick, tap]);
 
   return {
