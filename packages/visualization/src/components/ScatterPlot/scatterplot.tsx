@@ -6,7 +6,7 @@ import { Stack, useTheme } from '@mui/material';
 import { downloadDivAsPNG, downloadDivAsSVG, isTouchScreen } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
-import { DEFAULT_DIM_STYLE, getDomains, getPointExtents, isSameTransform } from './helpers';
+import { DEFAULT_DIM_STYLE, equalizeDomains, getDomains, getPointExtents, isSameTransform } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
@@ -25,8 +25,10 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const theme = useTheme();
     const tooltipRef = useRef<PlotTooltipHandle<Point<T>>>(null);
 
-    // On touch, start in pan mode so one finger scrolls the page instead of drawing lassos.
-    const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable && !isTouchScreen() ? "select" : "pan");
+    // Without zoom there's no pan to start in, except on touch, where one finger then scrolls the
+    // page instead of drawing lassos.
+    const initialSelectionMode = props.initialState?.controls?.selectionType
+        ?? (props.disableZoom && props.selectable && !isTouchScreen() ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
@@ -53,8 +55,10 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     // Depend on the bounds rather than the arrays so a consumer passing a fresh domain array on
     // every render doesn't rebuild the scales (and with them every derived scale and canvas draw).
-    const [xDomainMin, xDomainMax] = props.xDomain ?? dataDomains.xDomain;
-    const [yDomainMin, yDomainMax] = props.yDomain ?? dataDomains.yDomain;
+    const fitted = { xDomain: props.xDomain ?? dataDomains.xDomain, yDomain: props.yDomain ?? dataDomains.yDomain };
+    const domains = props.disableEqualScale ? fitted : equalizeDomains(fitted.xDomain, fitted.yDomain, boundedWidth, boundedHeight);
+    const [xDomainMin, xDomainMax] = domains.xDomain;
+    const [yDomainMin, yDomainMax] = domains.yDomain;
 
     const xScale = useMemo(() => {
         return scaleLinear({

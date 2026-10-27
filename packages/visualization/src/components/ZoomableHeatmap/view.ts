@@ -52,6 +52,9 @@ export const panAxis =(axis: ViewAxis, span: AxisSpan, delta: number): ViewAxis 
 export const centerAxis = (axis: ViewAxis, span: AxisSpan, cell: number): ViewAxis =>
   held({ scale: axis.scale, translate: span.size / 2 - axis.scale * cell }, span);
 
+/** The least of the axis on screen, in pixels, that zooming in can make fill it. */
+export const shortestFill = (axis: ViewAxis, span: AxisSpan) => (span.size * axis.scale) / scaleLimits(span)[1];
+
 /** The axis zoomed so what's between two positions on it fills it, or as near as its limits allow. */
 export const fillAxis = (axis: ViewAxis, span: AxisSpan, from: number, to: number): ViewAxis => {
   const [min, max] = scaleLimits(span);

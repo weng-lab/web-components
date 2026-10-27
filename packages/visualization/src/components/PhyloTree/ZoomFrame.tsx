@@ -56,10 +56,10 @@ export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children
       <ControlPanel
         style={{ position: "absolute", margin: 4 }}
         buttons={[
-          { label: "Zoom In", icon: <Add fontSize="small" />, onClick: () => zoom.scale({ scaleX: 1.2, scaleY: 1.2 }) },
-          { label: "Zoom Out", icon: <Remove fontSize="small" />, onClick: () => zoom.scale({ scaleX: 1 / 1.2, scaleY: 1 / 1.2 }) },
-          { label: "Reset Zoom", icon: <SettingsBackupRestore fontSize="small" />, onClick: zoom.reset },
-          { label: "Toggle Evolutionary Distance", icon: <Timeline fontSize="small" />, onClick: toggleBranchLength },
+          { label: "Zoom in", icon: <Add fontSize="small" />, onClick: () => zoom.scale({ scaleX: 1.2, scaleY: 1.2 }) },
+          { label: "Zoom out", icon: <Remove fontSize="small" />, onClick: () => zoom.scale({ scaleX: 1 / 1.2, scaleY: 1 / 1.2 }) },
+          { label: "Reset zoom", icon: <SettingsBackupRestore fontSize="small" />, onClick: zoom.reset },
+          { label: "Toggle evolutionary distance", icon: <Timeline fontSize="small" />, onClick: toggleBranchLength },
         ]}
       />
       <svg

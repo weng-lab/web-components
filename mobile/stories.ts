@@ -34,6 +34,9 @@ export const storyById = (id: string) => {
 /** The story's title and name, as the tests are named. */
 export const storyLabel = (story: MobileStory) => `${story.title} › ${story.name}`;
 
+/** The mobile stories of plots with box zoom. */
+export const BOX_ZOOMS = ["visualization-zoomableheatmap--mobile", "visualization-scatterplot--mobile"];
+
 /** Opens a story on its own, as the Storybook canvas shows it, and waits for it to settle. */
 export async function gotoStory(page: Page, story: MobileStory) {
   await page.goto(`/iframe.html?id=${story.id}&viewMode=story`);

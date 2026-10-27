@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react-vite';
+import { Decorator, Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
 import { useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
@@ -603,44 +603,59 @@ export const DimmedAndSpotlit: Story = {
     ],
 };
 
-// square locks the plot to the shorter side of its container and centers it, which is what you
-// want when both axes are in the same units and a circular cluster has to stay circular - a PCA
-// or UMAP embedding. Off by default: the plot fills the container instead.
+// Two rings side by side, so the x domain is wider than the y: drawn round only while both axes
+// have the same pixels per unit.
+const ringData: Point[] = Array.from({ length: 360 }, (_, i) => {
+    const angle = (i * Math.PI) / 90;
+    return i < 180
+        ? { x: Math.cos(angle), y: Math.sin(angle), color: '#2541b2' }
+        : { x: 2.4 + 0.3 * Math.cos(angle), y: 0.3 * Math.sin(angle), color: '#d62728' };
+});
+
+// square locks the plot to the shorter side of its container and centers it. Off by default: the
+// plot fills the container instead. Both keep the rings round, as the axes share a scale unless
+// disableEqualScale stretches each over the plot on its own.
 //
-// Both stories below sit in the same wide 900x420 container, so the difference is the point.
+// The three stories below sit in the same wide container, so the difference is the point.
+const inWideBox: Decorator = (Story) => (
+    <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
+        <Story />
+    </div>
+);
+
 export const Square: Story = {
     args: {
-        pointData: points,
+        pointData: ringData,
         loading: false,
         square: true,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
     },
-    decorators: [
-        (Story) => (
-            <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
-                <Story />
-            </div>
-        ),
-    ],
+    decorators: [inWideBox],
 };
 
 export const FillsContainer: Story = {
     args: {
-        pointData: points,
+        pointData: ringData,
         loading: false,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
     },
-    decorators: [
-        (Story) => (
-            <div style={{ width: 900, height: 420, border: '2px dashed #999' }}>
-                <Story />
-            </div>
-        ),
-    ],
+    decorators: [inWideBox],
+};
+
+export const EqualScaleDisabled: Story = {
+    args: {
+        pointData: ringData,
+        loading: false,
+        disableEqualScale: true,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+    },
+    decorators: [inWideBox],
 };
 
 // hoveredPoints set a window at a time, as a swept colorbar sets them. Points that stay in the window

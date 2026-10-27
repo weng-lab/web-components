@@ -10,8 +10,9 @@ import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { BackgroundField, ChartProps, CrosshairPosition, DimStyle, Point, SelectionMode, ZoomType } from "./types";
 import { DEFAULT_HOVER_STYLE, drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, pointKey, prepareCanvas, rescaleX, rescaleY } from "./helpers";
-import { followFingers, toLocal, useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
-import { TwoFingerHint } from "../../controls";
+import { followFingers, toLocal, useDragKeys, useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
+import { MIN_BOX, TwoFingerHint, ZoomBox, boxStart } from "../../controls";
+import { ZOOM_SCALE_LIMITS } from "./PlotZoom";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
@@ -71,6 +72,12 @@ type ScatterPlotViewportProps<T extends object> = {
 const HOVER_GROW_MS = 120;
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** The mode a drag is in with Shift held: the box zoom while panning, and panning otherwise. */
+const SHIFTED: Record<SelectionMode, SelectionMode> = { pan: "zoom", select: "pan", zoom: "pan", none: "none" };
+
+type Spot = { x: number; y: number };
+type Rect = { left: number; top: number; width: number; height: number };
 
 /** How far into its growth a point is at `now`, having started at `start`: 0 at rest, 1 fully grown. */
 const hoverAmountAt = (start: number | undefined, now: number) =>
@@ -143,6 +150,18 @@ const ScatterPlotViewport = <T extends object>({
     const { lines, isDragging, x, y, dx, dy, dragStart, dragMove, dragEnd, completeSelection, cancelSelection } =
         useDragSelection({ pointData, margin, xScale, yScale, onSelectionChange });
 
+    // A box being drawn to zoom into, in the plot area's pixels.
+    const [boxDrag, setBoxDrag] = useState<{ from: Spot; to: Spot } | null>(null);
+    // A drag keeps the mode it began in, so letting go of Shift first doesn't drop it midway.
+    const [dragMode, setDragMode] = useState<SelectionMode | null>(null);
+    const shiftHeld = useDragKeys(() => {
+        if (isDragging) cancelSelection();
+        setBoxDrag(null);
+    });
+    const mode = dragMode ?? (shiftHeld && !disableZoom ? SHIFTED[selectMode] : selectMode);
+    // In these modes a finger draws, so it isn't trying to move the plot or scroll the page.
+    const fingerDraws = selectMode === "select" || selectMode === "zoom";
+
     // Non-passive (React's onWheel is passive), so the wheel zooms instead of scrolling the page.
     useEffect(() => {
         const graphElement = graphRef.current;
@@ -155,6 +174,7 @@ const ScatterPlotViewport = <T extends object>({
     const twoFingerTouchAction = useTwoFingerGestures(svgRef, {
         onStart: () => {
             cancelSelection();
+            setBoxDrag(null);
             setShowPointAnimation(false);
             return zoom.transformMatrix;
         },
@@ -164,8 +184,7 @@ const ScatterPlotViewport = <T extends object>({
             zoom.setTransformMatrix(followFingers(start, toLocal(surface, from), toLocal(surface, to), scale));
         },
     }, !disableZoom);
-    // In select mode a finger draws, so it isn't trying to move the plot.
-    const hint = useTwoFingerHint(svgRef, !disableZoom && selectMode !== "select");
+    const hint = useTwoFingerHint(svgRef, !disableZoom && !fingerDraws);
 
     // The zoom holds panning inside the plot area, whose size only the plot knows.
     const { setPanExtent } = zoom;
@@ -288,13 +307,15 @@ const ScatterPlotViewport = <T extends object>({
         ? selectable
             ? isDragging ? 'none' : 'crosshair'
             : isDragging ? 'none' : 'default'
-        : hoveredPoint
-            ? 'default'
-            : selectMode === 'select'
-                ? isDragging ? 'none' : 'crosshair'
-                : zoom.isDragging
-                    ? 'grabbing'
-                    : 'grab';
+        : mode === 'zoom'
+            ? 'crosshair'
+            : hoveredPoint
+                ? 'default'
+                : mode === 'select'
+                    ? isDragging ? 'none' : 'crosshair'
+                    : zoom.isDragging
+                        ? 'grabbing'
+                        : 'grab';
 
     const handleSelectionEnd = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
         dragEnd(event);
@@ -347,30 +368,93 @@ const ScatterPlotViewport = <T extends object>({
         zoom.dragEnd();
     };
 
-    const onSurfaceMouseDown = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? dragStart
-            : disableZoom ? undefined : zoom.dragStart;
-    const onSurfaceMouseUp = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? handleSelectionEnd
-            : disableZoom ? undefined : onZoomDragEnd;
-    const onSurfaceMouseMove = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? (isDragging ? dragMove : undefined)
-            : disableZoom ? undefined : onZoomDragMove;
-    const onSurfaceMouseLeave = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? handleSelectionEnd
-            : disableZoom ? undefined : onZoomDragEnd;
-    // One finger only draws selections; outside select mode it scrolls the page.
-    const onSurfaceTouchStart = selectMode === "select" ? dragStart : undefined;
-    const onSurfaceTouchEnd = selectMode === "select" ? handleSelectionEnd : undefined;
-    const onSurfaceTouchMove = selectMode === "select" && isDragging ? dragMove : undefined;
+    const lassoing = mode === "select";
+    const panning = mode === "pan" && !disableZoom;
+    const onSurfaceMouseDown = lassoing
+        ? (event: React.MouseEvent<SVGRectElement>) => { setDragMode("select"); dragStart(event); }
+        : panning
+            ? (event: React.MouseEvent<SVGRectElement>) => { setDragMode("pan"); zoom.dragStart(event); }
+            : undefined;
+    // Leaving the plot ends a drag as letting go does.
+    const onSurfaceMouseUp = lassoing
+        ? (event: React.MouseEvent<SVGRectElement>) => { setDragMode(null); handleSelectionEnd(event); }
+        : panning
+            ? () => { setDragMode(null); onZoomDragEnd(); }
+            : undefined;
+    const onSurfaceMouseMove = lassoing ? (isDragging ? dragMove : undefined) : panning ? onZoomDragMove : undefined;
+    // One finger only draws selections and boxes; otherwise it scrolls the page.
+    const onSurfaceTouchStart = lassoing ? dragStart : undefined;
+    const onSurfaceTouchEnd = lassoing ? handleSelectionEnd : undefined;
+    const onSurfaceTouchMove = lassoing && isDragging ? dragMove : undefined;
+
+    /**
+     * The box a drag zooms into, which is what the plot will show: the plot's own shape, so the
+     * points keep theirs, and the smallest that covers the drag and the zoom can still fill the
+     * plot with. Inside the plot, and none for a drag too short to mean one.
+     */
+    const boxOf = (from: Spot, to: Spot): Rect | null => {
+        const end = {
+            x: Math.min(Math.max(to.x, 0), boundedWidth),
+            y: Math.min(Math.max(to.y, 0), boundedHeight),
+        };
+        const across = Math.abs(end.x - from.x);
+        const down = Math.abs(end.y - from.y);
+        if (Math.max(across, down) < MIN_BOX) return null;
+        const aspect = boundedWidth / boundedHeight;
+        const closest = (boundedWidth * zoom.transformMatrix.scaleX) / ZOOM_SCALE_LIMITS.scaleXMax;
+        const width = Math.min(boundedWidth, Math.max(across, down * aspect, closest));
+        const height = width / aspect;
+        return {
+            left: boxStart(from.x, end.x, width, boundedWidth),
+            top: boxStart(from.y, end.y, height, boundedHeight),
+            width,
+            height,
+        };
+    };
+    /** Zooms both axes alike, so the box boxOf gave fills the plot. */
+    const zoomToBox = ({ left, top, width, height }: Rect) => {
+        const matrix = zoom.transformMatrix;
+        const factor = boundedWidth / width;
+        const scaleX = matrix.scaleX * factor;
+        const scaleY = matrix.scaleY * factor;
+        // The box's center, unzoomed: a point p shows at scale·p + translate.
+        const centerX = (left + width / 2 - matrix.translateX) / matrix.scaleX;
+        const centerY = (top + height / 2 - matrix.translateY) / matrix.scaleY;
+        zoom.setTransformMatrix({
+            ...matrix,
+            scaleX,
+            scaleY,
+            translateX: boundedWidth / 2 - scaleX * centerX,
+            translateY: boundedHeight / 2 - scaleY * centerY,
+        });
+    };
+    // The box is drawn with pointer events, captured so it follows past the plot's edge, and one
+    // handler serves the mouse and a finger alike.
+    const onSurfacePointerDown = (event: React.PointerEvent<SVGRectElement>) => {
+        // A second finger is a pinch.
+        if (!event.isPrimary) return setBoxDrag(null);
+        if (mode !== "zoom" || disableZoom || event.button !== 0) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const from = toLocal(event.currentTarget, event);
+        setDragMode("zoom");
+        setShowPointAnimation(false);
+        setBoxDrag({ from, to: from });
+    };
+    const onSurfacePointerMove = (event: React.PointerEvent<SVGRectElement>) => {
+        if (boxDrag) setBoxDrag({ from: boxDrag.from, to: toLocal(event.currentTarget, event) });
+    };
+    const onSurfacePointerUp = (event: React.PointerEvent<SVGRectElement>) => {
+        if (dragMode === "zoom") setDragMode(null);
+        if (!boxDrag) return;
+        setBoxDrag(null);
+        const target = boxOf(boxDrag.from, toLocal(event.currentTarget, event));
+        if (target) zoomToBox(target);
+    };
+    const onSurfacePointerCancel = () => {
+        if (dragMode === "zoom") setDragMode(null);
+        setBoxDrag(null);
+    };
+    const box = boxDrag && boxOf(boxDrag.from, boxDrag.to);
     const onSurfaceWheel: React.WheelEventHandler<SVGRectElement> = (event) => {
         setShowPointAnimation(false);
         if (!disableZoom) {
@@ -452,11 +536,10 @@ const ScatterPlotViewport = <T extends object>({
                         style={{
                             position: "absolute",
                             userSelect: "none",
-                            // In select mode a finger draws, so it can't also scroll the page.
-                            touchAction: selectMode === "select" ? "none" : twoFingerTouchAction,
+                            touchAction: fingerDraws ? "none" : twoFingerTouchAction,
                         }}
                         onMouseMove={(event) => {
-                            if (isDragging) handleMouseLeave();
+                            if (isDragging || boxDrag) handleMouseLeave();
                             else handleMouseMove(event, zoom);
                         }}
                         onMouseLeave={handleMouseLeave}
@@ -521,14 +604,18 @@ const ScatterPlotViewport = <T extends object>({
                                 onMouseDown={onSurfaceMouseDown}
                                 onMouseUp={onSurfaceMouseUp}
                                 onMouseMove={onSurfaceMouseMove}
-                                onMouseLeave={onSurfaceMouseLeave}
+                                onMouseLeave={onSurfaceMouseUp}
+                                onPointerDown={onSurfacePointerDown}
+                                onPointerMove={onSurfacePointerMove}
+                                onPointerUp={onSurfacePointerUp}
+                                onPointerCancel={onSurfacePointerCancel}
                                 onTouchStart={onSurfaceTouchStart}
                                 onTouchEnd={onSurfaceTouchEnd}
                                 onTouchMove={onSurfaceTouchMove}
                                 onWheel={onSurfaceWheel}
                                 onClick={handlePointClick}
                             />
-                            {crosshair && !isDragging && (
+                            {crosshair && !isDragging && !boxDrag && (
                                 <Crosshair
                                     position={{
                                         x: xScaleTransformed(crosshair.x),
@@ -584,6 +671,9 @@ const ScatterPlotViewport = <T extends object>({
                         />
                         {legend}
                     </svg>
+                    {box && (
+                        <ZoomBox box={box} area={{ left: margin.left, top: margin.top, width: boundedWidth, height: boundedHeight }} />
+                    )}
                     <TwoFingerHint
                         shown={hint}
                         style={{ top: margin.top, left: margin.left, width: boundedWidth, height: boundedHeight }}

@@ -1,18 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { actions, center, gotoStory, plotSurface, recordActions, storyById, surfaceShot } from "./stories";
+import { BOX_ZOOMS, actions, center, gotoStory, plotSurface, recordActions, storyById, surfaceShot } from "./stories";
 
 /**
  * The mouse still works as it did: touch handling must not cost the desktop anything. Run against
  * the mobile stories, at desktop size.
  */
 
-// ScatterPlot starts in select mode on desktop, so it's put in pan mode to drag.
-const ZOOMS: [id: string, panMode: boolean][] = [
-  ["visualization-phylotree--mobile", false],
-  ["visualization-scatterplot--mobile", true],
-];
+const ZOOMS = ["visualization-phylotree--mobile", "visualization-scatterplot--mobile"];
 
-for (const [id, panMode] of ZOOMS) {
+for (const id of ZOOMS) {
   const story = storyById(id);
   test.describe(story.title, () => {
     test("the wheel zooms the plot, not the page", async ({ page }) => {
@@ -28,7 +24,6 @@ for (const [id, panMode] of ZOOMS) {
 
     test("a mouse drag pans the plot", async ({ page }) => {
       await gotoStory(page, story);
-      if (panMode) await page.getByRole("button", { name: "pan" }).click();
       const { x, y } = center(await plotSurface(page));
       const before = await surfaceShot(page);
       await page.mouse.move(x, y);
@@ -96,8 +91,11 @@ test.describe("visualization/ZoomableHeatmap", () => {
     await page.mouse.click(x, y);
     await expect.poll(() => actions(page), { timeout: 2000 }).toContain("onCellClick");
   });
+});
 
-  test("a drag with Shift held, or in box mode, zooms into the box it draws", async ({ page }) => {
+for (const id of BOX_ZOOMS) {
+  const story = storyById(id);
+  test(`${story.title} › a drag with Shift held, or in box mode, zooms into the box it draws`, async ({ page }) => {
     await gotoStory(page, story);
     const grid = (await page.locator("[data-mobile-story] canvas").boundingBox())!;
     const at = (fx: number, fy: number) => ({ x: grid.x + grid.width * fx, y: grid.y + grid.height * fy });
@@ -120,4 +118,4 @@ test.describe("visualization/ZoomableHeatmap", () => {
     await drawBox();
     await expect(reset).toBeEnabled();
   });
-});
+}

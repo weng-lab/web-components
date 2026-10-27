@@ -4,9 +4,9 @@ import { Add, HighlightAlt, Remove, SettingsBackupRestore } from "@mui/icons-mat
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import {
-  useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint, type TwoFingerGestureHandlers,
+  useDragKeys, useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint, type TwoFingerGestureHandlers,
 } from "../../hooks";
-import { ControlPanel, PLAIN_CONTROL_SIZE, TwoFingerHint } from "../../controls";
+import { ControlPanel, PLAIN_CONTROL_SIZE, TwoFingerHint, ZoomBox, MIN_BOX, boxStart } from "../../controls";
 import { downloadAsSVG, downloadSVGAsPNG, isTouchScreen } from "../../utility";
 import ColorbarLegend from "../Legend/Colorbar/ColorbarLegend";
 import { themeLabelStyle, useEndLabels } from "../Legend/Colorbar/colorbarLabels";
@@ -15,8 +15,8 @@ import { evenStops, sweptValues, type ColorRange, type RampRange } from "../Lege
 import { CellRaster, drawHoveredCell, drawSelectedColumns, rampLut } from "./cellRaster";
 import { LABEL_FONT_FAMILY, LABEL_FONT_SIZE, axisLabels, fitLabel, widestLabel } from "./axisLabels";
 import {
-  between, cellAt, centerAxis, fillAxis, fitView, isFit, isFullyZoomed, panAxis, resizeAxis, visibleCells, zoomView,
-  type Axes, type AxisSpan, type Point, type Spans, type View,
+  between, cellAt, centerAxis, fillAxis, fitView, isFit, isFullyZoomed, panAxis, resizeAxis, shortestFill, visibleCells, zoomView,
+  type Axes, type AxisSpan, type Point, type Spans, type View, type ViewAxis,
 } from "./view";
 import { sortedValues } from "./values";
 import type { ZoomableHeatmapCell, ZoomableHeatmapProps } from "./types";
@@ -52,8 +52,6 @@ const BUTTON_ZOOM = 2;
 const ZOOM_DURATION = 220;
 /** How far a mouse moves while pressed before it's dragging rather than clicking. */
 const DRAG_THRESHOLD = 4;
-/** A box thinner than this one way zooms the other way alone, as a band across the grid. */
-const MIN_BOX = 12;
 /** The most names a group of selected labels lists. */
 const GROUP_NAMES = 15;
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -240,8 +238,6 @@ export const ZoomableHeatmap = ({
   const [dragging, setDragging] = useState(false);
   const draggedRef = useRef(false);
   const [boxMode, setBoxMode] = useState(false);
-  // Shift held swaps panning and boxing.
-  const [shiftHeld, setShiftHeld] = useState(false);
   const [box, setBox] = useState<Box | null>(null);
   const [hovered, setHovered] = useState<{ row: number; column: number } | null>(null);
   const animation = useRef(0);
@@ -352,17 +348,21 @@ export const ZoomableHeatmap = ({
   const columnTouchAction = useTwoFingerGestures(columnStripRef, pinch("x"), ready);
   const hint = useTwoFingerHint(surfaceRef, ready && !boxMode);
 
-  // The part of the grid a box dragged between two points zooms into: the whole of an axis it's too
-  // thin along, so a band zooms the other axis alone. None where it's too thin both ways.
+  // The part of the grid a drag between two points zooms into, so it's what the grid will show: as
+  // long as the drag along each axis, or as the closest the zoom can go there. All of an axis the
+  // drag barely moves along, so a band zooms the other axis alone; none where it barely moves at all.
   const boxOf = (from: Point, to: Point): Box | null => {
-    if (!spans) return null;
-    const along = (a: number, b: number, size: number) => {
-      const low = Math.max(0, Math.min(a, b));
-      const high = Math.min(size, Math.max(a, b));
-      return high - low < MIN_BOX ? null : ([low, high - low] as const);
+    const v = latest();
+    if (!spans || !v) return null;
+    const along = (axis: ViewAxis, span: AxisSpan, a: number, b: number) => {
+      const end = Math.min(Math.max(b, 0), span.size);
+      const dragged = Math.abs(end - a);
+      if (dragged < MIN_BOX) return null;
+      const length = Math.min(span.size, Math.max(dragged, shortestFill(axis, span)));
+      return [boxStart(a, end, length, span.size), length] as const;
     };
-    const x = along(from.x, to.x, spans.x.size);
-    const y = along(from.y, to.y, spans.y.size);
+    const x = along(v.x, spans.x, from.x, to.x);
+    const y = along(v.y, spans.y, from.y, to.y);
     if (!x && !y) return null;
     const [left, width] = x ?? [0, spans.x.size];
     const [top, height] = y ?? [0, spans.y.size];
@@ -381,21 +381,10 @@ export const ZoomableHeatmap = ({
     setDragging(false);
     setBox(null);
   };
-  const handleKey = useStableCallback((event: KeyboardEvent) => {
-    if (event.key === "Shift") setShiftHeld(event.type === "keydown");
-    if (event.key === "Escape" && drag.current?.boxing) cancelDrag();
+  // Shift held swaps panning and boxing.
+  const shiftHeld = useDragKeys(() => {
+    if (drag.current?.boxing) cancelDrag();
   });
-  useEffect(() => {
-    const release = () => setShiftHeld(false);
-    window.addEventListener("keydown", handleKey);
-    window.addEventListener("keyup", handleKey);
-    window.addEventListener("blur", release);
-    return () => {
-      window.removeEventListener("keydown", handleKey);
-      window.removeEventListener("keyup", handleKey);
-      window.removeEventListener("blur", release);
-    };
-  }, [handleKey]);
 
   // Selection
   const selected = useMemo(() => new Set(selectedColumns), [selectedColumns]);
@@ -705,19 +694,7 @@ export const ZoomableHeatmap = ({
           onMouseLeave={leave}
           onClick={handleClick}
         >
-          {/* Dims the rest of the grid. */}
-          {box && (
-            <div
-              style={{
-                position: "absolute",
-                ...box,
-                boxSizing: "border-box",
-                border: "1px solid #222",
-                boxShadow: `0 0 0 ${grid.width + grid.height}px rgba(0, 0, 0, 0.25)`,
-                pointerEvents: "none",
-              }}
-            />
-          )}
+          {box && <ZoomBox box={box} area={{ left: 0, top: 0, width: grid.width, height: grid.height }} />}
         </div>
         {layout.legend && (
           <div

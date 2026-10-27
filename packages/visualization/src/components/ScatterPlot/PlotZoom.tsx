@@ -16,7 +16,7 @@ const initialTransformMatrix = {
     skewY: 0,
 };
 
-const ZOOM_SCALE_LIMITS = {
+export const ZOOM_SCALE_LIMITS = {
     scaleXMin: 1 / 2,
     scaleXMax: 10,
     scaleYMin: 1 / 2,
