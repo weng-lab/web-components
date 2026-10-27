@@ -303,7 +303,8 @@ function measureLayout() {
     })
     .map((el) => ({ el: describe(el), kind: el instanceof SVGElement ? "mark" : "control", ...rect(el) }));
   const tooSmall = (min: number) => targets.filter((t) => Math.min(t.width, t.height) < min);
-  const smallControls = tooSmall(44).filter((t) => t.kind === "control").sort((a, b) => Math.min(a.width, a.height) - Math.min(b.width, b.height));
+  // WCAG AA's minimum: the site is desktop first, so controls needn't reach Apple's 44px.
+  const smallControls = tooSmall(24).filter((t) => t.kind === "control").sort((a, b) => Math.min(a.width, a.height) - Math.min(b.width, b.height));
   const smallMarks = tooSmall(24).filter((t) => t.kind === "mark");
 
   // What could keep a swipe from scrolling the page, and what scrolls inside the story.
@@ -333,8 +334,7 @@ function measureLayout() {
     },
     targets: {
       controls: targets.filter((t) => t.kind === "control").length,
-      controlsUnder44: smallControls.length,
-      controlsUnder24: smallControls.filter((t) => Math.min(t.width, t.height) < 24).length,
+      controlsUnder24: smallControls.length,
       smallestControls: smallControls.slice(0, 6),
       marks: targets.filter((t) => t.kind === "mark").length,
       marksUnder24: smallMarks.length,

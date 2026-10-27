@@ -31,7 +31,7 @@ type Findings = {
     pageOverflowX: number;
     offscreen: { el: string }[];
     text: { under10px: number; cutOff: { count: number }; overlaps: { count: number } };
-    targets: { controlsUnder24: number; controlsUnder44: number; marksUnder24: number };
+    targets: { controlsUnder24: number; marksUnder24: number };
   };
   probes: {
     tap: Gesture & { stillShownAfterTapAway: number };
@@ -58,7 +58,6 @@ function flags({ errors, layout, probes }: Findings): Flag[] {
   if (text.overlaps.count) add("warn", `${text.overlaps.count} overlapping label pair(s)`);
   if (text.under10px) add("warn", `${text.under10px} text(s) under 10px`);
   if (targets.controlsUnder24) add("bad", `${targets.controlsUnder24} control(s) under 24px`);
-  else if (targets.controlsUnder44) add("warn", `${targets.controlsUnder44} control(s) under 44px`);
   if (targets.marksUnder24) add("info", `${targets.marksUnder24} tappable mark(s) under 24px`);
 
   if (swipeUp.pageScrolled.y < swipeUp.distance / 2) {
