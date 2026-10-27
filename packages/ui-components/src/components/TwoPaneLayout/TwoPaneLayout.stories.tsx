@@ -108,7 +108,10 @@ export const TabFiltersTable: Story = {
     return (
       <TwoPaneLayout
         TableComponent={<SyncedTable tableProps={tableProps} rows={siteRows} />}
-        plots={SITES.map((site) => ({ tabTitle: `Site: ${site}`, plotComponent: <RowList rows={sortedFilteredData} /> }))}
+        plots={SITES.map((site) => ({
+          tabTitle: `Site: ${site}`,
+          plotComponent: <RowList rows={sortedFilteredData} />,
+        }))}
         onTabChange={(index) => filters.setModel((model) => onlySite(model, SITES[index]))}
         rowHeight="500px"
       />
