@@ -1,12 +1,12 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Tooltip, useTheme } from "@mui/material";
-import { Add, Remove, SettingsBackupRestore } from "@mui/icons-material";
+import { Add, HighlightAlt, Remove, SettingsBackupRestore } from "@mui/icons-material";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import {
   useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint, type TwoFingerGestureHandlers,
 } from "../../hooks";
-import { ControlPanel, TwoFingerHint } from "../../controls";
+import { ControlPanel, PLAIN_CONTROL_SIZE, TwoFingerHint } from "../../controls";
 import { downloadAsSVG, downloadSVGAsPNG, isTouchScreen } from "../../utility";
 import ColorbarLegend from "../Legend/Colorbar/ColorbarLegend";
 import { themeLabelStyle, useEndLabels } from "../Legend/Colorbar/colorbarLabels";
@@ -15,7 +15,7 @@ import { evenStops, sweptValues, type ColorRange, type RampRange } from "../Lege
 import { CellRaster, drawHoveredCell, drawSelectedColumns, rampLut } from "./cellRaster";
 import { LABEL_FONT_FAMILY, LABEL_FONT_SIZE, axisLabels, fitLabel, widestLabel } from "./axisLabels";
 import {
-  between, cellAt, centerAxis, fitView, isFit, isFullyZoomed, panAxis, resizeAxis, visibleCells, zoomView,
+  between, cellAt, centerAxis, fillAxis, fitView, isFit, isFullyZoomed, panAxis, resizeAxis, visibleCells, zoomView,
   type Axes, type AxisSpan, type Point, type Spans, type View,
 } from "./view";
 import { sortedValues } from "./values";
@@ -31,12 +31,18 @@ const TICK_GAP = 3;
 const LABEL_SHARE = 0.25;
 const MIN_LABEL_SPACE = 48;
 const PAD = 8;
-/** The colorbar's row above the grid: as tall as the range button. */
-const LEGEND_ROW = 30;
-const LEGEND_GAP = 6;
+/** The row above the grid, of the zoom buttons and the colorbar: as tall as the buttons. */
+const TOP_ROW = PLAIN_CONTROL_SIZE;
+const TOP_GAP = 6;
+const CONTROLS_WIDTH = 4 * PLAIN_CONTROL_SIZE;
+/** Between the zoom buttons and the colorbar. */
+const CONTROLS_GAP = 6;
 /** The range button and the gap before it. */
 const RANGE_BUTTON = 34;
 const MAX_LEGEND_LENGTH = 320;
+const MIN_LEGEND_LENGTH = 60;
+/** The shortest the colorbar gets beside the zoom buttons: any shorter, they move over the row labels. */
+const LEGEND_LENGTH_BESIDE_CONTROLS = 120;
 /** The largest a cell grows: room enough to read and aim at. */
 const MAX_CELL = { width: 25, height: 20 };
 /** The smallest a cell can be and still be aimed at, by a finger and by a mouse. Smaller, a click zooms in on it. */
@@ -46,6 +52,8 @@ const BUTTON_ZOOM = 2;
 const ZOOM_DURATION = 220;
 /** How far a mouse moves while pressed before it's dragging rather than clicking. */
 const DRAG_THRESHOLD = 4;
+/** A box thinner than this one way zooms the other way alone, as a band across the grid. */
+const MIN_BOX = 12;
 /** The most names a group of selected labels lists. */
 const GROUP_NAMES = 15;
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -63,32 +71,48 @@ type Layout = {
   xTitle: number;
   rowLabelWidth: number;
   columnLabelHeight: number;
+  /** Where the zoom buttons start. */
+  controls: number;
   legend: Box | null;
 };
 
 /**
  * Where everything goes. Nothing here depends on the zoom, so zooming never moves the grid: the
  * label strips are sized to the longest labels, up to a share of the plot, once.
+ *
+ * The zoom buttons start at the grid's corner, unless that leaves the colorbar beside them too
+ * short. Then they move over the row labels, which make room for them where they're narrower.
  */
 function layoutOf(
   width: number,
   height: number,
-  { widestRow, widestColumn, xLabel, yLabel, showLegend }: { widestRow: number; widestColumn: number; xLabel?: string; yLabel?: string; showLegend: boolean }
+  { widestRow, widestColumn, xLabel, yLabel, legendChrome }: {
+    widestRow: number;
+    widestColumn: number;
+    xLabel?: string;
+    yLabel?: string;
+    /** The legend's width but for its bar, or null without one. */
+    legendChrome: number | null;
+  }
 ): Layout {
   const yTitle = yLabel ? TITLE_SPACE : 0;
   const xTitle = xLabel ? TITLE_SPACE : 0;
   const rowLabelWidth = Math.ceil(Math.min(widestRow, Math.max(MIN_LABEL_SPACE, width * LABEL_SHARE)));
   const columnLabelHeight = Math.ceil(Math.min(widestColumn, Math.max(MIN_LABEL_SPACE, height * LABEL_SHARE)));
-  const left = yTitle + rowLabelWidth + TICK_GAP + TICK;
-  const top = showLegend ? PAD / 2 + LEGEND_ROW + LEGEND_GAP : PAD;
+  const labelsWidth = yTitle + rowLabelWidth + TICK_GAP + TICK;
+  const beside = CONTROLS_WIDTH + CONTROLS_GAP;
+  const overGrid = width - labelsWidth - PAD >= beside + (legendChrome === null ? 0 : legendChrome + LEGEND_LENGTH_BESIDE_CONTROLS);
+  const left = overGrid ? labelsWidth : Math.max(labelsWidth, beside);
+  const top = PAD / 2 + TOP_ROW + TOP_GAP;
   const grid = {
     left,
     top,
     width: Math.max(0, Math.floor(width - left - PAD)),
     height: Math.max(0, Math.floor(height - top - TICK - TICK_GAP - columnLabelHeight - xTitle - PAD / 2)),
   };
-  const legend = showLegend ? { left: grid.left, top: PAD / 2, width: grid.width, height: LEGEND_ROW } : null;
-  return { grid, yTitle, xTitle, rowLabelWidth, columnLabelHeight, legend };
+  const legendLeft = overGrid ? grid.left + beside : grid.left;
+  const legend = legendChrome === null ? null : { left: legendLeft, top: PAD / 2, width: grid.left + grid.width - legendLeft, height: TOP_ROW };
+  return { grid, yTitle, xTitle, rowLabelWidth, columnLabelHeight, controls: overGrid ? grid.left : grid.left - beside, legend };
 }
 
 const sameSpan = (a: AxisSpan, b: AxisSpan) => a.cells === b.cells && a.size === b.size && a.maxCell === b.maxCell;
@@ -132,12 +156,13 @@ function useView(spans: Spans | null) {
 
 /**
  * A heatmap that opens on every cell and zooms in: with a wheel or a pinch over the grid, or over
- * one axis's labels to zoom that axis alone; and, while cells are too small to aim at, with a click
- * or tap on the spot. Built for matrices of around a million cells, drawn from one image of them.
+ * one axis's labels to zoom that axis alone; while cells are too small to aim at, with a click or
+ * tap on the spot; and with a box dragged out, with Shift held or the box button on. Built for
+ * matrices of around a million cells, drawn from one image of them.
  *
  * The labels thin out to what fits as it zooms out, in strips that never change size, so zooming
- * never shifts the layout. The colorbar above it can be swept to pick out values, and has the
- * button that moves its range beside it.
+ * never shifts the layout. Above it, clear of the cells, are the zoom buttons and the colorbar,
+ * which can be swept to pick out values and has the button that moves its range beside it.
  */
 export const ZoomableHeatmap = ({
   values,
@@ -186,7 +211,8 @@ export const ZoomableHeatmap = ({
   // Layout
   const widestRow = useMemo(() => (ready ? widestLabel(rowNames) : 0), [ready, rowNames]);
   const widestColumn = useMemo(() => (ready ? widestLabel(columnNames) : 0), [ready, columnNames]);
-  const layout = ready ? layoutOf(width, height, { widestRow, widestColumn, xLabel, yLabel, showLegend }) : null;
+  const legendChrome = showLegend ? endLabels.low.width + endLabels.high.width + 2 * LABEL_GAP + (editable ? RANGE_BUTTON : 0) : null;
+  const layout = ready ? layoutOf(width, height, { widestRow, widestColumn, xLabel, yLabel, legendChrome }) : null;
   const gridWidth = layout?.grid.width ?? 0;
   const gridHeight = layout?.grid.height ?? 0;
   const spans = useMemo<Spans | null>(
@@ -209,9 +235,14 @@ export const ZoomableHeatmap = ({
   const tooltipRef = useRef<PlotTooltipHandle<ZoomableHeatmapCell>>(null);
   const tap = useTapToActivate<number>();
   const pointer = useRef<Pointer>(isTouchScreen() ? "touch" : "mouse");
-  const drag = useRef<{ x: number; y: number; view: View; moved: boolean } | null>(null);
+  // A drag pans, or with `boxing` draws a box to zoom into.
+  const drag = useRef<{ from: Point; view: View; moved: boolean; boxing: boolean } | null>(null);
   const [dragging, setDragging] = useState(false);
   const draggedRef = useRef(false);
+  const [boxMode, setBoxMode] = useState(false);
+  // Shift held swaps panning and boxing.
+  const [shiftHeld, setShiftHeld] = useState(false);
+  const [box, setBox] = useState<Box | null>(null);
   const [hovered, setHovered] = useState<{ row: number; column: number } | null>(null);
   const animation = useRef(0);
   useEffect(() => () => cancelAnimationFrame(animation.current), []);
@@ -319,7 +350,52 @@ export const ZoomableHeatmap = ({
   const surfaceTouchAction = useTwoFingerGestures(surfaceRef, pinch("both"), ready);
   const rowTouchAction = useTwoFingerGestures(rowStripRef, pinch("y"), ready);
   const columnTouchAction = useTwoFingerGestures(columnStripRef, pinch("x"), ready);
-  const hint = useTwoFingerHint(surfaceRef, ready);
+  const hint = useTwoFingerHint(surfaceRef, ready && !boxMode);
+
+  // The part of the grid a box dragged between two points zooms into: the whole of an axis it's too
+  // thin along, so a band zooms the other axis alone. None where it's too thin both ways.
+  const boxOf = (from: Point, to: Point): Box | null => {
+    if (!spans) return null;
+    const along = (a: number, b: number, size: number) => {
+      const low = Math.max(0, Math.min(a, b));
+      const high = Math.min(size, Math.max(a, b));
+      return high - low < MIN_BOX ? null : ([low, high - low] as const);
+    };
+    const x = along(from.x, to.x, spans.x.size);
+    const y = along(from.y, to.y, spans.y.size);
+    if (!x && !y) return null;
+    const [left, width] = x ?? [0, spans.x.size];
+    const [top, height] = y ?? [0, spans.y.size];
+    return { left, top, width, height };
+  };
+  const zoomToBox = ({ left, top, width, height }: Box) => {
+    const v = latest();
+    if (!v || !spans) return;
+    animateTo({ x: fillAxis(v.x, spans.x, left, left + width), y: fillAxis(v.y, spans.y, top, top + height) });
+  };
+  /** Drops a drag midway, for Escape or a second finger, so letting go does nothing. */
+  const cancelDrag = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    draggedRef.current = true;
+    setDragging(false);
+    setBox(null);
+  };
+  const handleKey = useStableCallback((event: KeyboardEvent) => {
+    if (event.key === "Shift") setShiftHeld(event.type === "keydown");
+    if (event.key === "Escape" && drag.current?.boxing) cancelDrag();
+  });
+  useEffect(() => {
+    const release = () => setShiftHeld(false);
+    window.addEventListener("keydown", handleKey);
+    window.addEventListener("keyup", handleKey);
+    window.addEventListener("blur", release);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("keyup", handleKey);
+      window.removeEventListener("blur", release);
+    };
+  }, [handleKey]);
 
   // Selection
   const selected = useMemo(() => new Set(selectedColumns), [selectedColumns]);
@@ -454,10 +530,9 @@ export const ZoomableHeatmap = ({
     const gridBottom = grid.top + grid.height;
     const canZoomOut = !(isFit(view.x, spans.x) && isFit(view.y, spans.y));
     const canZoomIn = !(isFullyZoomed(view.x, spans.x) && isFullyZoomed(view.y, spans.y));
-    const barLength = Math.max(
-      60,
-      Math.min(MAX_LEGEND_LENGTH, grid.width - endLabels.low.width - endLabels.high.width - 2 * LABEL_GAP - (editable ? RANGE_BUTTON : 0))
-    );
+    const boxing = box || (!dragging && boxMode !== shiftHeld);
+    const cursor = boxing ? "crosshair" : dragging ? "grabbing" : !aimable(view, "mouse") ? "zoom-in" : onCellClick ? "pointer" : "default";
+    const barLength = Math.max(MIN_LEGEND_LENGTH, Math.min(MAX_LEGEND_LENGTH, (layout.legend?.width ?? 0) - (legendChrome ?? 0)));
 
     const columnLabel = (column: number, text: string, bold: boolean) => (
       <text
@@ -582,45 +657,68 @@ export const ZoomableHeatmap = ({
           style={{
             position: "absolute",
             ...grid,
-            touchAction: surfaceTouchAction,
-            cursor: dragging ? "grabbing" : !aimable(view, "mouse") ? "zoom-in" : onCellClick ? "pointer" : "default",
+            overflow: "hidden",
+            // In box mode a finger draws, so it can't also scroll the page.
+            touchAction: boxMode ? "none" : surfaceTouchAction,
+            cursor,
           }}
           onPointerDown={(event) => {
             pointer.current = event.pointerType === "touch" ? "touch" : "mouse";
+            // A second finger is a pinch.
+            if (!event.isPrimary) return cancelDrag();
             draggedRef.current = false;
-            if (event.pointerType === "touch" || event.button !== 0) return;
+            const boxing = boxMode !== event.shiftKey;
+            if ((event.pointerType === "touch" && !boxing) || event.button !== 0) return;
             stopAnimation();
-            drag.current = { x: event.clientX, y: event.clientY, view: latest()!, moved: false };
+            drag.current = { from: localPoint(event), view: latest()!, moved: false, boxing };
             event.currentTarget.setPointerCapture(event.pointerId);
           }}
           onPointerMove={(event) => {
             const d = drag.current;
             if (!d) return;
-            const dx = event.clientX - d.x;
-            const dy = event.clientY - d.y;
+            const to = localPoint(event);
+            const dx = to.x - d.from.x;
+            const dy = to.y - d.from.y;
             if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
             if (!d.moved) {
               d.moved = true;
-              setDragging(true);
+              if (!d.boxing) setDragging(true);
               leave();
             }
-            setView({ x: panAxis(d.view.x, spans.x, dx), y: panAxis(d.view.y, spans.y, dy) });
+            if (d.boxing) setBox(boxOf(d.from, to));
+            else setView({ x: panAxis(d.view.x, spans.x, dx), y: panAxis(d.view.y, spans.y, dy) });
           }}
-          onPointerUp={() => {
-            draggedRef.current = !!drag.current?.moved;
+          onPointerUp={(event) => {
+            const d = drag.current;
+            if (!d) return;
+            draggedRef.current = d.moved;
             drag.current = null;
             setDragging(false);
+            setBox(null);
+            const target = d.boxing && d.moved && boxOf(d.from, localPoint(event));
+            if (target) zoomToBox(target);
           }}
-          onPointerCancel={() => {
-            drag.current = null;
-            setDragging(false);
-          }}
+          onPointerCancel={cancelDrag}
           onMouseMove={(event) => {
             if (!drag.current?.moved) hoverAt(event);
           }}
           onMouseLeave={leave}
           onClick={handleClick}
-        />
+        >
+          {/* Dims the rest of the grid. */}
+          {box && (
+            <div
+              style={{
+                position: "absolute",
+                ...box,
+                boxSizing: "border-box",
+                border: "1px solid #222",
+                boxShadow: `0 0 0 ${grid.width + grid.height}px rgba(0, 0, 0, 0.25)`,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </div>
         {layout.legend && (
           <div
             ref={legendRef}
@@ -673,8 +771,10 @@ export const ZoomableHeatmap = ({
         )}
         <TwoFingerHint shown={hint} style={grid} />
         <ControlPanel
-          style={{ position: "absolute", left: grid.left + grid.width - 6, top: grid.top + 6, transform: "translateX(-100%)" }}
-          tooltipPlacement="left"
+          direction="row"
+          plain
+          style={{ position: "absolute", left: layout.controls, top: PAD / 2 }}
+          tooltipPlacement="bottom"
           buttons={[
             { label: "Zoom in", icon: <Add fontSize="small" />, onClick: () => zoomBy(BUTTON_ZOOM), disabled: !canZoomIn },
             { label: "Zoom out", icon: <Remove fontSize="small" />, onClick: () => zoomBy(1 / BUTTON_ZOOM), disabled: !canZoomOut },
@@ -684,6 +784,13 @@ export const ZoomableHeatmap = ({
               icon: <SettingsBackupRestore fontSize="small" />,
               onClick: () => animateTo(fitView(spans)),
               disabled: !canZoomOut,
+            },
+            {
+              label: "Box zoom",
+              tooltip: boxMode ? "Drag a box to zoom in; hold Shift to pan" : "Drag a box to zoom in, or hold Shift and drag",
+              icon: <HighlightAlt fontSize="small" />,
+              onClick: () => setBoxMode((on) => !on),
+              pressed: boxMode,
             },
           ]}
         />

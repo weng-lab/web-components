@@ -52,6 +52,13 @@ export const panAxis =(axis: ViewAxis, span: AxisSpan, delta: number): ViewAxis 
 export const centerAxis = (axis: ViewAxis, span: AxisSpan, cell: number): ViewAxis =>
   held({ scale: axis.scale, translate: span.size / 2 - axis.scale * cell }, span);
 
+/** The axis zoomed so what's between two positions on it fills it, or as near as its limits allow. */
+export const fillAxis = (axis: ViewAxis, span: AxisSpan, from: number, to: number): ViewAxis => {
+  const [min, max] = scaleLimits(span);
+  const scale = clamp((axis.scale * span.size) / Math.abs(to - from), min, max);
+  return centerAxis({ ...axis, scale }, span, ((from + to) / 2 - axis.translate) / axis.scale);
+};
+
 /** The same zoom, relative to fitting, and the same middle cell, in a resized span. */
 export const resizeAxis = (axis: ViewAxis, from: AxisSpan, to: AxisSpan): ViewAxis => {
   const [min, max] = scaleLimits(to);

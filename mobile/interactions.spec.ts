@@ -230,6 +230,23 @@ test("ZoomableHeatmap › taps zoom in until a cell can be aimed at, then a tap 
   expect(await canvas.boundingBox(), "where the grid is, after zooming").toEqual(grid);
 });
 
+test("ZoomableHeatmap › in box mode one finger draws a box to zoom into, rather than scrolling the page", async ({ page }) => {
+  await gotoStory(page, storyById("visualization-zoomableheatmap--mobile"));
+  const canvas = page.locator("[data-mobile-story] canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  await scrollSettled(page);
+  await page.getByRole("button", { name: "Box zoom" }).tap();
+  const grid = (await canvas.boundingBox())!;
+  const top = await page.evaluate(() => visualViewport!.pageTop);
+  await (await Touch.on(page)).swipe(
+    { x: grid.x + grid.width * 0.3, y: grid.y + grid.height * 0.3 },
+    { x: grid.x + grid.width * 0.6, y: grid.y + grid.height * 0.6 }
+  );
+  await scrollSettled(page);
+  expect(await page.evaluate(() => visualViewport!.pageTop), "how far the page scrolled").toBe(top);
+  await expect(page.getByRole("button", { name: "Reset zoom" })).toBeEnabled();
+});
+
 const TWO_FINGER_HINTS: [id: string, hint: string][] = [
   ["visualization-heatmap--mobile-scrollable", "Use two fingers to move the grid"],
   ...ZOOMS.map((id): [string, string] => [id, "Use two fingers to zoom and pan"]),

@@ -96,4 +96,28 @@ test.describe("visualization/ZoomableHeatmap", () => {
     await page.mouse.click(x, y);
     await expect.poll(() => actions(page), { timeout: 2000 }).toContain("onCellClick");
   });
+
+  test("a drag with Shift held, or in box mode, zooms into the box it draws", async ({ page }) => {
+    await gotoStory(page, story);
+    const grid = (await page.locator("[data-mobile-story] canvas").boundingBox())!;
+    const at = (fx: number, fy: number) => ({ x: grid.x + grid.width * fx, y: grid.y + grid.height * fy });
+    const drawBox = async () => {
+      await page.mouse.move(at(0.3, 0.3).x, at(0.3, 0.3).y);
+      await page.mouse.down();
+      await page.mouse.move(at(0.6, 0.6).x, at(0.6, 0.6).y, { steps: 8 });
+      await page.mouse.up();
+    };
+    const reset = page.getByRole("button", { name: "Reset zoom" });
+
+    await page.keyboard.down("Shift");
+    await drawBox();
+    await page.keyboard.up("Shift");
+    await expect(reset).toBeEnabled();
+
+    await reset.click();
+    await expect(reset).toBeDisabled();
+    await page.getByRole("button", { name: "Box zoom" }).click();
+    await drawBox();
+    await expect(reset).toBeEnabled();
+  });
 });
