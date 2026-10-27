@@ -1,5 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
-import { expect } from 'storybook/test';
+import { expect, fn } from 'storybook/test';
 import Histogram from './Histogram';
 import { binHistogram } from './binning';
 
@@ -11,7 +11,8 @@ const meta = {
         controls: { expanded: true },
     },
     decorators: [
-        (Story) => (
+        // Mobile stories size to the device instead - see .storybook/preview.tsx
+        (Story, { tags }) => tags.includes('mobile') ? <Story /> : (
             <div style={{ width: 800, height: 500 }}>
                 <Story />
             </div>
@@ -269,4 +270,14 @@ export const NormalizedStack: Story = {
         thresholds: 25,
         densityLine: true,
     },
+};
+
+export const Mobile: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        ...MultiSeries.args,
+        onBarClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 300 }}><Story /></div>],
 };

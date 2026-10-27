@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
+import { ParentSize } from "@visx/responsive";
 import { SequenceAlignmentPlot, TooltipData } from "./index";
 import { EH38E3465364, EH38E4276533, EH38E4276534 } from "./example-data/mockData";
 import { getColor, getColorLabel, getLabel, getOrder, getPrimateGroup, makeAlignmentPlotData, SPECIES_ORDER_IN_API_RETURN } from "../PhyloTree/example-data/utils";
@@ -96,4 +97,16 @@ export const highlighted: Story = {
     getOrderColor: getColor,
     tooltipContents: (tooltipData) => <PlotTooltip {...tooltipData} />
   },
+};
+
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  args: EH38E4276533_.args,
+  render: (args) => (
+    <ParentSize>
+      {({ width, height }) => width > 0 && <SequenceAlignmentPlot {...args} width={width} height={height} />}
+    </ParentSize>
+  ),
+  decorators: [(Story) => <div style={{ height: 400 }}><Story /></div>],
 };

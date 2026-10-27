@@ -10,6 +10,9 @@ import { ViolinPoint, SingleViolinProps, TooltipData } from "./types";
 import ViolinTooltip from "./violinTooltip";
 import { Portal, useTooltip } from "@visx/tooltip";
 
+// Points by value: outliers are new objects each render.
+const tapKey = (distIndex: number, point?: { value: number }) => (point ? `${distIndex}:${point.value}` : `${distIndex}`);
+
 const SingleViolin = <T,>({
     distribution,
     distIndex,
@@ -24,7 +27,8 @@ const SingleViolin = <T,>({
     horizontal,
     pointTooltipBody,
     onViolinClicked,
-    onPointClicked
+    onPointClicked,
+    tap,
 }: SingleViolinProps<T>) => {
 
     const {
@@ -81,27 +85,25 @@ const SingleViolin = <T,>({
     }), [distribution.label, distribution.data.length, median, firstQuartile, thirdQuartile]);
 
     const handleMouseMove = useCallback((event: React.MouseEvent<SVGPathElement>, data: TooltipData<T>, point?: ViolinPoint<T>) => {
+        tap.hover(tapKey(distIndex, point));
         showTooltip({
             tooltipData: point && pointTooltipBody ? { point: point } : data,
             tooltipLeft: event.pageX,
             tooltipTop: event.pageY,
         });
-    }, [pointTooltipBody, showTooltip]);
+    }, [pointTooltipBody, showTooltip, tap, distIndex]);
+
+    const handleMouseLeave = () => {
+        tap.hover(null);
+        hideTooltip();
+    };
 
     const handleViolinClick = () => {
-        if (!onViolinClicked || !tooltipData) return;
-
-        if (tooltipData) {
-            onViolinClicked(distribution);
-        }
+        if (onViolinClicked && tap.activates(tapKey(distIndex))) onViolinClicked(distribution);
     };
 
     const handlePointClick = (point: ViolinPoint<T>) => {
-        if (!onPointClicked || !tooltipData) return;
-
-        if (tooltipData) {
-            onPointClicked(point);
-        }
+        if (onPointClicked && tap.activates(tapKey(distIndex, point))) onPointClicked(point);
     };
 
     //center of each Violin
@@ -144,7 +146,7 @@ const SingleViolin = <T,>({
                 //display plots if enough data provided
                 <g
                     key={`group-${distIndex}`}
-                    onMouseLeave={hideTooltip}
+                    onMouseLeave={handleMouseLeave}
                     transform={horizontal ? `translate(${offset}, 0)` : `translate(0, 0)`}
                 >
                     {distribution.data.length >= (violinProps?.pointDisplayThreshold ?? 3) && !disableViolinPlot && violinPath && (

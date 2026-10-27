@@ -3,6 +3,11 @@ import type { HeatmapProps } from "./types";
 export const TICK_FONT_SIZE = 12;
 export const TICK_FONT_FAMILY = "sans-serif";
 export const AXIS_TITLE_FONT_SIZE = 14;
+// Where a column label starts below the axis, just past its 8px tick, at any angle. visx would put
+// it a font size lower, which only horizontal text needs.
+export const X_TICK_LABEL_TOP = 12;
+// How far a row label's end sits left of the axis: the 8px tick, then the label's -0.25em.
+export const Y_TICK_LABEL_OFFSET = 11;
 
 export const makeTickFormat = (names: string[]) => (d: number | { valueOf(): number }) => names[Math.floor(+d)] ?? "";
 
@@ -19,6 +24,7 @@ export const getXAxisTickLabelProps = (xLabelOrientation: XLabelOrientation) => 
   fontFamily: TICK_FONT_FAMILY,
   textAnchor: xTickTextAnchorFor(xLabelOrientation),
   angle: xTickAngleFor(xLabelOrientation),
+  y: X_TICK_LABEL_TOP,
   dy: xLabelOrientation === "horizontal" ? "0.71em" : "0.25em",
 });
 

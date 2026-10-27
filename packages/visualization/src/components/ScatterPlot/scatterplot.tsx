@@ -3,7 +3,7 @@ import { ChartProps, Point, ZoomType } from './types';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
 import { Stack, useTheme } from '@mui/material';
-import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
+import { downloadDivAsPNG, downloadDivAsSVG, isTouchScreen } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import { DEFAULT_DIM_STYLE, getDomains, getPointExtents, isSameTransform } from './helpers';
@@ -25,7 +25,8 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const theme = useTheme();
     const tooltipRef = useRef<PlotTooltipHandle<Point<T>>>(null);
 
-    const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
+    // On touch, start in pan mode so one finger scrolls the page instead of drawing lassos.
+    const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable && !isTouchScreen() ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });

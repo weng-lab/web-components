@@ -80,5 +80,14 @@ export const useDragSelection = <T extends object>({
         resetOnStart: true,
     });
 
-    return { lines, isDragging, x, y, dx, dy, dragStart, dragMove, dragEnd, completeSelection };
+    /**
+     * Drops the lasso in progress without selecting, as when a second finger starts a pan. visx's
+     * dragEnd only calls persist() on its event, so a stand-in will do.
+     */
+    const cancelSelection = useCallback(() => {
+        if (isDragging) dragEnd({ persist: () => {} } as unknown as React.MouseEvent);
+        setLines([]);
+    }, [isDragging, dragEnd]);
+
+    return { lines, isDragging, x, y, dx, dy, dragStart, dragMove, dragEnd, completeSelection, cancelSelection };
 };

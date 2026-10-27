@@ -11,6 +11,8 @@
     "packages/*/src/**/*.d.ts",
     "testing.tsx",
     ".storybook",
-    "global.d.ts"
+    "global.d.ts",
+    "mobile",
+    "playwright.config.ts"
   ]
 }

@@ -2,14 +2,16 @@ import { useCallback, useId, useMemo, useRef, useState, type ReactElement, type 
 import { AxisLeft, AxisBottom } from "@visx/axis";
 import type { HeatmapCellId, HeatmapLegendFrame } from "./types";
 import type { AnyBin } from "./HeatmapCanvasCells";
-import type { AnimationType } from "../../utility";
+import { isTouchScreen, type AnimationType } from "../../utility";
 import HeatmapLegend from "./HeatmapLegend";
 import HeatmapSelectionPointers from "./HeatmapSelectionPointers";
 import HeatmapMiniMap from "./HeatmapMiniMap";
 import HeatmapMiniMapPopup from "./HeatmapMiniMapPopup";
 import { PlotTooltip } from "../../tooltip";
+import { useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
+import { TwoFingerHint } from "../../controls";
 import { TICK_FONT_FAMILY, AXIS_TITLE_FONT_SIZE, markTickLabels, yAxisTickLabelProps, type getXAxisTickLabelProps } from "./heatmapAxisProps";
-import { LEGEND_GAP, MINI_MAP_HEIGHT, xAxisTitleCenter, type HeatmapLayout } from "./heatmapLayout";
+import { LEGEND_GAP, MINI_MAP_GAP, MINI_MAP_HEIGHT, xAxisTitleCenter, type HeatmapLayout } from "./heatmapLayout";
 import { useHeatmapCanvasGrid } from "./hooks/useHeatmapCanvasGrid";
 import { useScrollToSelection } from "./hooks/useScrollToSelection";
 
@@ -63,6 +65,21 @@ const HeatmapGrid = ({
   });
   useScrollToSelection({ mainPaneRef, selectedCells, scrollToSelection, binWidth, viewportWidth });
 
+  // On touch, one finger scrolls the page, so a grid too big for its pane pans with two (and the
+  // minimap). One that fits leaves pinch-zoom to the page.
+  const touchScreen = isTouchScreen();
+  const gridScrolls = xMax > viewportWidth || yMax > viewportHeight;
+  const touchAction = useTwoFingerGestures(mainPaneRef, {
+    onStart: () => ({ left: mainPaneRef.current?.scrollLeft ?? 0, top: mainPaneRef.current?.scrollTop ?? 0 }),
+    onMove: ({ from, to }, start) => {
+      const main = mainPaneRef.current;
+      if (!main) return;
+      main.scrollLeft = start.left - (to.clientX - from.clientX);
+      main.scrollTop = start.top - (to.clientY - from.clientY);
+    },
+  }, touchScreen && gridScrolls);
+  const hint = useTwoFingerHint(mainPaneRef, touchScreen && gridScrolls);
+
   // Centered under the viewport, but kept inside the container, as the download places it.
   const plotLeft = yTitleWidth + yTickLabelWidth;
   const xTitleX = useMemo(
@@ -101,7 +118,7 @@ const HeatmapGrid = ({
     <>
       <div style={{ display: "flex", flexDirection: "column" }}>
         {showMiniMap && (
-          <div ref={miniMapContainerRef} style={{ marginLeft: yTitleWidth + yTickLabelWidth, position: "relative", width: viewportWidth }}>
+          <div ref={miniMapContainerRef} style={{ marginTop: marg.top, marginLeft: yTitleWidth + yTickLabelWidth, position: "relative", width: viewportWidth }}>
             <HeatmapMiniMap
               canvasCellParams={canvasCellParams}
               xMax={xMax}
@@ -124,7 +141,8 @@ const HeatmapGrid = ({
             gridTemplateColumns: showLegend
               ? `${yTitleWidth}px ${yTickLabelWidth}px ${viewportWidth}px ${LEGEND_GAP + legendWidth}px`
               : `${yTitleWidth}px ${yTickLabelWidth}px ${viewportWidth}px`,
-            gridTemplateRows: `${marg.top}px ${viewportHeight}px ${xTickLabelHeight}px ${xTitleHeight}px`,
+            // The top margin goes above the minimap, where there is one.
+            gridTemplateRows: `${showMiniMap ? MINI_MAP_GAP : marg.top}px ${viewportHeight}px ${xTickLabelHeight}px ${xTitleHeight}px`,
           }}
         >
           <div style={{ gridColumn: 1, gridRow: 2 }}>
@@ -158,7 +176,13 @@ const HeatmapGrid = ({
           <div
             ref={setMainPaneNode}
             onScroll={handleGridScroll}
-            style={{ gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, overflow: "auto", overscrollBehavior: "contain", position: "relative" }}
+            style={{
+              gridColumn: 3, gridRow: 2, width: viewportWidth, height: viewportHeight, position: "relative",
+              overflow: touchScreen ? "hidden" : "auto",
+              touchAction,
+              // The wheel stops at the grid's ends rather than scrolling on into the page.
+              overscrollBehavior: touchScreen ? "auto" : "contain",
+            }}
           >
             <div style={{ width: xMax, height: yMax, position: "relative" }}>
               <canvas
@@ -178,6 +202,8 @@ const HeatmapGrid = ({
               />
             </div>
           </div>
+          {/* Over the pane, in its grid cell: inside it, it would scroll away with the cells. */}
+          <TwoFingerHint shown={hint} text="Use two fingers to move the grid" style={{ position: "relative", gridColumn: 3, gridRow: 2 }} />
           {tooltipBody && <PlotTooltip ref={canvasTooltipRef}>{tooltipBody}</PlotTooltip>}
           <div style={{ gridColumn: 3, gridRow: 3 }}>
             <svg width={viewportWidth} height={xTickLabelHeight} style={{ display: "block", overflow: "visible" }}>

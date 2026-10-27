@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { fn } from 'storybook/test';
 import Barplot from './barplot';
 import { BarData } from './types';
 
@@ -12,7 +13,8 @@ const meta = {
         controls: { expanded: true },
     },
     decorators: [
-        (Story) => (
+        // Mobile stories size to the device instead - see .storybook/preview.tsx
+        (Story, { tags }) => tags.includes('mobile') ? <Story /> : (
             <div style={{ width: 850, height: 500 }}>
                 <Story />
             </div>
@@ -151,4 +153,15 @@ export const ManualSize: Story = {
             </div>
         ),
     ],
+};
+
+export const Mobile: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        data: sampleData,
+        TooltipContents: TooltipContents as (bar: BarData<unknown>) => React.ReactNode,
+        onBarClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 300 }}><Story /></div>],
 };

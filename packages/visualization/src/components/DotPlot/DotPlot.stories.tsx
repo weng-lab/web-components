@@ -10,7 +10,8 @@ const meta = {
     controls: { expanded: true },
   },
   decorators: [
-    (Story) => (
+    // Mobile stories size to the device instead - see .storybook/preview.tsx
+    (Story, { tags }) => tags.includes("mobile") ? <Story /> : (
       <div style={{ width: 900, height: 400 }}>
         <Story />
       </div>
@@ -139,4 +140,17 @@ export const ManualSize: Story = {
       </div>
     ),
   ],
+};
+
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  args: {
+    data: sampleData,
+    xTickFontStyle: "italic",
+    radiusTitle: "Percent Expressed",
+    colorTitle: "Mean Expression",
+    showTooltipData: true,
+  },
+  decorators: [(Story) => <div style={{ height: 320 }}><Story /></div>],
 };

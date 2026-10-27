@@ -10,6 +10,7 @@ import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from '../../utility
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import SingleBar from './singleBar';
+import { useTapToActivate } from '../../hooks';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
@@ -53,6 +54,7 @@ const BarPlot = <T,>({
 
     const theme = useTheme();
     const tooltipRef = useRef<PlotTooltipHandle<BarData<unknown>>>(null);
+    const tap = useTapToActivate<BarData<unknown>>();
 
     const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -202,8 +204,7 @@ const BarPlot = <T,>({
     }));
 
     return (
-        // Min width of 500 to ensure that on mobile the calculated bar width is not negative
-        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle} style={{ minWidth: 500, overflow: 'auto' }}>
+        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle} style={{ overflow: 'auto' }}>
             {lollipopValues.length > 0 && (
                 <Legend
                     values={lollipopValues}
@@ -261,6 +262,7 @@ const BarPlot = <T,>({
                                     index={i}
                                     onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}
                                     tooltipRef={tooltipRef}
+                                    tap={tap}
                                     cutoffNegativeValues={cutoffNegativeValues}
                                     negativeCutoff={negativeCutoff}
                                     xScale={xScale}

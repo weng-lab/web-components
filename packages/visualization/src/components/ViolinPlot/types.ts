@@ -2,6 +2,7 @@ import { ScaleBand, ScaleLinear } from '@visx/vendor/d3-scale';
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from '../../utility';
 import { ManualSizeProps } from '../../responsive';
+import type { TapToActivate } from '../../hooks';
 
 type Outliers = "all" | "top" | "bottom" | "none"
 
@@ -121,4 +122,5 @@ export interface SingleViolinProps<T> {
     pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
     onViolinClicked?: (distribution: Distribution<T>) => void | undefined;
     onPointClicked?: (point: ViolinPoint<T>) => void | undefined;
+    tap: TapToActivate<string>;
 }

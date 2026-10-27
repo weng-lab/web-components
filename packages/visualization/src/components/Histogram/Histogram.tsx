@@ -15,6 +15,7 @@ import { binHistogram } from './binning';
 import HistogramLegend from './HistogramLegend';
 import HistogramTooltip, { HistogramTooltipHandle } from './HistogramTooltip';
 import HistogramBar from './HistogramBar';
+import { useTapToActivate } from '../../hooks';
 
 const DEFAULT_COLOR = '#4c78a8';
 const DEFAULT_OPACITY = 0.85;
@@ -68,6 +69,7 @@ const Histogram = ({
 }: HistogramProps) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
     const tooltipRef = useRef<HistogramTooltipHandle | null>(null);
+    const tap = useTapToActivate<HistogramBin>();
     const { parentRef, containerStyle, width, height } = useResponsiveParentSize({ width: manualWidth, height: manualHeight }, { debounceTime: 150 });
 
     const multiSeries = isSeriesData(data);
@@ -247,6 +249,7 @@ const Histogram = ({
                             binIndex={i}
                             svgRef={svgRef}
                             tooltipRef={tooltipRef}
+                            tap={tap}
                             onBarClicked={onBarClicked}
                         />
                     ))}
@@ -262,6 +265,7 @@ const Histogram = ({
                             binIndex={i}
                             svgRef={svgRef}
                             tooltipRef={tooltipRef}
+                            tap={tap}
                             onBarClicked={onBarClicked}
                         />
                     )))}

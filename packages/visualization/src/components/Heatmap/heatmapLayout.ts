@@ -7,17 +7,20 @@ import { getHeatmapLegendWidth } from "./HeatmapLegend";
 import { getHeatmapColorScale } from "./heatmapCellAppearance";
 import { cellKey, selectionMarks as markSelection, type SelectionMarks } from "./heatmapSelection";
 import { type CanvasCellParams } from "./HeatmapCanvasCells";
-import { AXIS_TITLE_FONT_SIZE, TICK_FONT_SIZE, TICK_FONT_FAMILY } from "./heatmapAxisProps";
+import { AXIS_TITLE_FONT_SIZE, TICK_FONT_SIZE, TICK_FONT_FAMILY, X_TICK_LABEL_TOP, Y_TICK_LABEL_OFFSET } from "./heatmapAxisProps";
 
-export const LEGEND_GAP = 16;
-// Between the tick labels and the axis title.
-const AXIS_LABEL_GAP = 12;
-// Each axis title's pane, which stays put as the grid scrolls.
-const Y_AXIS_TITLE_SPACE = 40;
-const X_AXIS_TITLE_SPACE = 70;
+export const LEGEND_GAP = 12;
+// Past the tick labels, before the axis title or the plot's edge.
+const AXIS_LABEL_GAP = 6;
+// Each axis title's pane, which stays put as the grid scrolls: the title with 7px either side.
+const AXIS_TITLE_SPACE = AXIS_TITLE_FONT_SIZE + 14;
+// Above the grid, room for the legend's top label, which is centered on the bar's end.
+const DEFAULT_TOP = 10;
 // measureText and SVG text layout disagree slightly, more so for long labels: pad so none get clipped.
 const TICK_LABEL_WIDTH_SAFETY_FACTOR = 1.15;
 export const MINI_MAP_HEIGHT = 50;
+// Between the minimap and the grid.
+export const MINI_MAP_GAP = 8;
 
 /**
  * Where to center the x-axis title: at `plotCenter`, pulled in to stay inside `canvasWidth`, which
@@ -70,7 +73,9 @@ export interface UseHeatmapLayoutArgs {
   colorDomain?: [number, number];
   colors: [string, string, ...string[]];
   xLabelOrientation: NonNullable<HeatmapProps["xLabelOrientation"]>;
-  margin?: { top: number; right: number; bottom: number; left: number };
+  xLabel?: string;
+  yLabel?: string;
+  margin?: HeatmapProps["margin"];
   showLegend: boolean;
   cellWidth?: number;
   cellHeight?: number;
@@ -86,7 +91,7 @@ export interface UseHeatmapLayoutArgs {
 }
 
 export function useHeatmapLayout({
-  data, colorDomain, colors, xLabelOrientation, margin, showLegend,
+  data, colorDomain, colors, xLabelOrientation, xLabel, yLabel, margin, showLegend,
   cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
   selectedCells, highlightRange, legendWidth: customLegendWidth,
 }: UseHeatmapLayoutArgs): HeatmapLayout {
@@ -118,17 +123,16 @@ export function useHeatmapLayout({
 
   const builtInLegendWidth = useMemo(() => getHeatmapLegendWidth(minValue, maxValue), [minValue, maxValue]);
   const legendWidth = customLegendWidth ?? builtInLegendWidth;
-  const defaultRight = showLegend ? legendWidth + LEGEND_GAP : 10;
-  const defaultTop = 20;
-  const labelBottomSpace = colLabelHeight + AXIS_LABEL_GAP + X_AXIS_TITLE_SPACE;
-  const marg = margin ?? {
-    top: defaultTop,
-    left: maxRowNameWidth + AXIS_LABEL_GAP + Y_AXIS_TITLE_SPACE,
-    right: defaultRight,
-    bottom: labelBottomSpace + TICK_FONT_SIZE,
+  const yTitleWidth = yLabel ? AXIS_TITLE_SPACE : 0;
+  const xTitleHeight = xLabel ? AXIS_TITLE_SPACE : 0;
+  const marg = {
+    top: margin?.top ?? DEFAULT_TOP,
+    left: margin?.left ?? yTitleWidth + maxRowNameWidth + Y_TICK_LABEL_OFFSET + AXIS_LABEL_GAP,
+    right: margin?.right ?? (showLegend ? legendWidth + LEGEND_GAP : 10),
+    bottom: margin?.bottom ?? X_TICK_LABEL_TOP + colLabelHeight + AXIS_LABEL_GAP + xTitleHeight,
   };
 
-  const miniMapSpace = showMiniMap ? MINI_MAP_HEIGHT : 0;
+  const miniMapSpace = showMiniMap ? MINI_MAP_HEIGHT + MINI_MAP_GAP : 0;
   const availableWidth = Math.max(0, parentWidth - marg.left - marg.right);
   const availableHeight = Math.max(0, parentHeight - marg.bottom - marg.top - miniMapSpace);
 
@@ -139,9 +143,7 @@ export function useHeatmapLayout({
   const viewportWidth = Math.min(xMax, availableWidth);
   const viewportHeight = Math.min(yMax, availableHeight);
 
-  const yTitleWidth = Y_AXIS_TITLE_SPACE;
   const yTickLabelWidth = Math.max(0, marg.left - yTitleWidth);
-  const xTitleHeight = X_AXIS_TITLE_SPACE;
   const xTickLabelHeight = Math.max(0, marg.bottom - xTitleHeight);
 
   const binWidth = xMax / data.length;

@@ -2,7 +2,7 @@ import TuneIcon from "@mui/icons-material/Tune";
 import { Badge, Button, IconButton, Popover, Stack, Tooltip, Typography } from "@mui/material";
 import { useState, type MouseEvent } from "react";
 import { formatRange, sameRange, type ColorRange, type RangePreset } from "../colorbarAxis";
-import ColorRangeEditor, { type ColorRangeEditorProps } from "./ColorRangeEditor";
+import ColorRangeEditor, { EDITOR_WIDTH, type ColorRangeEditorProps } from "./ColorRangeEditor";
 import SteadyText from "./SteadyText";
 
 /** What moving a colorbar's range needs beyond what the colorbar already has. */
@@ -18,7 +18,7 @@ export type ColorRangeControl = {
   onClose?: () => void;
 };
 
-export type ColorRangeButtonProps = ColorRangeEditorProps & {
+export type ColorRangeButtonProps = Omit<ColorRangeEditorProps, "width"> & {
   /**
    * What the scale is and where it starts, one paragraph each: a log transform, why the default range
    * is what it is. Shown above the editor.
@@ -114,7 +114,11 @@ const ColorRangeButton = ({ label, notes = [], onOpen, onClose, ...editor }: Col
             ))}
           </Stack>
         )}
-        <ColorRangeEditor {...editor} />
+        <ColorRangeEditor
+          {...editor}
+          // Fits a phone: Popover's 16px marginThreshold plus the panel's 16px padding, each side.
+          width={Math.min(EDITOR_WIDTH, (window.visualViewport?.width ?? window.innerWidth) - 64)}
+        />
       </Popover>
     </>
   );

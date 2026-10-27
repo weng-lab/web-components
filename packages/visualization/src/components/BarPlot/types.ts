@@ -1,6 +1,7 @@
 import { AnimationType, DownloadPlotHandle } from "../../utility";
 import { ManualSizeProps } from "../../responsive";
 import type { PlotTooltipRef } from "../../tooltip";
+import type { TapToActivate } from "../../hooks";
 
 export interface BarData<T> {
   category?: string;
@@ -69,6 +70,7 @@ export interface SingleBarProps<T> {
     index: number;
     onBarClicked?: (bar: BarData<T>) => void;
     tooltipRef: PlotTooltipRef<BarData<T>>;
+    tap: TapToActivate<BarData<T>>;
     cutoffNegativeValues: boolean;
     negativeCutoff: number;
     xScale: any;

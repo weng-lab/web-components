@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Heatmap from "./Heatmap";
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { fn } from 'storybook/test';
 import { Box, Button, Stack } from '@mui/material';
 import { RowDatum, ColumnDatum, HeatmapCellId, HeatmapProps } from './types';
 import { Colorbar } from '../Legend/Colorbar/Colorbar';
@@ -28,7 +29,8 @@ const meta = {
         controls: { expanded: true },
     },
     decorators: [
-        (Story) => (
+        // Mobile stories size to the device instead - see .storybook/preview.tsx
+        (Story, { tags }) => tags.includes('mobile') ? <Story /> : (
           <div style={{ width: 850, height: 500}}>
             <Story />
           </div>
@@ -131,14 +133,13 @@ export const SelectableCells: Story = {
         data: heatmapData,
         colors: ['#20619e', '#fff36e', '#c92b16'],
     },
-    render: () => {
+    render: (args) => {
         const [selectedCells, setSelectedCells] = useState<HeatmapCellId[]>([]);
         return (
             <Heatmap
-                data={heatmapData}
+                {...args}
                 xLabel="X-Axis Label"
                 yLabel="Y-Axis Label"
-                colors={['#20619e', '#fff36e', '#c92b16']}
                 selectedCells={selectedCells}
                 onClick={(bin) => {
                     setSelectedCells((current) =>
@@ -374,3 +375,27 @@ export const LegendSweepHighlightStatic: Story = {
     },
     render: (args) => <SweepableHeatmap data={args.data} xLabel="Sample" yLabel="Feature" colors={Z_COLORS} />,
 };
+
+export const Mobile: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: { ...SelectableCells.args, tooltipBody: Default.args!.tooltipBody },
+    render: SelectableCells.render,
+    decorators: [(Story) => <div style={{ height: 420, border: '1px solid black' }}><Story /></div>],
+};
+
+// A grid too big for the screen, which scrolls inside the plot.
+export const MobileScrollable: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        ...Default.args,
+        data: largeHeatmapData,
+        cellWidth: 24,
+        cellHeight: 18,
+        showMiniMap: true,
+        onClick: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 420, border: '1px solid black' }}><Story /></div>],
+};
+ 

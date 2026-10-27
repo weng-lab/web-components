@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { fn } from 'storybook/test';
 import Treemap from './TreeMap';
 import { TreemapNode } from './types';
 import { Box } from '@mui/material';
@@ -13,7 +14,8 @@ const meta = {
         controls: { expanded: true },
     },
     decorators: [
-        (Story) => (
+        // Mobile stories size to the device instead - see .storybook/preview.tsx
+        (Story, { tags }) => tags.includes('mobile') ? <Story /> : (
           <div style={{ width: 850, height: 500}}>
             <Story />
           </div>
@@ -111,4 +113,14 @@ export const ManualSize: Story = {
           </div>
         ),
       ],
+};
+
+export const Mobile: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        ...Tooltip.args,
+        onNodeClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 400 }}><Story /></div>],
 };

@@ -10,7 +10,8 @@ import { localPoint } from "@visx/event";
 import { ScaleLinear } from "@visx/vendor/d3-scale";
 import { BackgroundField, ChartProps, CrosshairPosition, DimStyle, Point, SelectionMode, ZoomType } from "./types";
 import { DEFAULT_HOVER_STYLE, drawCanvasPoint, getTicks, isPointVisible, partitionPointsByHover, pointKey, prepareCanvas, rescaleX, rescaleY } from "./helpers";
-import { useStableCallback } from "../../hooks";
+import { followFingers, toLocal, useStableCallback, useTapToActivate, useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
+import { TwoFingerHint } from "../../controls";
 import AnimatedPoints from "./AnimatedPoints";
 import PointLabels from "./PointLabels";
 import GradientLegend from "./GradientLegend";
@@ -139,31 +140,32 @@ const ScatterPlotViewport = <T extends object>({
         return () => window.clearTimeout(t);
     }, [animation, animationBuffer, animationGroupSize, pointData.length]);
 
-    const { lines, isDragging, x, y, dx, dy, dragStart, dragMove, dragEnd, completeSelection } =
+    const { lines, isDragging, x, y, dx, dy, dragStart, dragMove, dragEnd, completeSelection, cancelSelection } =
         useDragSelection({ pointData, margin, xScale, yScale, onSelectionChange });
 
-    // Passive event listeners to prevent default scroll/touch behavior on the chart surface
+    // Non-passive (React's onWheel is passive), so the wheel zooms instead of scrolling the page.
     useEffect(() => {
         const graphElement = graphRef.current;
-
         const handleWheel = (event: WheelEvent) => { event.preventDefault(); };
-        const handleTouchMove = (event: TouchEvent) => { event.preventDefault(); };
-        const handleTouchStart = (event: TouchEvent) => { event.preventDefault(); };
-
-        if (graphElement) {
-            graphElement.addEventListener('wheel', handleWheel, { passive: false });
-            graphElement.addEventListener('touchstart', handleTouchStart, { passive: false });
-            graphElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-        }
-
-        return () => {
-            if (graphElement) {
-                graphElement.removeEventListener('wheel', handleWheel);
-                graphElement.removeEventListener('touchstart', handleTouchStart);
-                graphElement.removeEventListener('touchmove', handleTouchMove);
-            }
-        };
+        graphElement?.addEventListener('wheel', handleWheel, { passive: false });
+        return () => graphElement?.removeEventListener('wheel', handleWheel);
     }, []);
+
+    const svgRef = useRef<SVGSVGElement | null>(null);
+    const twoFingerTouchAction = useTwoFingerGestures(svgRef, {
+        onStart: () => {
+            cancelSelection();
+            setShowPointAnimation(false);
+            return zoom.transformMatrix;
+        },
+        onMove: ({ from, to, scale }, start) => {
+            const surface = graphRef.current;
+            if (!surface) return;
+            zoom.setTransformMatrix(followFingers(start, toLocal(surface, from), toLocal(surface, to), scale));
+        },
+    }, !disableZoom);
+    // In select mode a finger draws, so it isn't trying to move the plot.
+    const hint = useTwoFingerHint(svgRef, !disableZoom && selectMode !== "select");
 
     // The zoom holds panning inside the plot area, whose size only the plot knows.
     const { setPanExtent } = zoom;
@@ -276,9 +278,11 @@ const ScatterPlotViewport = <T extends object>({
         return () => cancelAnimationFrame(frame);
     }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation, hoveredPointKeys]);
 
+    const tap = useTapToActivate<Point<T>>();
+    useEffect(() => tap.hover(hoveredPoint), [tap, hoveredPoint]);
     const handlePointClick = useCallback(() => {
-        if (hoveredPoint) onPointClicked?.(hoveredPoint);
-    }, [hoveredPoint, onPointClicked]);
+        if (hoveredPoint && tap.activates(hoveredPoint)) onPointClicked?.(hoveredPoint);
+    }, [hoveredPoint, onPointClicked, tap]);
 
     const surfaceCursor = disableZoom
         ? selectable
@@ -306,9 +310,9 @@ const ScatterPlotViewport = <T extends object>({
      * dispatch, and useStableCallback makes the frame use the current zoom.
      */
     const dragFrameRef = useRef<number | null>(null);
-    const pendingDragRef = useRef<MouseEvent | TouchEvent | null>(null);
-    const dragMoveLatest = useStableCallback((event: MouseEvent | TouchEvent) => {
-        zoom.dragMove(event as unknown as React.MouseEvent | React.TouchEvent);
+    const pendingDragRef = useRef<MouseEvent | null>(null);
+    const dragMoveLatest = useStableCallback((event: MouseEvent) => {
+        zoom.dragMove(event as unknown as React.MouseEvent);
     });
 
     const flushPendingDrag = useCallback(() => {
@@ -325,7 +329,7 @@ const ScatterPlotViewport = <T extends object>({
         if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
     }, []);
 
-    const onZoomDragMove = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
+    const onZoomDragMove = (event: React.MouseEvent<SVGRectElement>) => {
         pendingDragRef.current = event.nativeEvent;
         if (dragFrameRef.current !== null) return;
         dragFrameRef.current = requestAnimationFrame(() => {
@@ -363,21 +367,10 @@ const ScatterPlotViewport = <T extends object>({
         : selectMode === "select"
             ? handleSelectionEnd
             : disableZoom ? undefined : onZoomDragEnd;
-    const onSurfaceTouchStart = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? dragStart
-            : disableZoom ? undefined : zoom.dragStart;
-    const onSurfaceTouchEnd = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? handleSelectionEnd
-            : disableZoom ? undefined : onZoomDragEnd;
-    const onSurfaceTouchMove = selectMode === "none"
-        ? undefined
-        : selectMode === "select"
-            ? (isDragging ? dragMove : undefined)
-            : disableZoom ? undefined : onZoomDragMove;
+    // One finger only draws selections; outside select mode it scrolls the page.
+    const onSurfaceTouchStart = selectMode === "select" ? dragStart : undefined;
+    const onSurfaceTouchEnd = selectMode === "select" ? handleSelectionEnd : undefined;
+    const onSurfaceTouchMove = selectMode === "select" && isDragging ? dragMove : undefined;
     const onSurfaceWheel: React.WheelEventHandler<SVGRectElement> = (event) => {
         setShowPointAnimation(false);
         if (!disableZoom) {
@@ -452,10 +445,16 @@ const ScatterPlotViewport = <T extends object>({
                         }}
                     />
                     <svg
+                        ref={svgRef}
                         width={width}
                         height={height}
                         overflow="visible"
-                        style={{ position: "absolute", userSelect: "none" }}
+                        style={{
+                            position: "absolute",
+                            userSelect: "none",
+                            // In select mode a finger draws, so it can't also scroll the page.
+                            touchAction: selectMode === "select" ? "none" : twoFingerTouchAction,
+                        }}
                         onMouseMove={(event) => {
                             if (isDragging) handleMouseLeave();
                             else handleMouseMove(event, zoom);
@@ -585,6 +584,10 @@ const ScatterPlotViewport = <T extends object>({
                         />
                         {legend}
                     </svg>
+                    <TwoFingerHint
+                        shown={hint}
+                        style={{ top: margin.top, left: margin.left, width: boundedWidth, height: boundedHeight }}
+                    />
                 </div>
             )}
         </Box>

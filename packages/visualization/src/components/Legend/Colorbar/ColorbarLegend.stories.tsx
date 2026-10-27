@@ -95,3 +95,9 @@ export const EveryValueAlike: Story = {
 export const CustomLabelStyle: Story = {
   args: { labelStyle: { fontFamily: "Georgia, serif", fontSize: 13, fill: "#1f2937" }, length: 220 },
 };
+
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  args: Sequential.args,
+};

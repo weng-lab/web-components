@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { fn } from 'storybook/test';
 import { useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
 import ScatterPlotSync from './ScatterPlotSync';
@@ -17,7 +18,8 @@ const meta = {
         controls: { expanded: true },
     },
     decorators: [
-        (Story) => (
+        // Mobile stories size to the device instead - see .storybook/preview.tsx
+        (Story, { tags }) => tags.includes('mobile') ? <Story /> : (
           <div style={{ width: 850, height: 500}}>
             <Story />
           </div>
@@ -853,4 +855,24 @@ export const BackgroundFieldCustomLegend: Story = {
             />
         );
     },
+};
+
+export const Mobile: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        pointData: points,
+        loading: false,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        selectable: true,
+        onSelectionChange: fn(),
+        onPointClicked: fn(),
+        initialState: {
+            minimap: {
+                showWhileZoomed: true,
+            },
+        },
+    },
+    decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
 };

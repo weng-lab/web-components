@@ -7,7 +7,9 @@
     "storybook": "storybook dev -p 6006",
     "sb": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "dev": "vite"
+    "dev": "vite",
+    "test:mobile": "playwright test --project=\"mobile:*\"",
+    "audit:mobile": "playwright test --project=\"audit:*\""
   },
   "keywords": [],
   "author": "",
@@ -21,8 +23,10 @@
     "@mui/material": "^7.1.1",
     "@mui/x-data-grid-premium": "^8.18.0",
     "@mui/x-license": "^8.18.0",
+    "@playwright/test": "1.58.2",
     "@storybook/addon-a11y": "10.5.7",
     "@storybook/addon-docs": "10.5.7",
+    "@storybook/addon-mcp": "^0.7.0",
     "@storybook/addon-themes": "10.5.7",
     "@storybook/addon-vitest": "10.5.7",
     "@storybook/react-vite": "10.5.7",
@@ -63,8 +67,7 @@
     "typescript": "^5.8.3",
     "vite": "^7.0.0",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^3.2.3",
-    "@storybook/addon-mcp": "^0.7.0"
+    "vitest": "^3.2.3"
   },
   "msw": {
     "workerDirectory": [
