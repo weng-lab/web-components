@@ -22,6 +22,7 @@ const TwoPaneLayout = ({
   min = 20,
   max = 80,
   showTabLabels = false,
+  onTabChange,
 }: TwoPaneLayoutProps) => {
   const [tab, setTab] = useState<number>(0);
   const [tableOpen, setTableOpen] = useState(true);
@@ -46,6 +47,7 @@ const TwoPaneLayout = ({
 
   const handleSetTab = (newTab: number) => {
     setTab(newTab);
+    onTabChange?.(newTab);
   };
 
   const handleToggleTable = () => {
