@@ -49,4 +49,10 @@ export type TwoPaneLayoutProps = {
    * @default false
    */
   showTabLabels?: boolean;
+  /**
+   * Called with a plot's index in `plots` when the reader switches to its tab, so the page can follow
+   * along - filtering the table down to the samples that plot draws, say. The layout opens on the
+   * first tab, which isn't reported.
+   */
+  onTabChange?: (index: number) => void;
 };

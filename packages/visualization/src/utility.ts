@@ -4,6 +4,9 @@ import { easeOut, Transition } from "framer-motion";
 
 export type AnimationType = "fade" | "scale" | "slideUp" | "slideRight" | "pop";
 
+/** Whether the main pointer is a finger - a phone or tablet - rather than a mouse. */
+export const isTouchScreen = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+
 export interface DownloadPlotHandle {
   // May return a Promise: callers driving a loading indicator (e.g. DownloadModal) await it to
   // keep the indicator up for as long as the export actually takes.

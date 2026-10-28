@@ -3,10 +3,10 @@ import { ChartProps, Point, ZoomType } from './types';
 import { scaleLinear } from '@visx/scale';
 import ControlButtons from './controls';
 import { Stack, useTheme } from '@mui/material';
-import { downloadDivAsPNG, downloadDivAsSVG } from '../../utility';
+import { downloadDivAsPNG, downloadDivAsSVG, isTouchScreen } from '../../utility';
 import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
-import { DEFAULT_DIM_STYLE, getDomains, getPointExtents, isSameTransform } from './helpers';
+import { DEFAULT_DIM_STYLE, equalizeDomains, getDomains, getPointExtents, isSameTransform } from './helpers';
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
@@ -25,7 +25,10 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const theme = useTheme();
     const tooltipRef = useRef<PlotTooltipHandle<Point<T>>>(null);
 
-    const initialSelectionMode = props.initialState?.controls?.selectionType ?? (props.selectable ? "select" : "pan");
+    // Without zoom there's no pan to start in, except on touch, where one finger then scrolls the
+    // page instead of drawing lassos.
+    const initialSelectionMode = props.initialState?.controls?.selectionType
+        ?? (props.disableZoom && props.selectable && !isTouchScreen() ? "select" : "pan");
     const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
@@ -52,8 +55,10 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     // Depend on the bounds rather than the arrays so a consumer passing a fresh domain array on
     // every render doesn't rebuild the scales (and with them every derived scale and canvas draw).
-    const [xDomainMin, xDomainMax] = props.xDomain ?? dataDomains.xDomain;
-    const [yDomainMin, yDomainMax] = props.yDomain ?? dataDomains.yDomain;
+    const fitted = { xDomain: props.xDomain ?? dataDomains.xDomain, yDomain: props.yDomain ?? dataDomains.yDomain };
+    const domains = props.disableEqualScale ? fitted : equalizeDomains(fitted.xDomain, fitted.yDomain, boundedWidth, boundedHeight);
+    const [xDomainMin, xDomainMax] = domains.xDomain;
+    const [yDomainMin, yDomainMax] = domains.yDomain;
 
     const xScale = useMemo(() => {
         return scaleLinear({
@@ -136,7 +141,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     const renderPlot = (zoom: ZoomType) => {
         // Anchor the buttons on the plot area explicitly - a shared zoom is sized by whoever owns
-        // it, so visx's own default anchor (the centre of that size) isn't this plot's centre.
+        // it, so visx's own default anchor (the center of that size) isn't this plot's center.
         const zoomCenter = { x: boundedWidth / 2, y: boundedHeight / 2 };
         const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2, point: zoomCenter }); }
         const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8, point: zoomCenter }); }

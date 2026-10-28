@@ -60,3 +60,9 @@ export const Loading: Story = {
     loading: true
   }
 };
+
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  args: Default.args,
+};

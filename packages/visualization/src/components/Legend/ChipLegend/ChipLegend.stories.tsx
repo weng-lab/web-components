@@ -140,3 +140,11 @@ export const Scrollable: Story = {
     </Box>
   ),
 };
+
+/** Dozens of groups in a row that scrolls sideways. */
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  args: { groups: MANY_GROUPS, scrollable: true },
+  render: (args) => <Interactive {...args} points />,
+};

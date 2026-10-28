@@ -43,15 +43,26 @@ interface PlotTooltipState<T> {
 /**
  * Places the tooltip along one axis: offset from the pointer on the leading side, flipped to the
  * trailing side when the leading one would run off the end, and clamped when it fits on neither -
- * a tooltip larger than the viewport has no good side, so it is pinned rather than centred on a
+ * a tooltip larger than the viewport has no good side, so it is pinned rather than centered on a
  * pointer it cannot clear.
  */
-const placeAlongAxis = (pointer: number, size: number, viewport: number) => {
+const placeAlongAxis = (pointer: number, size: number, start: number, end: number) => {
   const leading = pointer + POINTER_OFFSET;
   const trailing = pointer - POINTER_OFFSET - size;
-  const overflowsLeading = leading + size > viewport - VIEWPORT_MARGIN;
-  const position = overflowsLeading && trailing >= VIEWPORT_MARGIN ? trailing : leading;
-  return Math.max(VIEWPORT_MARGIN, Math.min(position, viewport - size - VIEWPORT_MARGIN));
+  const overflowsLeading = leading + size > end - VIEWPORT_MARGIN;
+  const position = overflowsLeading && trailing >= start + VIEWPORT_MARGIN ? trailing : leading;
+  return Math.max(start + VIEWPORT_MARGIN, Math.min(position, end - size - VIEWPORT_MARGIN));
+};
+
+/**
+ * The visible area in fixed-position coordinates. On a phone the visual viewport can be smaller than
+ * innerWidth/innerHeight, after a pinch-zoom or with the layout viewport widened by overflow.
+ */
+const onScreen = () => {
+  const viewport = window.visualViewport;
+  return viewport
+    ? { left: viewport.offsetLeft, top: viewport.offsetTop, width: viewport.width, height: viewport.height }
+    : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
 };
 
 /**
@@ -135,8 +146,9 @@ function PlotTooltip<T>({ ref, children, zIndex }: PlotTooltipProps<T>) {
 
   // Before the first measurement there is no size to place against. The callback ref measures
   // during the commit that adds the node, so this fallback is never a position the user sees.
-  const left = size ? placeAlongAxis(state.left, size.width, window.innerWidth) : state.left + POINTER_OFFSET;
-  const top = size ? placeAlongAxis(state.top, size.height, window.innerHeight) : state.top + POINTER_OFFSET;
+  const screen = onScreen();
+  const left = size ? placeAlongAxis(state.left, size.width, screen.left, screen.left + screen.width) : state.left + POINTER_OFFSET;
+  const top = size ? placeAlongAxis(state.top, size.height, screen.top, screen.top + screen.height) : state.top + POINTER_OFFSET;
 
   return (
     <Portal>

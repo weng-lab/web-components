@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ParentSize } from "@visx/responsive";
 import { useState } from "react";
 import type { RampRange } from "../colorbarAxis";
 import { Colorbar, type ColorbarProps } from "./Colorbar";
@@ -50,4 +51,15 @@ export const Lying: Story = {
 /** A value marked on the bar, as a hovered cell's would be. */
 export const WithMarker: Story = {
   args: { marker: 1.4 },
+};
+
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  render: (args) => (
+    <ParentSize>
+      {({ width, height }) => width > 0 && <InSvg {...args} orientation="horizontal" width={width} height={height} />}
+    </ParentSize>
+  ),
+  decorators: [(Story) => <div style={{ height: 40 }}><Story /></div>],
 };

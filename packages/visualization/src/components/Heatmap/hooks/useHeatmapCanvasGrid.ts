@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { HeatmapCellId } from "../types";
 import type { PlotTooltipHandle } from "../../../tooltip";
 import type { AnimationType } from "../../../utility";
-import { useStableCallback } from "../../../hooks";
+import { useStableCallback, useTapToActivate } from "../../../hooks";
 import { drawHeatmapCells, getVisibleRange, hitTestCell, buildBin, type AnyBin, type CanvasCellParams } from "../HeatmapCanvasCells";
+import { cellKey } from "../heatmapSelection";
 
 // Rows and columns drawn past the viewport, so cells and tick labels don't pop in as they scroll into view.
 const GRID_OVERSCAN_CELLS = 4;
@@ -27,6 +28,7 @@ export function useHeatmapCanvasGrid({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hoveredCellRef = useRef<HeatmapCellId | null>(null);
   const canvasTooltipRef = useRef<PlotTooltipHandle<AnyBin>>(null);
+  const tap = useTapToActivate<string>();
   const drawRafRef = useRef<number | null>(null);
   // The entry animation in progress, cleared once the cells in view have come to rest.
   const entryRef = useRef<{ type: AnimationType; startedAt: number; scrollLeft: number } | null>(null);
@@ -131,6 +133,7 @@ export function useHeatmapCanvasGrid({
     const prev = hoveredCellRef.current;
     if (prev?.row !== cell?.row || prev?.column !== cell?.column) {
       hoveredCellRef.current = cell;
+      tap.hover(cell && cellKey(cell));
       drawCanvas();
     }
     if (cell) {
@@ -139,23 +142,25 @@ export function useHeatmapCanvasGrid({
     } else {
       canvasTooltipRef.current?.hide();
     }
-  }, [canvasCellParams, cellAt, drawCanvas]);
+  }, [canvasCellParams, cellAt, drawCanvas, tap]);
 
   const handleCanvasMouseLeave = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     event.currentTarget.style.cursor = "default";
     if (hoveredCellRef.current) {
       hoveredCellRef.current = null;
+      tap.hover(null);
       drawCanvas();
     }
     canvasTooltipRef.current?.hide();
-  }, [drawCanvas]);
+  }, [drawCanvas, tap]);
 
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onClick) return;
     const cell = cellAt(event);
-    const bin = cell && buildBin(canvasCellParams, cell);
+    if (!cell || !tap.activates(cellKey(cell))) return;
+    const bin = buildBin(canvasCellParams, cell);
     if (bin) onClick(bin);
-  }, [canvasCellParams, cellAt, onClick]);
+  }, [canvasCellParams, cellAt, onClick, tap]);
 
   return {
     canvasRef, mainPaneRef, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,

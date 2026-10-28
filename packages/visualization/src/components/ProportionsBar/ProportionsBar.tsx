@@ -1,11 +1,12 @@
-import React, { useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
+import { useParentSize } from "@visx/responsive";
 import { BarStackHorizontal } from "@visx/shape";
 import { scaleBand, scaleLinear } from "@visx/scale";
-import { useTooltip, defaultStyles, useTooltipInPortal, TooltipInPortalProps } from "@visx/tooltip";
-import { localPoint } from "@visx/event";
-import { LinearProgress, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
+import { LinearProgress, Table, TableBody, TableCell, TableRow, Typography, useTheme } from "@mui/material";
 import { ProportionsBarProps } from "./types";
 import { sortObjectByValueDesc } from "./helpers";
+import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
+import { isTouchScreen } from "../../utility";
 
 export const ProportionsBar = <K extends string>({
   data,
@@ -17,27 +18,17 @@ export const ProportionsBar = <K extends string>({
   formatLabel,
   style,
 }: ProportionsBarProps<K>) => {
-  const { containerRef, TooltipInPortal } = useTooltipInPortal({
-    scroll: true,
-    detectBounds: true,
-  });
+  const theme = useTheme();
+  const tooltipRef = useRef<PlotTooltipHandle<Record<K, number>>>(null);
 
   const plotData = useMemo(() => {
     if (!data) return null
     return sortDescending ? sortObjectByValueDesc(data) : data
   }, [data, sortDescending]);
 
-  //Fix weird type error on build
-  //Type error: 'TooltipInPortal' cannot be used as a JSX component.
-  const TooltipComponent = TooltipInPortal as unknown as React.FC<TooltipInPortalProps>;
-
-  const { tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip();
-
   const totalCount = plotData ? (Object.values(plotData) as number[]).reduce((prev, curr) => prev + curr, 0) : 0;
 
-  const outerDivRef = useRef<HTMLDivElement>(null)
-
-  const width = outerDivRef?.current ? outerDivRef.current.offsetWidth : 0
+  const { parentRef, width } = useParentSize<HTMLDivElement>();
 
   const barLengthScale = scaleLinear<number>({
     domain: [0, totalCount],
@@ -50,15 +41,6 @@ export const ProportionsBar = <K extends string>({
     range: [0, 0],
   });
 
-  const handleMouseOver = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    const coords = localPoint(event, event);
-    if (!coords) return
-    showTooltip({
-      tooltipLeft: coords.x,
-      tooltipTop: coords.y,
-    });
-  };
-
   const sharedProps = useMemo(
     () => ({
       data: plotData ? [plotData] : [],
@@ -68,10 +50,11 @@ export const ProportionsBar = <K extends string>({
     [plotData, getColor]
   );
 
-  const hitboxPadding = 10;
+  // Fingertip-sized above and below the 4px bar on touch; not past its ends, which could run off the screen.
+  const hitboxPadding = isTouchScreen() ? 20 : 10;
 
   return (
-    <div style={{ ...style }} ref={outerDivRef}>
+    <div style={{ ...style }} ref={parentRef}>
       {label && <Typography variant="caption">{label}</Typography>}
       {loading ? (
         <LinearProgress />
@@ -87,58 +70,59 @@ export const ProportionsBar = <K extends string>({
             />
           </svg>
           <div
-            ref={containerRef}
             style={{
               position: "absolute",
-              left: -hitboxPadding,
+              left: 0,
               top: -hitboxPadding,
-              width: width + hitboxPadding * 2,
+              width,
               height: 4 + hitboxPadding * 2,
               zIndex: 2,
               background: "transparent",
             }}
-            onMouseMove={(e) => handleMouseOver(e)}
-            onMouseLeave={hideTooltip}
+            onMouseMove={(event) => plotData && tooltipRef.current?.show(plotData, event)}
+            onMouseLeave={() => tooltipRef.current?.hide()}
           />
         </div>
       )}
-      {tooltipOpen && plotData && (
-        <TooltipComponent top={tooltipTop} left={tooltipLeft} style={{ zIndex: 1000, ...defaultStyles }}>
-          <Typography>{tooltipTitle}</Typography>
-          <Table size="small">
-            <TableBody
-              sx={{
-                "& tr:last-of-type td, & tr:last-of-type th": {
-                  border: 0,
-                },
-              }}
-            >
-              {(Object.keys(plotData) as K[]).map((key, i) => {
-                const value = plotData[key];
-                return (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: 12,
-                          height: 12,
-                          marginRight: 6,
-                          borderRadius: "50%",
-                          backgroundColor: getColor(key),
-                        }}
-                      />
-                      {formatLabel ? formatLabel(key) : key}
-                    </TableCell>
-                    <TableCell align="right">{value}</TableCell>
-                    <TableCell align="right">{((value / totalCount) * 100).toFixed(2)}%</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TooltipComponent>
-      )}
+      <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+        {(proportions) => (
+          <>
+            <Typography>{tooltipTitle}</Typography>
+            <Table size="small">
+              <TableBody
+                sx={{
+                  "& tr:last-of-type td, & tr:last-of-type th": {
+                    border: 0,
+                  },
+                }}
+              >
+                {(Object.keys(proportions) as K[]).map((key, i) => {
+                  const value = proportions[key];
+                  return (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            width: 12,
+                            height: 12,
+                            marginRight: 6,
+                            borderRadius: "50%",
+                            backgroundColor: getColor(key),
+                          }}
+                        />
+                        {formatLabel ? formatLabel(key) : key}
+                      </TableCell>
+                      <TableCell align="right">{value}</TableCell>
+                      <TableCell align="right">{((value / totalCount) * 100).toFixed(2)}%</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </>
+        )}
+      </PlotTooltip>
     </div>
   );
 };

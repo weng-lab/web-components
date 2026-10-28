@@ -1,8 +1,7 @@
 import { SingleNodeProps, TreemapNode } from "./types";
 import ValueOval from "./ValueOval";
 import { getLabelPlacement, truncateTextToWidth } from "./helpers";
-import { ReactNode, useCallback } from "react";
-import { Portal, TooltipWithBounds, useTooltip } from "@visx/tooltip";
+import { useCallback } from "react";
 import React from "react";
 import { HierarchyRectangularNode } from "@visx/hierarchy";
 
@@ -47,28 +46,10 @@ const SingleNode = <T,>(
         hasChildren
     );
 
-    const {
-        tooltipData,
-        tooltipLeft,
-        tooltipTop,
-        tooltipOpen,
-        showTooltip,
-        hideTooltip,
-    } = useTooltip<ReactNode>();
-
+    const { tooltipRef } = props;
     const handleMouseMove = useCallback(
-        (event: React.MouseEvent<SVGElement>) => {
-            if (!props.tooltipBody) return;
-
-            const tooltipContent = props.tooltipBody(props.node.data);
-
-            showTooltip({
-                tooltipLeft: event.clientX + 10,
-                tooltipTop: event.clientY + 10,
-                tooltipData: tooltipContent,
-            });
-        },
-        [props.tooltipBody, props.node.data, showTooltip]
+        (event: React.MouseEvent<SVGElement>) => tooltipRef.current?.show(props.node.data, event),
+        [tooltipRef, props.node.data]
     );
 
     const handleNodeClick = () => {
@@ -82,7 +63,7 @@ const SingleNode = <T,>(
                 onMouseEnter={() => props.onHover(true)}
                 onMouseLeave={() => {
                     props.onHover(false);
-                    hideTooltip?.();
+                    tooltipRef.current?.hide();
                 }}
                 onMouseMove={handleMouseMove}
                 onClick={handleNodeClick}
@@ -122,13 +103,6 @@ const SingleNode = <T,>(
                     />
                 )}
             </g>
-            {props.tooltipBody && tooltipOpen && tooltipData && (
-                <Portal>
-                    <TooltipWithBounds left={(tooltipLeft ?? 0) + 10} top={tooltipTop}>
-                        {tooltipData}
-                    </TooltipWithBounds>
-                </Portal>
-            )}
         </React.Fragment>
     );
 };

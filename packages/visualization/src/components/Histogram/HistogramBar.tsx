@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { getAnimationProps, AnimationType } from '../../utility';
 import { HistogramBin } from './types';
 import { HistogramTooltipHandle } from './HistogramTooltip';
+import type { TapToActivate } from '../../hooks';
 
 export interface HistogramBarProps {
     bin: HistogramBin;
@@ -16,11 +17,12 @@ export interface HistogramBarProps {
     binIndex: number;
     svgRef: React.RefObject<SVGSVGElement | null>;
     tooltipRef: React.RefObject<HistogramTooltipHandle | null>;
+    tap: TapToActivate<HistogramBin>;
     onBarClicked?: (bin: HistogramBin) => void;
 }
 
 //memoize so that entire chart doesnt re-render on hover, just the hovered bar
-const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType, binIndex, svgRef, tooltipRef, onBarClicked }: HistogramBarProps) => {
+const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType, binIndex, svgRef, tooltipRef, tap, onBarClicked }: HistogramBarProps) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const Wrapper = animationType ? motion.g : 'g';
@@ -39,6 +41,7 @@ const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType,
             {...animProps}
             onMouseEnter={(e: React.MouseEvent) => {
                 setIsHovered(true);
+                tap.hover(bin);
                 const rect = svgRef.current?.getBoundingClientRect();
                 tooltipRef.current?.show(bin, rect ? e.clientX - rect.left + 10 : e.pageX, rect ? e.clientY - rect.top : e.pageY);
             }}
@@ -48,6 +51,7 @@ const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType,
             }}
             onMouseLeave={() => {
                 setIsHovered(false);
+                tap.hover(null);
                 tooltipRef.current?.hide();
             }}
         >
@@ -62,7 +66,9 @@ const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType,
                     opacity={opacities[si]}
                     stroke={isHovered ? '#000000' : 'none'}
                     style={{ cursor: onBarClicked ? 'pointer' : 'default' }}
-                    onClick={() => onBarClicked?.(bin)}
+                    onClick={() => {
+                        if (tap.activates(bin)) onBarClicked?.(bin);
+                    }}
                 />
             ))}
         </Wrapper>

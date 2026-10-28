@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react-vite';
+import { fn } from 'storybook/test';
 import { testData } from './testData';
 import { Box, Typography } from '@mui/material';
 import ViolinPlot from './violinPlot';
@@ -13,7 +14,8 @@ const meta = {
         controls: { expanded: true },
     },
     decorators: [
-        (Story) => (
+        // Mobile stories size to the device instead - see .storybook/preview.tsx
+        (Story, { tags }) => tags.includes('mobile') ? <Story /> : (
           <div style={{ width: 850, height: 500}}>
             <Story />
           </div>
@@ -173,4 +175,22 @@ export const ManualSize: Story = {
           </div>
         ),
       ],
+};
+
+export const Mobile: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        distributions: testData,
+        loading: false,
+        axisLabel: "Axis Label",
+        labelOrientation: "rightDiagonal",
+        violinProps: {
+            showAllPoints: true,
+            jitter: 20
+        },
+        onViolinClicked: fn(),
+        onPointClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
 };

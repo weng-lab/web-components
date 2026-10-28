@@ -126,7 +126,7 @@ const rotate = (vertices: UnitVertices, radians: number): UnitVertices => {
 const flipVertically = (vertices: UnitVertices): UnitVertices => vertices.map(([x, y]) => [x, -y]);
 
 /**
- * Vertices of each shape at r = 1, centred on the origin, in the y-down coordinates both canvas
+ * Vertices of each shape at r = 1, centered on the origin, in the y-down coordinates both canvas
  * and SVG use - so one set of vertices drives both renderers and they cannot drift apart.
  */
 const UNIT_VERTICES: Record<Exclude<PointShape, "circle">, UnitVertices> = {
@@ -140,7 +140,7 @@ const UNIT_VERTICES: Record<Exclude<PointShape, "circle">, UnitVertices> = {
 };
 
 /**
- * The polygon a shape is drawn as, centred on (cx, cy) at radius r, or null for a circle - which
+ * The polygon a shape is drawn as, centered on (cx, cy) at radius r, or null for a circle - which
  * has no vertices and is drawn as an arc by whichever renderer asked.
  */
 export const getShapeVertices = (
@@ -211,6 +211,31 @@ export const getDomains = (extents: { x: [number, number]; y: [number, number] }
     xDomain: padExtent(extents.x),
     yDomain: padExtent(extents.y),
 });
+
+/**
+ * The domains with one widened about its center, so a unit spans as many pixels on x, across
+ * `width`, as on y, across `height` - see ChartProps' disableEqualScale. The axis with the fewest
+ * pixels per unit keeps its domain.
+ */
+export const equalizeDomains = (
+    xDomain: [number, number],
+    yDomain: [number, number],
+    width: number,
+    height: number
+): { xDomain: [number, number]; yDomain: [number, number] } => {
+    const xUnit = width / Math.abs(xDomain[1] - xDomain[0]);
+    const yUnit = height / Math.abs(yDomain[1] - yDomain[0]);
+    // Unmeasured, or a domain with no span: nothing to match.
+    const usable = (axisUnit: number) => axisUnit > 0 && Number.isFinite(axisUnit);
+    if (!usable(xUnit) || !usable(yUnit)) return { xDomain, yDomain };
+    const unit = Math.min(xUnit, yUnit);
+    const widen = ([min, max]: [number, number], axisUnit: number): [number, number] => {
+        const center = (min + max) / 2;
+        const half = ((max - min) / 2) * (axisUnit / unit);
+        return [center - half, center + half];
+    };
+    return { xDomain: widen(xDomain, xUnit), yDomain: widen(yDomain, yUnit) };
+};
 
 /**
  * Domains covering every given set of points, for plots that share a coordinate space and so

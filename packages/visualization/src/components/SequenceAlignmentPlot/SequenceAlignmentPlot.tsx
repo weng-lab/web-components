@@ -6,6 +6,8 @@ import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
 import { Text } from "@visx/text";
 import Tooltip from "@mui/material/Tooltip";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
+import { TwoFingerHint } from "../../controls";
 
 export type AlignmentChar = "A" | "C" | "G" | "T" | "N" | "M" | "-" | "*";
 
@@ -118,6 +120,15 @@ const clampTranslateX = (translateX: number, scaleX: number, canvasWidth: number
   Math.min(0, Math.max(canvasWidth * (1 - scaleX), translateX));
 
 /**
+ * The transform zoomed by `factor`, keeping what was at `from` px across the canvas at `to`: the
+ * wheel's cursor, or a pinch's midpoint as it moves.
+ */
+const zoomAbout = ({ scaleX, translateX }: ZoomTransform, factor: number, canvasWidth: number, from: number, to = from): ZoomTransform => {
+  const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleX * factor));
+  return { scaleX: scale, translateX: clampTranslateX(to - (from - translateX) * (scale / scaleX), scale, canvasWidth) };
+};
+
+/**
  * @todo This component could use some cleanup and maybe manual memoization to handle hover changes to highlight more efficiently
  * Maybe try debouncing the hover changes using requestAnimationFrame like PhyloTree
  */
@@ -195,40 +206,25 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-
-      const rect = canvas.getBoundingClientRect();
-      const cursorX = e.clientX - rect.left;
-      const { scaleX, translateX } = zoomTransformRef.current;
-
-      const zoomDir = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
-      const newScaleX = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleX * zoomDir));
-
-      // Adjust translateX so the data point under the cursor stays fixed
-      const newTranslateX = cursorX - (cursorX - translateX) * (newScaleX / scaleX);
-      const clampedTranslateX = clampTranslateX(newTranslateX, newScaleX, canvasWidth);
-
-      setZoomTransform({ scaleX: newScaleX, translateX: clampedTranslateX });
+      const cursorX = e.clientX - canvas.getBoundingClientRect().left;
+      const factor = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
+      setZoomTransform(zoomAbout(zoomTransformRef.current, factor, canvasWidth, cursorX));
     };
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, [canvasWidth]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const preventTouchScroll = (e: TouchEvent) => {
-      if (e.touches.length === 1) e.preventDefault(); // single finger = pan, not page scroll
-    };
-
-    canvas.addEventListener("touchstart", preventTouchScroll, { passive: false });
-    canvas.addEventListener("touchmove", preventTouchScroll, { passive: false });
-    return () => {
-      canvas.removeEventListener("touchstart", preventTouchScroll);
-      canvas.removeEventListener("touchmove", preventTouchScroll);
-    };
-  }, []);
+  const hint = useTwoFingerHint(canvasRef);
+  const touchAction = useTwoFingerGestures(canvasRef, {
+    onStart: () => zoomTransformRef.current,
+    onMove: ({ from, to, scale }, start) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const { left } = canvas.getBoundingClientRect();
+      setZoomTransform(zoomAbout(start, scale, canvasWidth, from.clientX - left, to.clientX - left));
+    },
+  });
 
   // Draw to the cancas
   useEffect(() => {
@@ -276,7 +272,9 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     [canvasWidth, numPositions]
   );
 
+  // A finger scrolls the page; touch pans with two.
   const handleHeatmapPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === "touch") return;
     setIsDragging(true);
     dragStartX.current = e.clientX;
     dragStartTranslateX.current = zoomTransformRef.current.translateX;
@@ -284,20 +282,21 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
   };
 
   const handleHeatmapPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!isDragging) return;
+    const delta = e.clientX - dragStartX.current;
+    const newTranslateX = clampTranslateX(
+      dragStartTranslateX.current + delta,
+      zoomTransformRef.current.scaleX,
+      canvasWidth
+    );
+    setZoomTransform((prev) => ({ ...prev, translateX: newTranslateX }));
+  };
 
-    // While dragging: update pan, suppress hover/tooltip
-    if (isDragging) {
-      const delta = e.clientX - dragStartX.current;
-      const newTranslateX = clampTranslateX(
-        dragStartTranslateX.current + delta,
-        zoomTransformRef.current.scaleX,
-        canvasWidth
-      );
-      setZoomTransform((prev) => ({ ...prev, translateX: newTranslateX }));
-      return;
-    }
+  // Mouse rather than pointer events, so a tap's follow-up mouse events show the tooltip too.
+  const handleHeatmapMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    // While dragging, the pan suppresses the hover and tooltip.
+    if (!canvas || isDragging) return;
 
     const rect = canvas.getBoundingClientRect();
     const cssX = e.clientX - rect.left;
@@ -330,8 +329,8 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     setIsDragging(false);
   };
 
-  const handleHeatmapPointerLeave = () => {
-    setIsDragging(false);
+  // Doesn't end a drag: pointer capture carries it until pointerup.
+  const handleHeatmapMouseLeave = () => {
     handleSetInternalHover(null);
     hideTooltip();
   };
@@ -433,12 +432,18 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         onPointerDown={handleHeatmapPointerDown}
         onPointerMove={handleHeatmapPointerMove}
         onPointerUp={handleHeatmapPointerUp}
-        onPointerLeave={handleHeatmapPointerLeave}
+        onMouseMove={handleHeatmapMouseMove}
+        onMouseLeave={handleHeatmapMouseLeave}
         style={{
           position: "absolute",
           left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH,
           cursor: isDragging ? "grabbing" : zoomTransform.scaleX > 1 ? "grab" : "default",
+          touchAction,
         }}
+      />
+      <TwoFingerHint
+        shown={hint}
+        style={{ left: HIGHLIGHTED_AND_SPECIES_SVG_WIDTH, top: 0, width: canvasWidth, height: canvasHeight }}
       />
       {/* overflow: hidden clips axis ticks that scroll outside the canvas bounds when zoomed */}
       <svg

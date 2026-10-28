@@ -9,12 +9,14 @@ import SingleViolin from "./singleViolin";
 import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { motion } from "framer-motion";
+import { useTapToActivate } from "../../hooks";
 
 const ViolinPlot = <T extends object>(
     props: ViolinPlotProps<T>,
 ) => {
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const svgRef = useRef<SVGSVGElement | null>(null);
+    const tap = useTapToActivate<string>();
 
     //Array of labels fo xDomain
     const labels = useMemo(() => {
@@ -161,6 +163,7 @@ const ViolinPlot = <T extends object>(
                                     pointTooltipBody={props.pointTooltipBody}
                                     onViolinClicked={props.onViolinClicked}
                                     onPointClicked={props.onPointClicked}
+                                    tap={tap}
                                 />
                             </Wrapper>
                         )

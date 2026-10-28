@@ -38,7 +38,7 @@ const Heatmap = ({
   const legendSvgRef = useRef<SVGSVGElement | null>(null);
 
   const layout = useHeatmapLayout({
-    data, colorDomain, colors, xLabelOrientation, margin, showLegend,
+    data, colorDomain, colors, xLabelOrientation, xLabel, yLabel, margin, showLegend,
     cellWidth, cellHeight, parentWidth, parentHeight, showMiniMap, gap, isRect,
     selectedCells, highlightRange, legendWidth,
   });

@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Button, Stack, Typography } from "@mui/material";
 import { LicenseInfo } from "@mui/x-license";
+import type { GridFilterModel } from "@mui/x-data-grid-premium";
 import { Meta, StoryObj } from "@storybook/react-vite";
-import { Table, TwoPaneLayout, useTablePlotSync, type SyncedTableProps } from "../..";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Table, TwoPaneLayout, useTablePlotSync, withExcludedValues, type SyncedTableProps } from "../..";
 
 const meta = {
   title: "ui-components/TwoPaneLayout",
@@ -81,5 +83,50 @@ export const HideTableKeepsState: Story = {
         />
       </Stack>
     );
+  },
+};
+
+/** The model with the site column filtered down to one site, the other columns' filters kept. */
+const onlySite = (model: GridFilterModel, site: string) =>
+  withExcludedValues(model, "site", new Set(SITES.filter((other) => other !== site)), SITES);
+
+const siteRows = makeRows(12);
+
+/**
+ * A tab per site, and a table that follows them: switching tabs reports the new one through
+ * `onTabChange`, which filters the table's site column down to that tab's site, keeping any other
+ * filters. The layout opens on the first tab, unreported, so the table starts filtered to its site.
+ */
+export const TabFiltersTable: Story = {
+  render: () => {
+    const { sortedFilteredData, tableProps, filters } = useTablePlotSync({
+      rows: siteRows,
+      getRowId: (row) => row.sample_id,
+      initialSort: [{ field: "sample_id", sort: "asc" }],
+      initialFilters: onlySite({ items: [] }, SITES[0]),
+    });
+    return (
+      <TwoPaneLayout
+        TableComponent={<SyncedTable tableProps={tableProps} rows={siteRows} />}
+        plots={SITES.map((site) => ({
+          tabTitle: `Site: ${site}`,
+          plotComponent: <RowList rows={sortedFilteredData} />,
+        }))}
+        onTabChange={(index) => filters.setModel((model) => onlySite(model, SITES[index]))}
+        rowHeight="500px"
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // A tab once visited stays mounted, hidden: the plot on screen is the one with a layout box.
+    const shownPlot = () => canvas.getAllByTestId("plot-rows").find((rows) => rows.offsetParent !== null);
+    await waitFor(() => expect(shownPlot()).toHaveTextContent("S01, S04, S07, S10"));
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Site: CKD" }));
+    await waitFor(() => expect(shownPlot()).toHaveTextContent("S02, S05, S08, S11"));
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Site: CCH" }));
+    await waitFor(() => expect(shownPlot()).toHaveTextContent("S01, S04, S07, S10"));
   },
 };

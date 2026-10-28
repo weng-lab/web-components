@@ -61,7 +61,7 @@ export type ScatterPlotSyncProps = {
  * and pass the shared domains through.
  *
  * Only the hovered plot shows a tooltip - the mirrored crosshair is an overlay, and does not
- * trigger the other plots' hover behaviour.
+ * trigger the other plots' hover behavior.
  */
 const ScatterPlotSync = ({ children, xDomain, yDomain, width, height }: ScatterPlotSyncProps) => {
     const [crosshairPosition, setCrosshairPosition] = useState<CrosshairPosition | null>(null);

@@ -104,7 +104,8 @@ export type CrosshairPosition = {
     y: number;
 };
 
-export type SelectionMode = "select" | "pan" | "none";
+/** What a drag over the plot does: lasso points, pan, draw a box to zoom into, or nothing. */
+export type SelectionMode = "select" | "pan" | "zoom" | "none";
 
 /**
  * Initial state of the component controling the initial state variables on first load
@@ -121,10 +122,13 @@ export type InitialState<S, Z> = {
     };
     controls?: {
         /**
-         * Initial selection type
-         * Note: allowed types depends on zoom and selection availibility
+         * What a drag does at first: "pan", "select" (a lasso) or "zoom" (a box to zoom into).
+         * Which are allowed depends on `selectable` and `disableZoom`.
+         * @default
+         * "pan". A selectable plot with zoom disabled can't pan, so it starts in "select", except
+         * on a touch screen, where one finger scrolls the page instead.
          */
-        selectionType?: S extends true ? "pan" | "select" : Z extends true ? "select" | "none" : "pan";
+        selectionType?: S extends true ? "pan" | "select" | "zoom" : Z extends true ? "select" | "none" : "pan" | "zoom";
     };
 }
 
@@ -144,7 +148,8 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     loading: boolean;
     /**
      * If true, enables lasso selection of points, controllable with onSelectionChange
-     * Shows new select icon in controls section (pencil)
+     * Shows a lasso button in the controls section. The plot still starts in pan mode
+     * unless initialState.controls.selectionType says otherwise.
      * @default
      * false
      */
@@ -376,6 +381,9 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     /**
      * Fixes the x axis domain instead of deriving it from the data extents. Useful to keep the
      * axes stable as the data changes, or to give several plots a shared coordinate frame.
+     *
+     * Unless `disableEqualScale` is set, one of the two domains is widened so the axes share a
+     * scale.
      */
     xDomain?: [number, number];
     /**
@@ -390,17 +398,29 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     controlsPosition?: "left" | "right";
     /**
-     * Lock the plot to a square, sized to the shorter side of its container and centred in it.
+     * Lock the plot to a square, sized to the shorter side of its container and centered in it.
      *
      * Off by default, in which case the plot fills the container and its aspect ratio follows
-     * whatever shape that is. Turn it on when the two axes are in the same units and a circle
-     * of points has to stay a circle - a PCA or UMAP embedding, say - rather than being
-     * stretched by the shape of the box it happens to sit in.
+     * whatever shape that is. Either way the points keep their shape, unless
+     * `disableEqualScale` is set.
      *
      * @default
      * false
      */
     square?: boolean;
+    /**
+     * By default a unit on the x axis spans as many pixels as a unit on the y axis, so the points
+     * keep their shape - a PCA or UMAP embedding stays as computed - whatever the shape of the
+     * plot. The axis whose data fits the plot most tightly keeps its domain, and the other's
+     * widens about its center to match.
+     *
+     * Set this to stretch each axis over the plot on its own instead, as when the axes are in
+     * different units. Synced plots should all set it or none, so their domains still line up.
+     *
+     * @default
+     * false
+     */
+    disableEqualScale?: boolean;
 };
 
 /** How a dimmed point is drawn, in place of its own color and opacity. */

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
+import { ParentSize } from "@visx/responsive";
 import PhyloTree from "./PhyloTree";
 import { data } from "./example-data/241_mammals_treedata";
 import { getColor, getLabel, getOrder } from "./example-data/utils";
@@ -221,3 +223,15 @@ export const OnLeafHoverChange: Story = {
   }
 };
 
+export const Mobile: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  args: {
+    ...Mammals241.args,
+    onBranchClick: fn(),
+  },
+  render: (args) => (
+    <ParentSize>{({ width, height }) => width > 0 && <PhyloTree {...args} width={width} height={height} />}</ParentSize>
+  ),
+  decorators: [(Story) => <div style={{ height: 400 }}><Story /></div>],
+};

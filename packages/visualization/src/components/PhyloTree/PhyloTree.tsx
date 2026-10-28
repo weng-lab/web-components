@@ -9,6 +9,7 @@ import { Zoom, ProvidedZoom } from "@visx/zoom";
 import { ZoomFrame } from "./ZoomFrame";
 import { pointRadial } from "d3-shape";
 import { RenderTree } from "./RenderTree";
+import { useTapToActivate } from "../../hooks";
 
 /**
  * Improvements that would make this scale better (as much as svg can):
@@ -107,6 +108,9 @@ export const TOTAL_INNER_RADIUS = 500;
  * For internal svg calculation only (used to define viewbox in ZoomFrame)
  */
 export const TOTAL_INNER_DIAMETER = TOTAL_INNER_RADIUS * 2;
+
+/** How far the tree zooms out and in. */
+export const ZOOM_SCALE_LIMITS: [min: number, max: number] = [0.8, 4];
 
 export default function PhyloTree({
   width: totalWidth,
@@ -382,6 +386,12 @@ export default function PhyloTree({
     }
   }, []);
 
+  const tap = useTapToActivate<string>();
+  useEffect(() => tap.hover(internalHovered), [tap, internalHovered]);
+  const handleNodeClick = useCallback((node: TreeNode) => {
+    if (tap.activates(node.data.id)) onBranchClick(node.leaves().map((leaf) => leaf.data.id));
+  }, [tap, onBranchClick]);
+
   const treeContent = useMemo(() => {
     return (
       <Group top={TOTAL_INNER_RADIUS} left={TOTAL_INNER_RADIUS}>
@@ -393,7 +403,7 @@ export default function PhyloTree({
           useBranchLengths={enableBranchLengths}
           onNodeMouseMove={handleLeafOnMouseMove}
           onNodeMouseLeave={handleLeafOnMouseLeave}
-          onBranchClick={onBranchClick}
+          onNodeClick={handleNodeClick}
         />
       </Group>
     );
@@ -405,7 +415,7 @@ export default function PhyloTree({
     enableBranchLengths,
     handleLeafOnMouseMove,
     handleLeafOnMouseLeave,
-    onBranchClick,
+    handleNodeClick,
   ]);
 
   const renderTreeInZoom = useCallback(
@@ -429,10 +439,10 @@ export default function PhyloTree({
       <Zoom<SVGSVGElement>
         width={totalWidth}
         height={totalHeight}
-        scaleXMin={0.8}
-        scaleXMax={4}
-        scaleYMin={0.8}
-        scaleYMax={4}
+        scaleXMin={ZOOM_SCALE_LIMITS[0]}
+        scaleXMax={ZOOM_SCALE_LIMITS[1]}
+        scaleYMin={ZOOM_SCALE_LIMITS[0]}
+        scaleYMax={ZOOM_SCALE_LIMITS[1]}
       >
         {renderTreeInZoom}
       </Zoom>

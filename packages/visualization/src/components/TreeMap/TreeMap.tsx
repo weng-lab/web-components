@@ -5,12 +5,19 @@ import SingleNode from "./SingleNode";
 import { motion } from "framer-motion";
 import { downloadAsSVG, downloadSVGAsPNG, getAnimationProps } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
+import { useTapToActivate } from "../../hooks";
+import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
+import { useTheme } from "@mui/material";
 
 const Treemap = <T extends object>(
     props: TreemapProps<T>,
 ) => {
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
     const [hovered, setHovered] = useState<string | null>(null);
+    const tap = useTapToActivate<string>();
+    const tooltipRef = useRef<PlotTooltipHandle<TreemapNode<T>>>(null);
+    const { onNodeClicked } = props;
+    const theme = useTheme();
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     // wrap the array in a root node
@@ -96,6 +103,8 @@ const Treemap = <T extends object>(
                             .filter((n) => n.depth > 0)
                             .map((node, i) => {
                                 const nodeId = node.ancestors().map((a) => a.data.label).join("/");
+                                // With the index: labels repeat, and nodes are new objects each render.
+                                const tapKey = `${i}:${nodeId}`;
                                 const Wrapper = props.animation ? motion.g : "g";
                                 const animProps = getAnimationProps(props.animation, i);
 
@@ -104,14 +113,19 @@ const Treemap = <T extends object>(
                                         <SingleNode
                                             node={node}
                                             isHovered={hovered === nodeId}
-                                            onHover={(hover) => setHovered(hover ? nodeId : null)}
+                                            onHover={(hover) => {
+                                                setHovered(hover ? nodeId : null);
+                                                tap.hover(hover ? tapKey : null);
+                                            }}
                                             strokeWidth={style.strokeWidth ?? 0}
                                             opacity={style.opacity ?? .3}
                                             borderRadius={style.borderRadius ?? 0}
                                             fontSize={style.fontSize ?? 16}
                                             labelPlacement={props.labelPlacement ?? "topLeft"}
-                                            tooltipBody={props.tooltipBody}
-                                            onNodeClicked={props.onNodeClicked}
+                                            tooltipRef={tooltipRef}
+                                            onNodeClicked={onNodeClicked && ((data) => {
+                                                if (tap.activates(tapKey)) onNodeClicked(data);
+                                            })}
                                         />
                                     </Wrapper>
                                 );
@@ -119,6 +133,11 @@ const Treemap = <T extends object>(
                     }}
                 </VisxTreemap>
             </svg>
+            {props.tooltipBody && (
+                <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+                    {props.tooltipBody}
+                </PlotTooltip>
+            )}
         </ResponsiveContainer>
 
     );

@@ -55,10 +55,11 @@ export type HeatmapProps<C extends object = Record<string, unknown>, R extends o
   gap?: number;
   isRect?: boolean;
   /**
-   * Space around the grid, in px: left for the y-axis title (40px) and row labels, bottom for the
-   * column labels and x-axis title (70px), right for the legend. Defaults to fitting them.
+   * Space around the grid, in px, any side of which can be set alone: left for the row labels and
+   * the y-axis title (28px), bottom for the column labels and the x-axis title (28px), right for the
+   * legend. Each side left out fits what it holds. Labels too long for their side are clipped.
    */
-  margin?: { top: number; right: number; bottom: number; left: number };
+  margin?: { top?: number; right?: number; bottom?: number; left?: number };
   /** Animates the cells in on mount, column by column from the left. Scrolling cuts it short. */
   animationType?: AnimationType;
   showLegend?: boolean;

@@ -2,6 +2,7 @@ import { HierarchyRectangularNode } from "@visx/hierarchy";
 import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from "../../utility";
 import { ManualSizeProps } from "../../responsive";
+import type { PlotTooltipRef } from "../../tooltip";
 
 export type Methods = "treemapSquarify" | "treemapBinary" | "treemapDice" | "treemapResquarify" | "treemapSlice" | "treemapSliceDice"
 
@@ -60,7 +61,7 @@ export type SingleNodeProps<T> = {
     borderRadius: number;
     fontSize: number;
     labelPlacement: "middle" | "topRight" | "topLeft" | "bottomLeft" | "bottomRight";
-    tooltipBody?: (node: TreemapNode<T>) => ReactElement
+    tooltipRef: PlotTooltipRef<TreemapNode<T>>;
     onNodeClicked?: (point: TreemapNode<T>) => void;
 }
 

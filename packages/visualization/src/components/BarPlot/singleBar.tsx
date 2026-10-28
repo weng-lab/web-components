@@ -13,6 +13,7 @@ const SingleBar = <T,>({
     bar,
     onBarClicked,
     tooltipRef,
+    tap,
     cutoffNegativeValues,
     negativeCutoff,
     xScale,
@@ -31,20 +32,22 @@ const SingleBar = <T,>({
 
     const handleMouseEnter = useCallback(() => {
         setHovered(true);
-    }, []);
+        tap.hover(bar);
+    }, [tap, bar]);
 
     const handleMouseMove = useCallback((event: React.MouseEvent<SVGGElement>) => {
         tooltipRef.current?.show(bar, event);
     }, [tooltipRef, bar]);
 
     const handleClick = useCallback(() => {
-        onBarClicked?.(bar);
-    }, [onBarClicked, bar]);
+        if (tap.activates(bar)) onBarClicked?.(bar);
+    }, [onBarClicked, bar, tap]);
 
     const handleMouseLeave = useCallback(() => {
         setHovered(false);
+        tap.hover(null);
         tooltipRef.current?.hide();
-    }, [tooltipRef]);
+    }, [tooltipRef, tap]);
 
     const pointValue = cutoffNegativeValues ? Math.max(bar.value, negativeCutoff) : bar.value;
 

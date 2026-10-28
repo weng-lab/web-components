@@ -21,7 +21,7 @@ import {
 import { breakPoints, columnColor, histogramColumns } from "../colorbarGeometry";
 
 /** The editor's own sizes, roomier than the compact colorbar's. */
-const WIDTH = 348;
+export const EDITOR_WIDTH = 348;
 const EDITOR_HISTOGRAM = 56;
 const EDITOR_GAP = 3;
 const EDITOR_BAR = 12;
@@ -48,6 +48,8 @@ export type ColorRangeEditorProps = {
   noun: string;
   /** Fired on every step of a drag, so the plot recolors as a handle moves, and for a preset. */
   onChange: (range: ColorRange) => void;
+  /** How wide the editor is. EDITOR_WIDTH by default. */
+  width?: number;
 };
 
 /**
@@ -67,6 +69,7 @@ const ColorRangeEditor = ({
   format,
   noun,
   onChange,
+  width = EDITOR_WIDTH,
 }: ColorRangeEditorProps) => {
   const theme = useTheme();
   const gradientId = `range-editor-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
@@ -75,14 +78,14 @@ const ColorRangeEditor = ({
   const [lowT, highT] = [axis.toT(low), axis.toT(high)];
   const span = high - low;
 
-  const bins = Math.round(WIDTH / COLUMN);
+  const bins = Math.round(width / COLUMN);
   const columns = histogramColumns(histogram(values, axis, bins), EDITOR_HISTOGRAM);
-  const column = WIDTH / bins;
+  const column = width / bins;
 
   // Sampled, since a gradient between the ramp's stops can't follow the squeezed axis or the flat ends.
   const colorAt = rampAt(stops);
-  const barStops = Array.from({ length: Math.ceil(WIDTH / COLOR_STEP) + 1 }, (_, i) => {
-    const t = Math.min((i * COLOR_STEP) / WIDTH, 1);
+  const barStops = Array.from({ length: Math.ceil(width / COLOR_STEP) + 1 }, (_, i) => {
+    const t = Math.min((i * COLOR_STEP) / width, 1);
     return { t, color: colorAt(span > 0 ? (axis.fromT(t) - low) / span : 0.5) };
   });
 
@@ -106,10 +109,10 @@ const ColorRangeEditor = ({
 
   return (
     // As wide as the bar, so a long readout wraps rather than widening the panel mid-drag.
-    <Stack gap={1} width={WIDTH}>
-      <Box position="relative" width={WIDTH} height={EDITOR_HISTOGRAM + EDITOR_GAP + EDITOR_BAR}>
+    <Stack gap={1} width={width}>
+      <Box position="relative" width={width} height={EDITOR_HISTOGRAM + EDITOR_GAP + EDITOR_BAR}>
         <svg
-          width={WIDTH}
+          width={width}
           height={EDITOR_HISTOGRAM + EDITOR_GAP + EDITOR_BAR}
           style={{ display: "block", overflow: "visible" }}
           aria-hidden
@@ -151,7 +154,7 @@ const ColorRangeEditor = ({
           <rect
             x={0}
             y={EDITOR_HISTOGRAM + EDITOR_GAP}
-            width={WIDTH}
+            width={width}
             height={EDITOR_BAR}
             rx={EDITOR_BAR / 2}
             fill={`url(#${gradientId})`}
@@ -160,7 +163,7 @@ const ColorRangeEditor = ({
           {axis.breaks.map((b) => (
             <rect
               key={b}
-              x={b * WIDTH - 1}
+              x={b * width - 1}
               y={EDITOR_HISTOGRAM + EDITOR_GAP}
               width={2}
               height={EDITOR_BAR}
@@ -170,7 +173,7 @@ const ColorRangeEditor = ({
           {[lowT, highT].map((t, i) => (
             <rect
               key={i}
-              x={t * WIDTH - 0.5}
+              x={t * width - 0.5}
               y={0}
               width={1}
               height={EDITOR_HISTOGRAM + EDITOR_GAP}
@@ -197,7 +200,7 @@ const ColorRangeEditor = ({
             position: "absolute",
             left: 0,
             top: EDITOR_HISTOGRAM + EDITOR_GAP,
-            width: WIDTH,
+            width,
             height: EDITOR_BAR,
             p: 0,
             "@media (pointer: coarse)": { p: 0 },
