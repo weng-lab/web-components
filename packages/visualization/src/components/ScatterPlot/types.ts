@@ -105,6 +105,18 @@ export type CrosshairPosition = {
     y: number;
 };
 
+/**
+ * Where a plot is zoomed to, in its data's own terms: the point at the middle of the plot area, and how far the plot
+ * is zoomed in on each axis from showing its whole domain. Unlike the zoom's transform, which is in pixels, it means
+ * the same on plots of any size.
+ */
+export type ScatterPlotView = {
+    x: number;
+    y: number;
+    scaleX: number;
+    scaleY: number;
+};
+
 /** What a drag over the plot does: lasso points, pan, draw a box to zoom into, or nothing. */
 export type SelectionMode = "select" | "pan" | "zoom" | "none";
 
@@ -373,12 +385,20 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     onCrosshairChange?: (position: CrosshairPosition | null) => void;
     /**
      * An externally owned zoom instance. When provided the plot drives that zoom instead of
-     * creating its own, so several plots can share one view - see ScatterPlotSync.
+     * creating its own.
      *
      * Plots sharing a zoom must be the same size and share their domains, since the transform
-     * is in pixels.
+     * is in pixels. To keep plots of any size on one view, share `view` instead, as
+     * ScatterPlotSync does.
      */
     zoom?: ZoomType;
+    /**
+     * A view to follow, shared with other plots in data terms so each shows it at its own size - see
+     * ScatterPlotSync. Null where none has been shared yet.
+     */
+    view?: ScatterPlotView | null;
+    /** Fired as the plot's own zoom moves, with where it's moved to, for the other plots to follow. */
+    onViewChange?: (view: ScatterPlotView) => void;
     /**
      * Fixes the x axis domain instead of deriving it from the data extents. Useful to keep the
      * axes stable as the data changes, or to give several plots a shared coordinate frame.
@@ -394,9 +414,7 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
     /**
      * Side of the plot the zoom/selection controls sit on: a column to its right, or a row over it.
      * The plot gives up a lane of its own to them on that side, so they never cover the points. "auto" takes the right or the top, whichever leaves room for the bigger square plot
-     * area: the top over a plot taller than it is wide, as on a phone. Synced plots keep plot areas
-     * of the same size with their controls on the same side, as "auto" puts them in containers of
-     * the same size.
+     * area: the top over a plot taller than it is wide, as on a phone.
      * @default
      * "auto"
      */

@@ -372,7 +372,8 @@ export const ManualSize: Story = {
 
 // Two plots over the same coordinate space, linked by ScatterPlotSync: hovering either one draws
 // the same crosshair on both, and zooming or panning either one moves both - their minimaps start
-// on, so the shared view shows in each. Only the hovered plot shows a tooltip.
+// on, so the shared view shows in each. They're different sizes, each showing the shared view at
+// its own. Only the hovered plot shows a tooltip.
 const syncedDataA: Point[] = generatePoints(600);
 const syncedDataB: Point[] = generatePoints(600)
     .map((point, index) => ({
@@ -396,7 +397,7 @@ export const SyncedPlots: Story = {
             <ScatterPlotSync {...domains}>
                 {(sync) => (
                     <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-                        <div style={{ flex: 1, height: '100%' }}>
+                        <div style={{ flex: 3, height: '100%' }}>
                             <ScatterPlot
                                 pointData={syncedDataA}
                                 loading={false}
@@ -407,7 +408,7 @@ export const SyncedPlots: Story = {
                                 {...sync}
                             />
                         </div>
-                        <div style={{ flex: 1, height: '100%' }}>
+                        <div style={{ flex: 2, height: '70%' }}>
                             <ScatterPlot
                                 pointData={syncedDataB}
                                 loading={false}

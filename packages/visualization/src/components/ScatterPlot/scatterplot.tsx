@@ -10,6 +10,7 @@ import { DEFAULT_DIM_STYLE, equalizeDomains, getDomains, getPointExtents, isSame
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
+import { ViewSync } from './ViewSync';
 import DefaultTooltipBody from './tooltip';
 import { useSelectionMode } from './hooks/useSelectionMode';
 import { useMiniMapToggle } from './hooks/useMiniMapToggle';
@@ -149,6 +150,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
         return (
             <>
+                {(props.view !== undefined || props.onViewChange) && (
+                    <ViewSync zoom={zoom} view={props.view ?? null} onViewChange={props.onViewChange} xScale={xScale} yScale={yScale} />
+                )}
                 {layout.controls && (
                     <Stack
                         direction="column"
