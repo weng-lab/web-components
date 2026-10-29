@@ -23,7 +23,7 @@ const ControlButtons = ({
         <ControlPanel
             direction={side === "top" ? "row" : "column"}
             // Toward the plot, rather than off the container's edge.
-            tooltipPlacement={side === "top" ? "bottom" : side === "right" ? "left" : "right"}
+            tooltipPlacement={side === "top" ? "bottom" : "left"}
             highlight={highlight}
             buttons={[
                 selectable && {

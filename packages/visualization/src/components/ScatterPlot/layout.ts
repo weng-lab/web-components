@@ -18,7 +18,7 @@ const SQUARE_PLOT_FRACTION = 0.9;
 /** Between the control panel and the container's edge: as far as the axis labels sit from it. */
 const CONTROLS_EDGE = 6;
 
-/** Between the control panel and the plot's box (or legend) beside it. */
+/** Between the control panel and a legend beside it. */
 const CONTROLS_GAP = 6;
 
 /**
@@ -28,16 +28,15 @@ const CONTROLS_GAP = 6;
 const CONTROLS_NEAR = 12;
 
 /**
- * Room held back on each side for the control panel, so it has a lane of its own rather than sitting over the axis
- * on the left or the points on the right, and ends CONTROLS_EDGE from the container's edge. Beside the plot's box, as
- * on the left or past a legend, the lane takes the whole panel; on the right or over the plot, the panel reaches into
- * the plot's margin there, which the lane leaves out. A column of buttons is as wide as a row of them is tall.
+ * Room held back for the control panel, so it has a lane of its own rather than sitting over the points, and ends
+ * CONTROLS_EDGE from the container's edge. Past a legend, the lane takes the whole panel; otherwise the panel reaches
+ * into the plot's margin on its side, which the lane leaves out. A column of buttons is as wide as a row of them is tall.
  */
-const BESIDE_LANE = CONTROLS_GAP + CONTROL_PANEL_WIDTH + CONTROLS_EDGE;
+const LEGEND_LANE = CONTROLS_GAP + CONTROL_PANEL_WIDTH + CONTROLS_EDGE;
 const RIGHT_LANE = CONTROLS_NEAR + CONTROL_PANEL_WIDTH + CONTROLS_EDGE - MARGIN.right;
 const TOP_LANE = CONTROLS_NEAR + CONTROL_PANEL_WIDTH + CONTROLS_EDGE - MARGIN.top;
 
-export type ControlsSide = "left" | "right" | "top";
+export type ControlsSide = "right" | "top";
 
 type PlotLayout = {
     /** The plot's box - the svg the axes and points are drawn in - within the container. */
@@ -80,10 +79,9 @@ export const getPlotLayout = (input: PlotLayoutInput): PlotLayout => {
 };
 
 const layOut = ({ parentWidth, parentHeight, square, controls, legend }: PlotLayoutInput & { controls: ControlsSide | null }): PlotLayout => {
-    const gutterLeft = controls === "left" ? BESIDE_LANE : 0;
-    const gutterRight = controls === "right" ? (legend ? BESIDE_LANE : RIGHT_LANE) : 0;
+    const gutterRight = controls === "right" ? (legend ? LEGEND_LANE : RIGHT_LANE) : 0;
     const gutterTop = controls === "top" ? TOP_LANE : 0;
-    const available = Math.max(0, parentWidth - gutterLeft - gutterRight);
+    const available = Math.max(0, parentWidth - gutterRight);
     const availableHeight = Math.max(0, parentHeight - gutterTop);
 
     let plot: Omit<PlotLayout, "top" | "controls">;
@@ -95,14 +93,14 @@ const layOut = ({ parentWidth, parentHeight, square, controls, legend }: PlotLay
         // the legend, if there is one) are held back.
         const margin = legend ? LEGEND_MARGIN : MARGIN;
         plot = {
-            left: gutterLeft,
+            left: 0,
             width: available,
             height: availableHeight,
             margin,
             boundedWidth: Math.max(0, available - margin.left - margin.right),
             boundedHeight: Math.max(0, availableHeight - margin.top - margin.bottom),
         };
-        contentRight = gutterLeft + available;
+        contentRight = available;
     } else {
         // The square path keeps its original proportions, so it only differs from previous
         // versions where the panel or the legend would otherwise have been drawn over it.
@@ -120,7 +118,7 @@ const layOut = ({ parentWidth, parentHeight, square, controls, legend }: PlotLay
 
         // Centered in the container where there's room, and pushed clear of the panel where there isn't.
         const centered = (parentWidth - size) / 2;
-        const left = Math.max(gutterLeft, Math.min(centered, parentWidth - gutterRight - size - hang));
+        const left = Math.max(0, Math.min(centered, parentWidth - gutterRight - size - hang));
 
         plot = {
             left,
@@ -141,7 +139,6 @@ const layOut = ({ parentWidth, parentHeight, square, controls, legend }: PlotLay
     // its right end.
     const plotRight = plot.left + plot.margin.left + plot.boundedWidth;
     const panels = {
-        left: { left: plot.left - CONTROLS_GAP - CONTROL_PANEL_WIDTH, top: plot.margin.top },
         right: { left: legend ? contentRight + CONTROLS_GAP : plotRight + CONTROLS_NEAR, top: plot.margin.top },
         top: { right: parentWidth - plotRight, top: gutterTop + plot.margin.top - CONTROLS_NEAR - CONTROL_PANEL_WIDTH },
     };

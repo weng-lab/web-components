@@ -294,15 +294,15 @@ export const ControlsHighlight: Story = {
     }
 };
 
-// The controls on the left of the plot, which is narrowed to give them a lane of their own.
-export const ControlsLeft: Story = {
+// The controls on the right of the plot, which is narrowed to give them a lane of their own.
+export const ControlsRight: Story = {
     args: {
         pointData: points,
         loading: false,
         leftAxisLabel: "Y-Axis Label",
         bottomAxisLabel: "X-Axis Label",
         disableTooltip: true,
-        controlsPosition: "left",
+        controlsPosition: "right",
     }
 };
 

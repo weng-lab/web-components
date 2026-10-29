@@ -392,9 +392,8 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     yDomain?: [number, number];
     /**
-     * Side of the plot the zoom/selection controls sit on: a column beside it, or a row over it.
-     * The plot gives up a lane of its own to them on that side, so they never cover the axis or the
-     * points. "auto" takes the right or the top, whichever leaves room for the bigger square plot
+     * Side of the plot the zoom/selection controls sit on: a column to its right, or a row over it.
+     * The plot gives up a lane of its own to them on that side, so they never cover the points. "auto" takes the right or the top, whichever leaves room for the bigger square plot
      * area: the top over a plot taller than it is wide, as on a phone. Synced plots keep plot areas
      * of the same size with their controls on the same side, as "auto" puts them in containers of
      * the same size.
