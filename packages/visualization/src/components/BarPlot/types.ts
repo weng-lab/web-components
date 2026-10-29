@@ -46,6 +46,12 @@ export interface BarPlotProps<T> extends ManualSizeProps {
    * will make barSpacing negligible 
    */
   fill?: boolean;
+  /**
+   * The most of the width past the category labels that the value labels may take, as a fraction. Labels
+   * that don't fit past their bar are cut short with an ellipsis, so a narrow plot keeps room for its bars.
+   * @default 0.5
+   */
+  maxLabelShare?: number;
   legendTitle?: string;
   legendValues?: [number] | [number, number] | [number, number, number] | [number, number, number, number];
   downloadFileName?: string;
@@ -79,6 +85,8 @@ export interface SingleBarProps<T> {
     barSpacing: number;
     gapBetweenTextAndBar: number;
     getLollipopRadius: (x: number) => number;
+    /** Where the value label must end: it's cut short with an ellipsis where it would run past. */
+    labelRight: number;
     animation?: AnimationType;
     animationEnabled: boolean;
     animationBuffer?: number;

@@ -19,5 +19,8 @@ export type { TwoPanePlotConfig, TwoPaneLayoutProps, SyncedTableProps, TableFilt
 export { ResizablePanes, useResizablePanes } from "./components/ResizablePanes";
 export type { ResizablePanesProps, Direction, ResponsiveDirection } from "./components/ResizablePanes";
 
+export { ScrollableTabs } from "./components/ScrollableTabs";
+export type { ScrollableTabsProps } from "./components/ScrollableTabs";
+
 export { DetailsTabs } from "./components/DetailsTabs";
 export type { DetailsTabsProps, TabItem } from "./components/DetailsTabs";

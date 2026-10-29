@@ -13,9 +13,11 @@ import { kernelDensityEstimator, gaussian, scottRule } from '../ViolinPlot/helpe
 import { HistogramBin, HistogramProps, HistogramSeries } from './types';
 import { binHistogram } from './binning';
 import HistogramLegend from './HistogramLegend';
-import HistogramTooltip, { HistogramTooltipHandle } from './HistogramTooltip';
+import HistogramTooltip from './HistogramTooltip';
 import HistogramBar from './HistogramBar';
 import { useTapToActivate } from '../../hooks';
+import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
+import { useTheme } from '@mui/material';
 
 const DEFAULT_COLOR = '#4c78a8';
 const DEFAULT_OPACITY = 0.85;
@@ -68,7 +70,8 @@ const Histogram = ({
     height: manualHeight,
 }: HistogramProps) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
-    const tooltipRef = useRef<HistogramTooltipHandle | null>(null);
+    const tooltipRef = useRef<PlotTooltipHandle<HistogramBin>>(null);
+    const theme = useTheme();
     const tap = useTapToActivate<HistogramBin>();
     const { parentRef, containerStyle, width, height } = useResponsiveParentSize({ width: manualWidth, height: manualHeight }, { debounceTime: 150 });
 
@@ -247,7 +250,6 @@ const Histogram = ({
                             opacities={stackOpacities}
                             animationType={animationType}
                             binIndex={i}
-                            svgRef={svgRef}
                             tooltipRef={tooltipRef}
                             tap={tap}
                             onBarClicked={onBarClicked}
@@ -263,7 +265,6 @@ const Histogram = ({
                             opacities={overlayOpacities[si]}
                             animationType={animationType}
                             binIndex={i}
-                            svgRef={svgRef}
                             tooltipRef={tooltipRef}
                             tap={tap}
                             onBarClicked={onBarClicked}
@@ -328,12 +329,9 @@ const Histogram = ({
                     {multiSeries && showLegend && <HistogramLegend series={series} xMax={xMax} />}
                 </Group>
             </svg>
-            <HistogramTooltip
-                ref={tooltipRef}
-                multiSeries={multiSeries}
-                normalize={normalize}
-                tooltipBody={tooltipBody}
-            />
+            <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+                {(bin) => <HistogramTooltip data={bin} multiSeries={multiSeries} normalize={normalize} tooltipBody={tooltipBody} />}
+            </PlotTooltip>
         </ResponsiveContainer>
     );
 };

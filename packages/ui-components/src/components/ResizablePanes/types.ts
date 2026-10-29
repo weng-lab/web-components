@@ -37,6 +37,11 @@ export type ResizablePanesProps = {
    */
   collapsed?: "first" | "second";
   /**
+   * Which pane to hide while the panes are stacked, showing the other alone, as tabs would. Left out, the
+   * stacked panes follow `collapsed`.
+   */
+  stackedCollapsed?: "first" | "second";
+  /**
    * Pane height when laid out side-by-side (row mode).
    * @default "max(60vh, 600px)"
    */

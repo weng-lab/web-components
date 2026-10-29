@@ -4,7 +4,8 @@ import { ascending } from "@visx/vendor/d3-array";
 import { pathRadialStep } from "@visx/shape";
 import { cluster as d3cluster, hierarchy as d3hierarchy } from "d3-hierarchy";
 import { PhyloTreeProps, TreeItem, TreeLink, TreeNode, ZoomState } from "./types";
-import { useTooltip, defaultStyles, useTooltipInPortal } from "@visx/tooltip";
+import { useTheme } from "@mui/material";
+import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { Zoom, ProvidedZoom } from "@visx/zoom";
 import { ZoomFrame } from "./ZoomFrame";
 import { pointRadial } from "d3-shape";
@@ -133,17 +134,13 @@ export default function PhyloTree({
   const [enableBranchLengths, setEnableBranchLengths] = useState<boolean>(defaultScaling === "scaled");
 
   const [internalHovered, setInternalHovered] = useState<string | null>(null)
-  const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } = useTooltip<TreeItem>();
+  const theme = useTheme();
+  const tooltipRef = useRef<PlotTooltipHandle<TreeItem>>(null);
 
   const hovered = useMemo(
     () => (internalHovered ? [internalHovered, ...externalHovered] : externalHovered),
     [internalHovered, externalHovered]
   );
-
-  const { TooltipInPortal } = useTooltipInPortal({
-    scroll: true,
-    detectBounds: true,
-  });
 
   interface PendingHover {
     node: TreeNode | null;
@@ -173,13 +170,9 @@ export default function PhyloTree({
         setInternalHovered(pendingNode ? pendingNode.data.id : null);
 
         if (pendingNode && !pendingNode.children) {
-          showTooltip({
-            tooltipData: pendingNode.data,
-            tooltipLeft: pending!.x,
-            tooltipTop: pending!.y,
-          });
+          tooltipRef.current?.show(pendingNode.data, { clientX: pending!.x, clientY: pending!.y });
         } else {
-          hideTooltip();
+          tooltipRef.current?.hide();
         }
 
         if (onLeafHoverChange) {
@@ -368,11 +361,7 @@ export default function PhyloTree({
 
   const handleLeafOnMouseMove = useCallback((event: React.MouseEvent<Element, MouseEvent>, node: TreeNode) => {
     handleDebounceHover(event, node)
-    !node.children && showTooltip({
-      tooltipData: node.data,
-      tooltipLeft: event.clientX,
-      tooltipTop: event.clientY,
-    });
+    if (!node.children) tooltipRef.current?.show(node.data, event);
     if (onLeafHoverChange) {
       onLeafHoverChange(node.leaves().map(leaf => leaf.data.id))
     }
@@ -380,7 +369,7 @@ export default function PhyloTree({
 
   const handleLeafOnMouseLeave = useCallback((event: React.MouseEvent<Element, MouseEvent>, node: TreeNode) => {
     handleDebounceHover(event, null)
-    hideTooltip();
+    tooltipRef.current?.hide();
     if (onLeafHoverChange) {
       onLeafHoverChange([])
     }
@@ -446,10 +435,10 @@ export default function PhyloTree({
       >
         {renderTreeInZoom}
       </Zoom>
-      {tooltipData && tooltipContents && (
-        <TooltipInPortal left={tooltipLeft} top={tooltipTop}>
-          {tooltipContents(tooltipData.id)}
-        </TooltipInPortal>
+      {tooltipContents && (
+        <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+          {(item) => tooltipContents(item.id)}
+        </PlotTooltip>
       )}
     </div>
   );

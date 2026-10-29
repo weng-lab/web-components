@@ -165,3 +165,32 @@ export const Mobile: Story = {
     },
     decorators: [(Story) => <div style={{ height: 300 }}><Story /></div>],
 };
+
+const SAMPLE_TISSUES = ["Adrenal gland", "Liver", "Muscle", "Embryo", "Skin", "Large intestine", "Kidney", "Ovary", "Spleen", "Pancreas"];
+const SAMPLE_COLORS = ["#FF6384", "#4BC0C0", "#FFCD56", "#36A2EB", "#9966FF", "#FF9F40"];
+
+// A gene's expression across samples: more bars than fit the plot's height, under labels longer than fit past them.
+const longData: BarData<MyMetadata>[] = Array.from({ length: 60 }, (_, i) => {
+    const tissue = SAMPLE_TISSUES[i % SAMPLE_TISSUES.length];
+    const value = Math.round(360000 * Math.exp(-i / 12)) / 100;
+    return {
+        category: tissue,
+        label: `${value}, ${tissue}, female adult (${30 + (i % 40)} years) (ENCSR${(100000 + i * 7919) % 1000000}A)`,
+        value,
+        id: `sample-${i}`,
+        color: SAMPLE_COLORS[i % SAMPLE_COLORS.length],
+        metadata: { description: `Sample ${i + 1}`, source: tissue },
+    };
+});
+
+export const MobileLong: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        data: longData,
+        topAxisLabel: "Expression: TPM",
+        TooltipContents: TooltipContents as (bar: BarData<unknown>) => React.ReactNode,
+        onBarClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
+};

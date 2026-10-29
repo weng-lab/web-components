@@ -23,15 +23,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// Seeded, so the same bars draw every time.
+let seed = 1;
+const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
 // Box-Muller normal distribution
 function normalSample(mean: number, std: number): number {
-    const u1 = Math.random();
-    const u2 = Math.random();
+    const u1 = random();
+    const u2 = random();
     return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
 const normalData = Array.from({ length: 500 }, () => normalSample(0, 1));
-const skewedData = Array.from({ length: 500 }, () => Math.abs(normalSample(0, 1)) + Math.random() * 2);
+const skewedData = Array.from({ length: 500 }, () => Math.abs(normalSample(0, 1)) + random() * 2);
 
 export const Default: Story = {
     args: {

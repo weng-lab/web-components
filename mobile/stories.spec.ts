@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoStory, mobileStories, plotSurface, storyLabel } from "./stories";
-import { Touch, scrollSettled } from "./touch";
+import { gotoStory, mobileStories, ownRowsScrollTop, storyLabel, swipeOver } from "./stories";
 
 /** What every mobile story should do on every device, whatever the component. */
 for (const story of mobileStories) {
@@ -19,15 +18,12 @@ for (const story of mobileStories) {
     });
 
     // A plot as wide as the screen leaves nowhere else to put a finger, so one that keeps a swipe for
-    // itself stops the page from being scrolled past it.
+    // itself stops the page from being scrolled past it. A plot that scrolls its own rows keeps a swipe
+    // for them until they run out, as a table does, and the page has it from there.
     test("can be scrolled past with a swipe over it", async ({ page }) => {
       await gotoStory(page, story);
-      const surface = await plotSurface(page);
-      const from = { x: surface.x + surface.width / 2, y: surface.y + surface.height * 0.75 };
-      const to = { x: from.x, y: Math.max(from.y - 200, 8) };
-      const touch = await Touch.on(page);
-      await touch.swipe(from, to);
-      await scrollSettled(page);
+      await ownRowsScrollTop(page, true);
+      const { from, to } = await swipeOver(page);
       const scrolled = await page.evaluate(() => visualViewport!.pageTop);
       expect(scrolled, `how far a ${from.y - to.y}px swipe scrolled the page`).toBeGreaterThan((from.y - to.y) / 2);
     });

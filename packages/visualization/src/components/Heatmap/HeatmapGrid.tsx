@@ -58,7 +58,7 @@ const HeatmapGrid = ({
   const markedYTickLabelProps = useMemo(() => markTickLabels(yAxisTickLabelProps, selectionMarks.rows), [selectionMarks]);
 
   const {
-    canvasRef, mainPaneRef, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
+    canvasRef, mainPaneRef, mainPane, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
     visibleXTickValues, visibleYTickValues, canvasHandlers,
   } = useHeatmapCanvasGrid({
     canvasCellParams, viewportWidth, viewportHeight, xTickValues, yTickValues, onClick, animationType,
@@ -69,16 +69,15 @@ const HeatmapGrid = ({
   // minimap). One that fits leaves pinch-zoom to the page.
   const touchScreen = isTouchScreen();
   const gridScrolls = xMax > viewportWidth || yMax > viewportHeight;
-  const touchAction = useTwoFingerGestures(mainPaneRef, {
-    onStart: () => ({ left: mainPaneRef.current?.scrollLeft ?? 0, top: mainPaneRef.current?.scrollTop ?? 0 }),
+  const touchAction = useTwoFingerGestures(mainPane, {
+    onStart: () => ({ left: mainPane?.scrollLeft ?? 0, top: mainPane?.scrollTop ?? 0 }),
     onMove: ({ from, to }, start) => {
-      const main = mainPaneRef.current;
-      if (!main) return;
-      main.scrollLeft = start.left - (to.clientX - from.clientX);
-      main.scrollTop = start.top - (to.clientY - from.clientY);
+      if (!mainPane) return;
+      mainPane.scrollLeft = start.left - (to.clientX - from.clientX);
+      mainPane.scrollTop = start.top - (to.clientY - from.clientY);
     },
   }, touchScreen && gridScrolls);
-  const hint = useTwoFingerHint(mainPaneRef, touchScreen && gridScrolls);
+  const hint = useTwoFingerHint(mainPane, touchScreen && gridScrolls);
 
   // Centered under the viewport, but kept inside the container, as the download places it.
   const plotLeft = yTitleWidth + yTickLabelWidth;

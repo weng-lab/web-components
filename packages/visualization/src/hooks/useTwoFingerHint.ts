@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 /** How far one finger moves over the plot before it's taken as trying to move the plot. */
 const DRAG = 12;
@@ -6,15 +6,16 @@ const DRAG = 12;
 const LINGER = 1200;
 
 /**
- * Whether to show a plot's TwoFingerHint: while one finger drags across `ref`, scrolling the page
+ * Whether to show a plot's TwoFingerHint: while one finger drags across `element`, scrolling the page
  * rather than the plot, and briefly after, as embedded maps do. A second finger hides it.
  */
-export function useTwoFingerHint(ref: RefObject<Element | null>, enabled = true) {
+export function useTwoFingerHint(element: Element | null, enabled = true) {
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
-    const element = ref.current as HTMLElement | null;
-    if (!element || !enabled) return;
+    // Typed as HTML for its touch events, which an svg has too.
+    const target = element as HTMLElement | null;
+    if (!target || !enabled) return;
     let start: { x: number; y: number } | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -41,18 +42,18 @@ export function useTwoFingerHint(ref: RefObject<Element | null>, enabled = true)
       timer = setTimeout(() => setShown(false), LINGER);
     };
 
-    element.addEventListener("touchstart", handleStart, { passive: true });
-    element.addEventListener("touchmove", handleMove, { passive: true });
-    element.addEventListener("touchend", handleEnd);
-    element.addEventListener("touchcancel", handleEnd);
+    target.addEventListener("touchstart", handleStart, { passive: true });
+    target.addEventListener("touchmove", handleMove, { passive: true });
+    target.addEventListener("touchend", handleEnd);
+    target.addEventListener("touchcancel", handleEnd);
     return () => {
       clearTimeout(timer);
-      element.removeEventListener("touchstart", handleStart);
-      element.removeEventListener("touchmove", handleMove);
-      element.removeEventListener("touchend", handleEnd);
-      element.removeEventListener("touchcancel", handleEnd);
+      target.removeEventListener("touchstart", handleStart);
+      target.removeEventListener("touchmove", handleMove);
+      target.removeEventListener("touchend", handleEnd);
+      target.removeEventListener("touchcancel", handleEnd);
     };
-  }, [ref, enabled]);
+  }, [element, enabled]);
 
   return enabled && shown;
 }

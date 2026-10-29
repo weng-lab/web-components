@@ -1,6 +1,6 @@
 import { ProvidedZoom } from "@visx/zoom";
 import { localPoint } from "@visx/event";
-import { memo, ReactNode, useEffect, useRef } from "react";
+import { memo, ReactNode, useEffect, useRef, useState } from "react";
 import { Add, Remove, SettingsBackupRestore, Timeline } from "@mui/icons-material";
 import { ZoomState } from "./types";
 import { Group } from "@visx/group";
@@ -21,26 +21,24 @@ export type ZoomFrameProps = {
  * (zoom.containerRef) stay unattached: they pan with one finger, which would block page scrolling.
  */
 export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children, toggleBranchLength }: ZoomFrameProps) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [svg, setSvg] = useState<SVGSVGElement | null>(null);
 
   // Non-passive (React's onWheel is passive), so it can stop the page scrolling.
   const handleWheel = useStableCallback(zoom.handleWheel);
   useEffect(() => {
-    const svg = svgRef.current;
     svg?.addEventListener("wheel", handleWheel, { passive: false });
     return () => svg?.removeEventListener("wheel", handleWheel);
-  }, [handleWheel]);
+  }, [svg, handleWheel]);
 
-  const touchAction = useTwoFingerGestures(svgRef, {
+  const touchAction = useTwoFingerGestures(svg, {
     onStart: () => zoom.transformMatrix,
     onMove: ({ from, to, scale }, start) => {
-      const svg = svgRef.current;
       if (!svg) return;
       zoom.setTransformMatrix(followFingers(start, toLocal(svg, from), toLocal(svg, to), scale, ZOOM_SCALE_LIMITS));
     },
   });
 
-  const hint = useTwoFingerHint(svgRef);
+  const hint = useTwoFingerHint(svg);
 
   // Double-click zooms; a double tap is two taps on a branch.
   const pointerTypeRef = useRef("mouse");
@@ -63,7 +61,7 @@ export const ZoomFrame = memo(function({ zoom, totalWidth, totalHeight, children
         ]}
       />
       <svg
-        ref={svgRef}
+        ref={setSvg}
         width={totalWidth}
         height={totalHeight}
         style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction }}

@@ -2,9 +2,10 @@ import React, { useRef, useEffect, useState, useMemo, useCallback, ReactNode } f
 import { AxisBottom } from "@visx/axis";
 import { scaleLinear, scaleOrdinal } from "@visx/scale";
 import { LegendOrdinal } from "@visx/legend";
-import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
+import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { Text } from "@visx/text";
 import Tooltip from "@mui/material/Tooltip";
+import { useTheme } from "@mui/material/styles";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useTwoFingerGestures, useTwoFingerHint } from "../../hooks";
 import { TwoFingerHint } from "../../controls";
@@ -175,12 +176,8 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
   );
 
   
-  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<TooltipData>();
-  
-  const { TooltipInPortal } = useTooltipInPortal({
-    scroll: true,
-    detectBounds: true,
-  });
+  const theme = useTheme();
+  const tooltipRef = useRef<PlotTooltipHandle<TooltipData>>(null);
   
   const numSpecies = Object.keys(data).length;
   const numPositions = Object.values(data)[0]?.length ?? 0;
@@ -196,12 +193,12 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
     return new Map<string, SpeciesInfo>(entries);
   }, [data]);
   
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // State rather than a ref, so the listeners below attach to a canvas that mounts once there's room for it.
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
 
   // Attach wheel listener imperatively with passive: false so we can call preventDefault.
   // React 17+ attaches onWheel passively, which prevents scroll cancellation.
   useEffect(() => {
-    const canvas = canvasRef.current;
     if (!canvas) return;
 
     const handleWheel = (e: WheelEvent) => {
@@ -213,13 +210,12 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [canvasWidth]);
+  }, [canvas, canvasWidth]);
 
-  const hint = useTwoFingerHint(canvasRef);
-  const touchAction = useTwoFingerGestures(canvasRef, {
+  const hint = useTwoFingerHint(canvas);
+  const touchAction = useTwoFingerGestures(canvas, {
     onStart: () => zoomTransformRef.current,
     onMove: ({ from, to, scale }, start) => {
-      const canvas = canvasRef.current;
       if (!canvas) return;
       const { left } = canvas.getBoundingClientRect();
       setZoomTransform(zoomAbout(start, scale, canvasWidth, from.clientX - left, to.clientX - left));
@@ -228,7 +224,6 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
   // Draw to the cancas
   useEffect(() => {
-    const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
@@ -260,7 +255,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         ctx.globalAlpha = 1;
       });
     });
-  }, [data, canvasWidth, canvasHeight, numPositions, numSpecies, hovered, zoomTransform]);
+  }, [canvas, data, canvasWidth, canvasHeight, numPositions, numSpecies, hovered, zoomTransform]);
 
   // Converts a CSS pixel x position on the canvas to a data-space nucleotide index,
   // inverting the zoom transform: dataX = (cssX - translateX) / (cssWidthPerDataUnit * scaleX)
@@ -294,7 +289,6 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
   // Mouse rather than pointer events, so a tap's follow-up mouse events show the tooltip too.
   const handleHeatmapMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
     // While dragging, the pan suppresses the hover and tooltip.
     if (!canvas || isDragging) return;
 
@@ -309,19 +303,18 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
 
     if (position >= 0 && position < numPositions && speciesIndex >= 0 && speciesIndex < numSpecies) {
       handleSetInternalHover(speciesId);
-      showTooltip({
-        tooltipTop: e.clientY,
-        tooltipLeft: e.clientX,
-        tooltipData: {
+      tooltipRef.current?.show(
+        {
           position,
           char,
           charLabel: char != null ? LEGEND_LABELS[char] : undefined,
           ...(speciesInfo.get(speciesId) as SpeciesInfo),
         },
-      });
+        e
+      );
     } else {
       handleSetInternalHover(null);
-      hideTooltip();
+      tooltipRef.current?.hide();
     }
   };
 
@@ -332,17 +325,17 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
   // Doesn't end a drag: pointer capture carries it until pointerup.
   const handleHeatmapMouseLeave = () => {
     handleSetInternalHover(null);
-    hideTooltip();
+    tooltipRef.current?.hide();
   };
 
   const handleSpeciesBarMouseMove = (event: React.MouseEvent<SVGGElement, MouseEvent>, species: SpeciesInfo) => {
     handleSetInternalHover(species.id);
-    showTooltip({ tooltipLeft: event.clientX, tooltipTop: event.clientY, tooltipData: species });
+    tooltipRef.current?.show(species, event);
   };
 
   const handleSpeciesBarMouseLeave = (event: React.MouseEvent<SVGGElement, MouseEvent>, species: SpeciesInfo) => {
     handleSetInternalHover(null);
-    hideTooltip();
+    tooltipRef.current?.hide();
   };
 
   // Apply the zoom transform to the axis scale so tick positions stay in sync with the canvas.
@@ -428,7 +421,7 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
         </Text>
       </svg>
       <canvas
-        ref={canvasRef}
+        ref={setCanvas}
         onPointerDown={handleHeatmapPointerDown}
         onPointerMove={handleHeatmapPointerMove}
         onPointerUp={handleHeatmapPointerUp}
@@ -511,10 +504,10 @@ export const SequenceAlignmentPlot: React.FC<SequenceAlignmentPlotProps> = ({
           }}
         />
       </div>
-      {tooltipData && tooltipContents && (
-        <TooltipInPortal left={tooltipLeft} top={tooltipTop} style={defaultStyles}>
-          {tooltipContents(tooltipData)}
-        </TooltipInPortal>
+      {tooltipContents && (
+        <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip}>
+          {tooltipContents}
+        </PlotTooltip>
       )}
       <Tooltip title={INFO_TOOLTIP_TEXT} placement="top-end" arrow>
         <InfoOutlinedIcon

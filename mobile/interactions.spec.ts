@@ -1,5 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
-import { BOX_ZOOMS, actions, center, gotoStory, plotSurface, recordActions, storyById, storyLabel, surfaceShot } from "./stories";
+import {
+  BOX_ZOOMS,
+  actions,
+  center,
+  gotoStory,
+  ownRowsScrollTop,
+  plotSurface,
+  recordActions,
+  storyById,
+  storyLabel,
+  surfaceShot,
+  swipeOver,
+} from "./stories";
 import { Touch, scrollSettled } from "./touch";
 
 /**
@@ -37,6 +49,7 @@ async function tapMark(page: Page) {
 
 const TOOLTIPS = [
   "visualization-barplot--mobile",
+  "visualization-barplot--mobile-long",
   "visualization-dotplot--mobile",
   "visualization-heatmap--mobile",
   "visualization-heatmap--mobile-scrollable",
@@ -47,13 +60,21 @@ const TOOLTIPS = [
   "visualization-sequencealignmentplot--mobile",
   "visualization-treemap--mobile",
   "visualization-violinplot--mobile",
+  "visualization-violinplot--mobile-many",
 ];
 
 for (const id of TOOLTIPS) {
   const story = storyById(id);
-  test(`${storyLabel(story)} › a tap shows a tooltip on the screen, and a tap elsewhere hides it`, async ({ page }) => {
+  test(`${storyLabel(story)} › a tap shows a tooltip on the screen, the first after the plot mounts too, and a tap elsewhere hides it`, async ({ page }) => {
     await gotoStory(page, story);
-    await tapMark(page);
+    const spot = await tapMark(page);
+    const markAt = () =>
+      page.evaluate(({ x, y }) => {
+        const mark = document.elementFromPoint(x, y);
+        return mark && `${mark.tagName} ${mark.getAttribute("class") ?? ""}`;
+      }, spot);
+    const mark = await markAt();
+    const scrolled = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
     const box = (await tooltip(page).first().boundingBox())!;
     const screen = page.viewportSize()!;
     expect(box.x, "the tooltip's left edge").toBeGreaterThanOrEqual(0);
@@ -62,6 +83,14 @@ for (const id of TOOLTIPS) {
     // The page above the plot: never part of it.
     await page.touchscreen.tap(screen.width / 2, 60);
     await expect(tooltip(page)).toHaveCount(0);
+
+    // Reloaded, where a tooltip shown as the plot mounts went unseen, and scrolled back: tapped once the mark is
+    // under the spot again.
+    await gotoStory(page, story);
+    await page.evaluate(({ x, y }) => scrollTo(x, y), scrolled);
+    await expect.poll(markAt).toBe(mark);
+    await page.touchscreen.tap(spot.x, spot.y);
+    await expect(tooltip(page).first(), "the tooltip from the first tap after mounting").toBeVisible();
   });
 }
 
@@ -107,12 +136,14 @@ test("Heatmap › on a grid that fits, a pinch is left to zoom the page", async 
 
 const TAP_TO_CLICK: [id: string, clicks: RegExp][] = [
   ["visualization-barplot--mobile", /^onBarClicked$/],
+  ["visualization-barplot--mobile-long", /^onBarClicked$/],
   ["visualization-heatmap--mobile-scrollable", /^onClick$/],
   ["visualization-histogram--mobile", /^onBarClicked$/],
   ["visualization-phylotree--mobile", /^onBranchClick$/],
   ["visualization-scatterplot--mobile", /^onPointClicked$/],
   ["visualization-treemap--mobile", /^onNodeClicked$/],
   ["visualization-violinplot--mobile", /^on(Violin|Point)Clicked$/],
+  ["visualization-violinplot--mobile-many", /^on(Violin|Point)Clicked$/],
 ];
 
 for (const [id, clicks] of TAP_TO_CLICK) {
@@ -128,9 +159,102 @@ for (const [id, clicks] of TAP_TO_CLICK) {
   });
 }
 
+test("visualization/Legend/ChipLegend › a tap on a chip highlights its group, and a second tap on it switches the group off", async ({ page }) => {
+  await gotoStory(page, storyById("visualization-legend-chiplegend--mobile"));
+  const status = page.getByText(/^Hovered:/);
+  const liver = page.getByRole("button", { name: /^Liver\b/ });
+  await liver.tap();
+  await expect(status).toHaveText("Hovered: liver · Hidden: none");
+  await liver.tap();
+  await expect(status).toHaveText("Hovered: liver · Hidden: liver");
+  // A tap on another chip only moves the highlight to it.
+  await page.getByRole("button", { name: /^Lung\b/ }).tap();
+  await expect(status).toHaveText("Hovered: lung · Hidden: liver");
+});
+
+// Plots that scroll their own rows.
+for (const id of ["visualization-barplot--mobile-long", "visualization-violinplot--mobile-many"]) {
+  const story = storyById(id);
+  test(`${storyLabel(story)} › a swipe over the rows scrolls them`, async ({ page }) => {
+    await gotoStory(page, story);
+    const before = (await ownRowsScrollTop(page))!;
+    const { from, to } = await swipeOver(page);
+    const after = (await ownRowsScrollTop(page))!;
+    expect(after - before, `how far a ${from.y - to.y}px swipe scrolled the rows`).toBeGreaterThan((from.y - to.y) / 2);
+  });
+
+  test(`${storyLabel(story)} › the rows fade out at an end with more past it, so a clean break between two still shows there are more`, async ({ page }) => {
+    await gotoStory(page, story);
+    await ownRowsScrollTop(page);
+    const fades = () =>
+      page.evaluate(() => {
+        const rows = document.querySelector<HTMLElement>("[data-own-rows]")!;
+        const depth = (end: string) => parseFloat(rows.style.getPropertyValue(`--fade-${end}`)) || 0;
+        return { masked: getComputedStyle(rows).maskImage !== "none", start: depth("start") > 0, end: depth("end") > 0 };
+      });
+    expect(await fades()).toEqual({ masked: true, start: false, end: true });
+    await ownRowsScrollTop(page, true);
+    await expect.poll(fades).toEqual({ masked: true, start: true, end: false });
+  });
+}
+
+test("ui-components/TwoPaneLayout › a tap on the table's search button focuses its field in the tap itself, so a phone raises its keyboard", async ({ page }) => {
+  await gotoStory(page, storyById("ui-components-twopanelayout--stacked-as-tabs"));
+  await page.getByRole("tab", { name: "Table" }).tap();
+  // Heard once the tap's click is handled: a focus made after it, as a frame later, doesn't raise the keyboard.
+  await page.evaluate(() =>
+    window.addEventListener("click", () => ((window as any).__focusedInTap = document.activeElement?.getAttribute("role")))
+  );
+  await page.getByRole("button", { name: "Search" }).tap();
+  expect(await page.evaluate(() => (window as any).__focusedInTap)).toBe("searchbox");
+});
+
+test("ui-components/DetailsTabs › a long label wraps to fit its tab, and every tab is as tall as the tallest, so the selected one's shading reaches the row's bottom", async ({ page }) => {
+  await gotoStory(page, storyById("ui-components-detailstabs--phone"));
+  const tabs = await page.getByRole("tab").evaluateAll((tabs) =>
+    tabs.map((tab) => {
+      const { left, right, height } = tab.getBoundingClientRect();
+      return { left, right, height };
+    })
+  );
+  const tallest = Math.max(...tabs.map(({ height }) => height));
+  expect(tabs.map(({ height }) => height), "the tabs' heights").toEqual(tabs.map(() => tallest));
+  tabs.slice(1).forEach(({ left }, i) => expect(left, `tab ${i + 2}'s left edge`).toBeGreaterThanOrEqual(tabs[i].right - 0.5));
+});
+
+test("ScatterPlot › controls placed automatically go in a row over a plot taller than it is wide, and beside one wider", async ({ page }) => {
+  await gotoStory(page, storyById("visualization-scatterplot--mobile-tall"));
+  const plot = (await page.locator("[data-mobile-story] canvas").first().boundingBox())!;
+  const zoomIn = (await page.getByRole("button", { name: "Zoom in" }).boundingBox())!;
+  const zoomOut = (await page.getByRole("button", { name: "Zoom out" }).boundingBox())!;
+  // The story's plot is 600px tall and as wide as the screen, less the page's margins.
+  if (page.viewportSize()!.width < 600) {
+    expect(zoomOut.y, "the buttons' tops").toBe(zoomIn.y);
+    expect(zoomIn.y + zoomIn.height, "the buttons' bottom").toBeLessThan(plot.y);
+  } else {
+    expect(zoomOut.x, "the buttons' left edges").toBe(zoomIn.x);
+    expect(zoomIn.x, "the buttons' left edge").toBeGreaterThan(plot.x + plot.width);
+  }
+});
+
+test("ScatterPlot › points given while it was still loading are drawn once it has loaded", async ({ page }) => {
+  await gotoStory(page, storyById("visualization-scatterplot--mobile-after-loading"));
+  const inked = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>("[data-mobile-story] canvas");
+      if (!canvas || canvas.width === 0) return 0;
+      const pixels = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+      let count = 0;
+      for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 0) count++;
+      return count;
+    });
+  await expect.poll(inked, { message: "the canvas's drawn pixels" }).toBeGreaterThan(0);
+});
+
 const ZOOMS = [
   "visualization-phylotree--mobile",
   "visualization-scatterplot--mobile",
+  "visualization-scatterplot--mobile-after-loading",
   "visualization-sequencealignmentplot--mobile",
   "visualization-zoomableheatmap--mobile",
 ];
@@ -169,7 +293,7 @@ for (const id of ZOOMS) {
 }
 
 for (const id of ["visualization-legend-colorbarlegend--mobile", "visualization-zoomableheatmap--mobile"]) {
-  test(`${storyLabel(storyById(id))} › the range editor opens on the screen`, async ({ page }) => {
+  test(`${storyLabel(storyById(id))} › the range editor opens on the screen, and its Done button closes it`, async ({ page }) => {
     await gotoStory(page, storyById(id));
     await page.getByRole("button", { name: "Adjust the color range" }).tap();
     const panel = page.getByRole("presentation").locator(".MuiPopover-paper");
@@ -181,6 +305,8 @@ for (const id of ["visualization-legend-colorbarlegend--mobile", "visualization-
     // Nothing in it wider than the panel.
     const overflow = await panel.evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(overflow, "how far its contents run past it").toBeLessThanOrEqual(0);
+    await panel.getByRole("button", { name: "Done" }).tap();
+    await expect(panel).toBeHidden();
   });
 }
 

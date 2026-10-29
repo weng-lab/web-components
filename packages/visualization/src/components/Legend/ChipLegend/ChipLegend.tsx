@@ -1,7 +1,7 @@
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { Box, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Chip, Stack, Tooltip, Typography } from "@mui/material";
+import { useEffect, type ReactNode } from "react";
+import { HorizontalScroller } from "../../../controls/HorizontalScroller";
+import { useTapToActivate, type TapToActivate } from "../../../hooks";
 import type { PointShape } from "../../ScatterPlot/types";
 import ShapeGlyph from "./ShapeGlyph";
 import Swatch from "../Swatch";
@@ -25,6 +25,10 @@ export type ChipLegendProps = {
   groups: LegendGroup[];
   /** Group values switched off; the caller decides what that does to the points (see Point's `dimmed`). */
   hidden: ReadonlySet<string>;
+  /**
+   * Fired by a click on a chip. On touch, with `onHover`, by a second tap on it: the first highlights its group, as
+   * hovering does.
+   */
   onToggle: (value: string) => void;
   /** Group to ring, whichever side it came from: the plot's cursor or a chip's own hover. */
   highlighted?: string | null;
@@ -45,6 +49,7 @@ type LegendChipProps = {
   ringed: boolean;
   onToggle: (value: string) => void;
   onHover?: (value: string | null) => void;
+  tap: TapToActivate<string>;
 };
 
 const LegendChip = ({
@@ -53,15 +58,23 @@ const LegendChip = ({
   ringed,
   onToggle,
   onHover,
+  tap,
 }: LegendChipProps) => {
   const chip = (
     <Chip
       size="small"
-      // How ChipScroller finds the chip to scroll to.
-      data-legend-value={value}
-      onClick={() => onToggle(value)}
-      onMouseEnter={() => onHover?.(value)}
-      onMouseLeave={() => onHover?.(null)}
+      // How HorizontalScroller finds the chip to scroll to.
+      data-scroller-key={value}
+      // With nothing to highlight, there's nothing for a first tap to show, so it switches the group at once.
+      onClick={() => (!onHover || tap.activates(value)) && onToggle(value)}
+      onMouseEnter={() => {
+        tap.hover(value);
+        onHover?.(value);
+      }}
+      onMouseLeave={() => {
+        tap.hover(null);
+        onHover?.(null);
+      }}
       variant={hidden ? "outlined" : "filled"}
       label={
         <Stack direction="row" alignItems="center" gap={0.75}>
@@ -99,105 +112,18 @@ const LegendChip = ({
   );
 };
 
-/** How far a scroll button moves the row: most of its width, so a chip stays in view for context. */
-const PAGE = 0.8;
-/** Room left beside a chip scrolled into view, past its ring. */
-const EDGE = 8;
-
-/**
- * One row of chips that scrolls sideways, with buttons at either end while it overflows, as MUI's
- * scrollable Tabs. The highlighted chip is scrolled into view unless the cursor is on the row, where
- * the highlight comes from the chip under it, and scrolling would pull the chips from under the cursor.
- */
-const ChipScroller = ({ highlighted, children }: { highlighted?: string | null; children: ReactNode }) => {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const rowRef = useRef<HTMLDivElement>(null);
-  const pointerInside = useRef(false);
-  // Whether there's more of the row past each end.
-  const [more, setMore] = useState({ start: false, end: false });
-
-  useEffect(() => {
-    const scroller = scrollerRef.current!;
-    const update = () => {
-      const start = scroller.scrollLeft > 1;
-      const end = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1;
-      setMore((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(scroller);
-    observer.observe(rowRef.current!);
-    scroller.addEventListener("scroll", update, { passive: true });
-    return () => {
-      observer.disconnect();
-      scroller.removeEventListener("scroll", update);
-    };
-  }, []);
-
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller || highlighted == null || pointerInside.current) return;
-    const chip = scroller.querySelector(`[data-legend-value="${CSS.escape(highlighted)}"]`);
-    if (!chip) return;
-    const view = scroller.getBoundingClientRect();
-    const { left, right } = chip.getBoundingClientRect();
-    const offset = left < view.left ? left - view.left - EDGE : right > view.right ? right - view.right + EDGE : 0;
-    // A smooth scroll takes longer the further it goes, so a long jump is made at once rather than
-    // trailing behind a cursor moving on across the plot.
-    if (offset !== 0) {
-      scroller.scrollBy({ left: offset, behavior: Math.abs(offset) > scroller.clientWidth ? "auto" : "smooth" });
-    }
-  }, [highlighted]);
-
-  const scrollButton = (direction: -1 | 1) => (
-    <IconButton
-      size="small"
-      disabled={direction === -1 ? !more.start : !more.end}
-      onClick={() =>
-        scrollerRef.current?.scrollBy({ left: direction * scrollerRef.current.clientWidth * PAGE, behavior: "smooth" })
-      }
-      aria-label={direction === -1 ? "Scroll the legend left" : "Scroll the legend right"}
-      // A chip's height, so the buttons appearing doesn't change the row's.
-      sx={{ p: 0, width: 24, height: 24, flexShrink: 0 }}
-    >
-      {direction === -1 ? <ChevronLeftIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-    </IconButton>
-  );
-  const overflowing = more.start || more.end;
-
-  return (
-    <>
-      {overflowing && scrollButton(-1)}
-      <Box
-        ref={scrollerRef}
-        onMouseEnter={() => (pointerInside.current = true)}
-        onMouseLeave={() => (pointerInside.current = false)}
-        sx={{
-          flex: "1 1 auto",
-          minWidth: 0,
-          overflowX: "auto",
-          scrollbarWidth: "none",
-          "&::-webkit-scrollbar": { display: "none" },
-          // Room for a ringed chip's outline, which the scroller would otherwise clip, without adding
-          // to the row's height.
-          p: "3px",
-          my: "-3px",
-        }}
-      >
-        <Stack ref={rowRef} direction="row" alignItems="center" gap={0.5} width="max-content">
-          {children}
-        </Stack>
-      </Box>
-      {overflowing && scrollButton(1)}
-    </>
-  );
-};
-
 /**
  * Clickable legend - ScatterPlot has no categorical legend of its own, so groups are toggled here
  * and the caller decides what a toggle does to its points.
  */
 const ChipLegend = ({ groups, hidden, onToggle, highlighted, onHover, label, scrollable = false }: ChipLegendProps) => {
+  // On touch, a tap on a chip highlights its group, as hovering it does, and a second tap switches it.
+  const tap = useTapToActivate<string>();
+  // A group already highlighted, from its points on the plot, has had its preview: a tap on its chip switches it.
+  useEffect(() => {
+    tap.hover(highlighted ?? null);
+  }, [tap, highlighted]);
+
   const chips = groups.map((group) => (
     <LegendChip
       key={group.value}
@@ -206,6 +132,7 @@ const ChipLegend = ({ groups, hidden, onToggle, highlighted, onHover, label, scr
       ringed={group.value === highlighted}
       onToggle={onToggle}
       onHover={onHover}
+      tap={tap}
     />
   ));
 
@@ -224,7 +151,13 @@ const ChipLegend = ({ groups, hidden, onToggle, highlighted, onHover, label, scr
           {label}
         </Typography>
       )}
-      {scrollable ? <ChipScroller highlighted={highlighted}>{chips}</ChipScroller> : chips}
+      {scrollable ? (
+        <HorizontalScroller label="legend" reveal={highlighted}>
+          {chips}
+        </HorizontalScroller>
+      ) : (
+        chips
+      )}
     </Stack>
   );
 };

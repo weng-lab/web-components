@@ -38,5 +38,8 @@ export type { ManualSizeProps, UseResponsiveParentSizeResult, ResponsiveContaine
 
 export { useStableCallback } from './hooks';
 
+export { HorizontalScroller } from './controls';
+export type { HorizontalScrollerProps } from './controls';
+
 export { PlotTooltip } from './tooltip';
 export type { PlotTooltipHandle, PlotTooltipRef, PlotTooltipProps } from './tooltip';

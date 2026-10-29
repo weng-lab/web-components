@@ -57,8 +57,8 @@ export type ScatterPlotSyncProps = {
  * crosshair on all of them.
  *
  * The plots must be the same size and share their domains for their pixels to mean the same
- * thing. Lay them out in equally sized containers (or give them explicit matching width/height)
- * and pass the shared domains through.
+ * thing. Lay them out in equally sized containers (or give them explicit matching width/height),
+ * with their control panels on the same side, and pass the shared domains through.
  *
  * Only the hovered plot shows a tooltip - the mirrored crosshair is an overlay, and does not
  * trigger the other plots' hover behavior.

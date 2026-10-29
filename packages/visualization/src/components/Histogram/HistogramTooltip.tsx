@@ -1,17 +1,11 @@
-import React, { useImperativeHandle, useState } from 'react';
-import { TooltipWithBounds } from '@visx/tooltip';
+import React from 'react';
 import { HistogramBin, HistogramNormalize } from './types';
 
-export interface HistogramTooltipHandle {
-    show: (bin: HistogramBin, left: number, top: number) => void;
-    hide: () => void;
-}
-
 interface HistogramTooltipProps {
+    data: HistogramBin;
     multiSeries: boolean;
     normalize: HistogramNormalize;
     tooltipBody?: (bin: HistogramBin) => React.ReactElement;
-    ref: React.Ref<HistogramTooltipHandle>;
 }
 
 const normalizeLabels: Record<HistogramNormalize, string> = {
@@ -22,22 +16,13 @@ const normalizeLabels: Record<HistogramNormalize, string> = {
 
 const formatHeight = (v: number) => `${Number(v.toPrecision(4))}`;
 
-const HistogramTooltip = ({ multiSeries, normalize, tooltipBody, ref }: HistogramTooltipProps) => {
-    const [state, setState] = useState<{ open: boolean; data?: HistogramBin; left?: number; top?: number }>({ open: false });
-
-    useImperativeHandle(ref, () => ({
-        show: (bin, left, top) => setState({ open: true, data: bin, left, top }),
-        hide: () => setState((s) => ({ ...s, open: false })),
-    }));
-
-    if (!state.open || !state.data) return null;
-
-    const { data, left, top } = state;
+/** What a bin's tooltip says, in the histogram's PlotTooltip. */
+const HistogramTooltip = ({ data, multiSeries, normalize, tooltipBody }: HistogramTooltipProps) => {
     const normalized = normalize !== 'count';
     const singleValue = data.series[0]?.value;
 
     return (
-        <TooltipWithBounds left={left} top={top}>
+        <>
             {tooltipBody ? (
                 tooltipBody(data)
             ) : (
@@ -65,7 +50,7 @@ const HistogramTooltip = ({ multiSeries, normalize, tooltipBody, ref }: Histogra
                     )}
                 </div>
             )}
-        </TooltipWithBounds>
+        </>
     );
 };
 

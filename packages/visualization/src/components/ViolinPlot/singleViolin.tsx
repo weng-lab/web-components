@@ -3,12 +3,10 @@ import { max as d3max } from '@visx/vendor/d3-array';
 import { curveBasis } from '@visx/curve';
 import { line } from '@visx/shape';
 import { range } from '@visx/vendor/d3-array';
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import CrossPlot from "./crossPlot";
 import { calculateBoxStats, scottRule, silvermanRule, kernelDensityEstimator, gaussian, seededRandom } from "./helpers";
 import { ViolinPoint, SingleViolinProps, TooltipData } from "./types";
-import ViolinTooltip from "./violinTooltip";
-import { Portal, useTooltip } from "@visx/tooltip";
 
 // Points by value: outliers are new objects each render.
 const tapKey = (distIndex: number, point?: { value: number }) => (point ? `${distIndex}:${point.value}` : `${distIndex}`);
@@ -29,16 +27,10 @@ const SingleViolin = <T,>({
     onViolinClicked,
     onPointClicked,
     tap,
+    tooltipRef,
 }: SingleViolinProps<T>) => {
-
-    const {
-        tooltipData,
-        tooltipLeft,
-        tooltipTop,
-        tooltipOpen,
-        showTooltip,
-        hideTooltip,
-    } = useTooltip<TooltipData<T>>();
+    // What's under the pointer, for its highlight. Its tooltip is the plot's.
+    const [hovered, setHovered] = useState<TooltipData<T>>();
 
     const data = distribution.data.flatMap(d => d.value)
 
@@ -86,16 +78,15 @@ const SingleViolin = <T,>({
 
     const handleMouseMove = useCallback((event: React.MouseEvent<SVGPathElement>, data: TooltipData<T>, point?: ViolinPoint<T>) => {
         tap.hover(tapKey(distIndex, point));
-        showTooltip({
-            tooltipData: point && pointTooltipBody ? { point: point } : data,
-            tooltipLeft: event.pageX,
-            tooltipTop: event.pageY,
-        });
-    }, [pointTooltipBody, showTooltip, tap, distIndex]);
+        const shown = point && pointTooltipBody ? { point } : data;
+        setHovered(shown);
+        tooltipRef.current?.show(shown, event);
+    }, [pointTooltipBody, tap, distIndex, tooltipRef]);
 
     const handleMouseLeave = () => {
         tap.hover(null);
-        hideTooltip();
+        setHovered(undefined);
+        tooltipRef.current?.hide();
     };
 
     const handleViolinClick = () => {
@@ -158,7 +149,7 @@ const SingleViolin = <T,>({
                                 stroke={distribution.violinColor ?? 'black'}
                                 strokeOpacity={distribution.opacity ?? 1}
                                 strokeWidth={
-                                    tooltipData === violinTooltip
+                                    hovered === violinTooltip
                                         ? (violinProps?.stroke ?? 1) + 1
                                         : violinProps?.stroke ?? 1
                                 }
@@ -179,7 +170,7 @@ const SingleViolin = <T,>({
                             thirdQuartile={thirdQuartile}
                             valueScale={valueScale}
                             medianWidth={boxWidth}
-                            tooltipData={tooltipData ?? {}}
+                            tooltipData={hovered ?? {}}
                             handleMouseMove={handleMouseMove}
                             handleCrossClick={handleViolinClick}
                             disableViolinPlot={disableViolinPlot}
@@ -201,9 +192,9 @@ const SingleViolin = <T,>({
                         };
 
                         const isHighlighted = pointTooltipBody
-                            ? tooltipData?.point === outlier :
-                            tooltipData?.label === pointTooltip.label &&
-                            tooltipData?.value === pointTooltip.value;
+                            ? hovered?.point === outlier :
+                            hovered?.label === pointTooltip.label &&
+                            hovered?.value === pointTooltip.value;
 
                         const radius = outlier.radius ?? 4
 
@@ -229,7 +220,8 @@ const SingleViolin = <T,>({
                             const vertcy = valueScale(point.value);
                             const horizoncx = valueScale(point.value)
 
-                            const jitterAmount = violinProps?.jitter ?? 0;
+                            // Kept to the violin's own band, so points can't spill onto a neighbor's.
+                            const jitterAmount = Math.min(violinProps?.jitter ?? 0, labelScale.bandwidth() / 2);
                             const seed = `${distribution.label}-${point}-${index}`;
                             const jitterX = jitterAmount > 0
                                 ? (seededRandom(seed) - 0.5) * 2 * jitterAmount
@@ -244,9 +236,9 @@ const SingleViolin = <T,>({
                             };
 
                             const isHighlighted = pointTooltipBody
-                                ? tooltipData?.point === point :
-                                tooltipData?.label === pointTooltip.label &&
-                                tooltipData?.value === pointTooltip.value;
+                                ? hovered?.point === point :
+                                hovered?.label === pointTooltip.label &&
+                                hovered?.value === pointTooltip.value;
 
                             const r = point.radius ?? 2
                             const radius = isHighlighted ? r + 1 : r;
@@ -280,9 +272,9 @@ const SingleViolin = <T,>({
                             };
 
                             const isHighlighted = pointTooltipBody
-                                ? tooltipData?.point === point :
-                                tooltipData?.label === pointTooltip.label &&
-                                tooltipData?.value === pointTooltip.value;
+                                ? hovered?.point === point :
+                                hovered?.label === pointTooltip.label &&
+                                hovered?.value === pointTooltip.value;
 
                             return (
                                 <circle
@@ -302,18 +294,6 @@ const SingleViolin = <T,>({
 
                 </g>
             }
-            {tooltipOpen && tooltipData && (
-                <Portal>
-                    <ViolinTooltip
-                        left={tooltipLeft ?? 0}
-                        top={tooltipTop ?? 0}
-                        data={tooltipData}
-                        open={tooltipOpen}
-                        key={`${tooltipLeft}-${tooltipTop}`}
-                        pointTooltipBody={pointTooltipBody}
-                    />
-                </Portal>
-            )}
         </React.Fragment>
     )
 }

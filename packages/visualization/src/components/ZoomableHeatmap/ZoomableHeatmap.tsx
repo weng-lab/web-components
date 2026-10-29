@@ -224,9 +224,10 @@ export const ZoomableHeatmap = ({
 
   // Interaction
   const plotRef = useRef<HTMLDivElement | null>(null);
-  const surfaceRef = useRef<HTMLDivElement | null>(null);
-  const rowStripRef = useRef<HTMLDivElement | null>(null);
-  const columnStripRef = useRef<HTMLDivElement | null>(null);
+  // In state, so the wheel and touch listeners attach once the grid has room to render.
+  const [surface, setSurface] = useState<HTMLDivElement | null>(null);
+  const [rowStrip, setRowStrip] = useState<HTMLDivElement | null>(null);
+  const [columnStrip, setColumnStrip] = useState<HTMLDivElement | null>(null);
   const legendRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chromeRef = useRef<SVGSVGElement | null>(null);
@@ -273,7 +274,7 @@ export const ZoomableHeatmap = ({
     tooltipRef.current?.hide();
   };
   const localPoint = (event: { clientX: number; clientY: number }): Point => {
-    const rect = surfaceRef.current!.getBoundingClientRect();
+    const rect = surface!.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
   const indexOf = ({ row, column }: { row: number; column: number }) => column * rows + row;
@@ -328,9 +329,9 @@ export const ZoomableHeatmap = ({
       element?.addEventListener("wheel", handle, { passive: false });
       return () => element?.removeEventListener("wheel", handle);
     };
-    const stops = [listen(surfaceRef.current, "both"), listen(rowStripRef.current, "y"), listen(columnStripRef.current, "x")];
+    const stops = [listen(surface, "both"), listen(rowStrip, "y"), listen(columnStrip, "x")];
     return () => stops.forEach((stop) => stop());
-  }, [handleWheel, ready]);
+  }, [handleWheel, surface, rowStrip, columnStrip]);
 
   // Two fingers pan and pinch, as the wheel zooms: the grid both ways, an axis's labels that axis alone.
   const pinch = (axes: Axes): TwoFingerGestureHandlers<View | null> => ({
@@ -343,10 +344,10 @@ export const ZoomableHeatmap = ({
       if (v && spans) setView(zoomView(v, spans, axes, scale, localPoint(from), localPoint(to)));
     },
   });
-  const surfaceTouchAction = useTwoFingerGestures(surfaceRef, pinch("both"), ready);
-  const rowTouchAction = useTwoFingerGestures(rowStripRef, pinch("y"), ready);
-  const columnTouchAction = useTwoFingerGestures(columnStripRef, pinch("x"), ready);
-  const hint = useTwoFingerHint(surfaceRef, ready && !boxMode);
+  const surfaceTouchAction = useTwoFingerGestures(surface, pinch("both"));
+  const rowTouchAction = useTwoFingerGestures(rowStrip, pinch("y"));
+  const columnTouchAction = useTwoFingerGestures(columnStrip, pinch("x"));
+  const hint = useTwoFingerHint(surface, !boxMode);
 
   // The part of the grid a drag between two points zooms into, so it's what the grid will show: as
   // long as the drag along each axis, or as the closest the zoom can go there. All of an axis the
@@ -555,11 +556,11 @@ export const ZoomableHeatmap = ({
           }}
         />
         <div
-          ref={rowStripRef}
+          ref={setRowStrip}
           style={{ position: "absolute", left: yTitle, top: grid.top, width: grid.left - yTitle, height: grid.height, touchAction: rowTouchAction }}
         />
         <div
-          ref={columnStripRef}
+          ref={setColumnStrip}
           style={{ position: "absolute", left: grid.left, top: gridBottom, width: grid.width, height: TICK + TICK_GAP + columnLabelHeight, touchAction: columnTouchAction }}
         />
         {/* Over the label strips, which take the wheel and pinches: only a group's label takes the pointer, to list its names. */}
@@ -642,7 +643,7 @@ export const ZoomableHeatmap = ({
           )}
         </svg>
         <div
-          ref={surfaceRef}
+          ref={setSurface}
           style={{
             position: "absolute",
             ...grid,

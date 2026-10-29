@@ -32,12 +32,11 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
-    const controlsPosition = props.controlsPosition ?? "left";
     const layout = getPlotLayout({
         parentWidth,
         parentHeight,
         square: props.square ?? false,
-        controls: props.disableZoom ? null : controlsPosition,
+        controls: props.disableZoom ? null : props.controlsPosition ?? "auto",
         legend: Boolean(props.backgroundField?.legend),
     });
     const { margin, boundedWidth, boundedHeight } = layout;
@@ -150,13 +149,14 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
         return (
             <>
-                {layout.controlsLeft !== null && (
+                {layout.controls && (
                     <Stack
                         direction="column"
                         sx={{
                             position: 'absolute',
-                            left: layout.controlsLeft,
-                            top: margin.top,
+                            left: layout.controls.left,
+                            right: layout.controls.right,
+                            top: layout.controls.top,
                             zIndex: 10
                         }}
                     >
@@ -171,13 +171,14 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                             highlight={props.controlsHighlight}
                             downloadButton={downloadButton}
                             downloadPlot={handleDownload}
-                            side={controlsPosition}
+                            side={layout.controls.side}
                             miniMap={props.disableMiniMap ? undefined : { open: showMiniMap, toggle: toggleMiniMap }}
                         />
                     </Stack>
                 )}
                 <ScatterPlotViewport
                     left={layout.left}
+                    top={layout.top}
                     width={layout.width}
                     height={layout.height}
                     margin={margin}
@@ -220,7 +221,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         boundedWidth={boundedWidth}
                         boundedHeight={boundedHeight}
                         plotLeft={layout.left + margin.left}
-                        plotTop={margin.top}
+                        plotTop={layout.top + margin.top}
                         pointData={props.pointData}
                         xScale={xScale}
                         yScale={yScale}

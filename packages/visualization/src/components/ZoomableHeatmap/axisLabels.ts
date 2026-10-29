@@ -1,4 +1,4 @@
-import { measureTextWidth } from "../../utility";
+import { measureTextWidth, truncateToWidth } from "../../utility";
 
 export const LABEL_FONT_SIZE = 11;
 export const LABEL_FONT_FAMILY = "sans-serif";
@@ -45,17 +45,7 @@ export function fitLabel(text: string, width: number): string {
   const key = `${width}\u0000${text}`;
   const cached = fitted.get(key);
   if (cached !== undefined) return cached;
-  let result = text;
-  if (measure(text) > width) {
-    let lo = 0;
-    let hi = text.length;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (measure(`${text.slice(0, mid)}…`) <= width) lo = mid;
-      else hi = mid - 1;
-    }
-    result = `${text.slice(0, lo).trimEnd()}…`;
-  }
+  const result = truncateToWidth(text, width, LABEL_FONT_SIZE, LABEL_FONT_FAMILY);
   if (fitted.size > 20_000) fitted.clear();
   fitted.set(key, result);
   return result;

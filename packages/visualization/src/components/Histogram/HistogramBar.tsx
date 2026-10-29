@@ -3,8 +3,8 @@ import { Bar } from '@visx/shape';
 import { motion } from 'framer-motion';
 import { getAnimationProps, AnimationType } from '../../utility';
 import { HistogramBin } from './types';
-import { HistogramTooltipHandle } from './HistogramTooltip';
 import type { TapToActivate } from '../../hooks';
+import type { PlotTooltipRef } from '../../tooltip';
 
 export interface HistogramBarProps {
     bin: HistogramBin;
@@ -15,14 +15,13 @@ export interface HistogramBarProps {
     opacities: number[];
     animationType?: AnimationType;
     binIndex: number;
-    svgRef: React.RefObject<SVGSVGElement | null>;
-    tooltipRef: React.RefObject<HistogramTooltipHandle | null>;
+    tooltipRef: PlotTooltipRef<HistogramBin>;
     tap: TapToActivate<HistogramBin>;
     onBarClicked?: (bin: HistogramBin) => void;
 }
 
 //memoize so that entire chart doesnt re-render on hover, just the hovered bar
-const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType, binIndex, svgRef, tooltipRef, tap, onBarClicked }: HistogramBarProps) => {
+const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType, binIndex, tooltipRef, tap, onBarClicked }: HistogramBarProps) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const Wrapper = animationType ? motion.g : 'g';
@@ -42,13 +41,9 @@ const HistogramBar = memo(({ bin, x, barWidth, yScale, opacities, animationType,
             onMouseEnter={(e: React.MouseEvent) => {
                 setIsHovered(true);
                 tap.hover(bin);
-                const rect = svgRef.current?.getBoundingClientRect();
-                tooltipRef.current?.show(bin, rect ? e.clientX - rect.left + 10 : e.pageX, rect ? e.clientY - rect.top : e.pageY);
+                tooltipRef.current?.show(bin, e);
             }}
-            onMouseMove={(e: React.MouseEvent) => {
-                const rect = svgRef.current?.getBoundingClientRect();
-                tooltipRef.current?.show(bin, rect ? e.clientX - rect.left + 10 : e.pageX, rect ? e.clientY - rect.top : e.pageY);
-            }}
+            onMouseMove={(e: React.MouseEvent) => tooltipRef.current?.show(bin, e)}
             onMouseLeave={() => {
                 setIsHovered(false);
                 tap.hover(null);

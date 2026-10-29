@@ -51,6 +51,12 @@ for (const [id, selector, action] of CLICKS) {
   });
 }
 
+test("visualization/Legend/ChipLegend › a click on a chip switches its group at once", async ({ page }) => {
+  await gotoStory(page, storyById("visualization-legend-chiplegend--mobile"));
+  await page.getByRole("button", { name: /^Liver\b/ }).click();
+  await expect(page.getByText(/^Hovered:/)).toHaveText("Hovered: liver · Hidden: liver");
+});
+
 test.describe("visualization/ZoomableHeatmap", () => {
   const story = storyById("visualization-zoomableheatmap--mobile");
 

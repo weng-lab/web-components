@@ -98,12 +98,9 @@ const ColorRangeButton = ({ label, notes = [], onOpen, onClose, ...editor }: Col
         transformOrigin={{ vertical: "top", horizontal: side }}
         slotProps={{ paper: { sx: { p: 2, mt: 0.5 } } }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={notes.length ? 0.5 : 1}>
-          <Typography variant="subtitle2">Color range</Typography>
-          <Button size="small" disabled={!adjusted} onClick={() => editor.onChange(editor.defaultRange)}>
-            Reset
-          </Button>
-        </Stack>
+        <Typography variant="subtitle2" mb={notes.length ? 0.5 : 1}>
+          Color range
+        </Typography>
         {/* As wide as the editor, so a long note wraps rather than widening the panel. */}
         {notes.length > 0 && (
           <Stack gap={0.5} mb={1.5} width={0} minWidth="100%">
@@ -119,6 +116,16 @@ const ColorRangeButton = ({ label, notes = [], onOpen, onClose, ...editor }: Col
           // Fits a phone: Popover's 16px marginThreshold plus the panel's 16px padding, each side.
           width={Math.min(EDITOR_WIDTH, (window.visualViewport?.width ?? window.innerWidth) - 64)}
         />
+        {/* The range is applied as it changes, so Done only closes the panel: a plain way out on a phone, where the
+            panel leaves little of the page to tap outside it. */}
+        <Stack direction="row" justifyContent="flex-end" gap={1} mt={1.5}>
+          <Button size="small" disabled={!adjusted} onClick={() => editor.onChange(editor.defaultRange)}>
+            Reset
+          </Button>
+          <Button size="small" variant="contained" disableElevation onClick={close}>
+            Done
+          </Button>
+        </Stack>
       </Popover>
     </>
   );

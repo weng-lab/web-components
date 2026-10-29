@@ -3,6 +3,7 @@ import { ProvidedZoom } from "@visx/zoom";
 import { CSSProperties, ReactElement, ReactNode } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 import { ManualSizeProps } from '../../responsive';
+import type { ControlsSide } from './layout';
 
 /**
  * Shapes a point can be drawn as, for encoding a categorical field alongside color.
@@ -391,12 +392,16 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     yDomain?: [number, number];
     /**
-     * Side of the plot the zoom/selection controls sit on. The plot is narrowed to give them a
-     * lane of their own on that side, so they never cover the axis or the points.
+     * Side of the plot the zoom/selection controls sit on: a column beside it, or a row over it.
+     * The plot gives up a lane of its own to them on that side, so they never cover the axis or the
+     * points. "auto" takes the right or the top, whichever leaves room for the bigger square plot
+     * area: the top over a plot taller than it is wide, as on a phone. Synced plots keep plot areas
+     * of the same size with their controls on the same side, as "auto" puts them in containers of
+     * the same size.
      * @default
-     * "left"
+     * "auto"
      */
-    controlsPosition?: "left" | "right";
+    controlsPosition?: ControlsSide | "auto";
     /**
      * Lock the plot to a square, sized to the shorter side of its container and centered in it.
      *
@@ -509,7 +514,7 @@ export type ControlButtonsProps = {
     downloadButton: boolean;
     downloadPlot: () => void;
     /** The side of the plot the panel is on, so its tooltips can open toward the plot. */
-    side: "left" | "right";
+    side: ControlsSide;
     /** The minimap toggle, shown when the plot has a minimap. */
     miniMap?: {
         open: boolean;

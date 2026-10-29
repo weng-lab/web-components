@@ -1,8 +1,8 @@
 import { DragHandle } from "@mui/icons-material";
 import { Box, Divider, useTheme } from "@mui/material";
-import type { ResizablePanesProps } from "./types";
+import type { Direction, ResizablePanesProps } from "./types";
 import { useResizablePanes } from "./useResizablePanes";
-import { perBreakpoint } from "./responsiveDirection";
+import { mediaWhere, perBreakpoint } from "./responsiveDirection";
 
 /**
  * A resizable split-pane primitive. Renders two panes with a draggable divider
@@ -27,6 +27,7 @@ export const ResizablePanes = ({
   min = 20,
   max = 80,
   collapsed,
+  stackedCollapsed,
   rowHeight = "max(60vh, 600px)",
   columnHeight = "500px",
   gap = 2,
@@ -34,10 +35,6 @@ export const ResizablePanes = ({
 }: ResizablePanesProps) => {
   const theme = useTheme();
   const { pct, containerRef, dividerHandlers } = useResizablePanes(initialPct, min, max);
-
-  const showFirst = collapsed !== "first";
-  const showSecond = collapsed !== "second";
-  const isCollapsed = !showFirst || !showSecond;
 
   // `theme.spacing(gap)` is stable across server/client, so interpolating it into
   // the responsive strings does not reintroduce a flash.
@@ -47,16 +44,31 @@ export const ResizablePanes = ({
   // column → short), even when collapsed to a single pane.
   const paneHeight = perBreakpoint(direction, (d) => (d === "row" ? rowHeight : columnHeight));
 
-  // When a pane is collapsed the layout is a static single column, known at SSR
-  // (it's a JS prop, not viewport-derived) — so it overrides the responsive grid
-  // and is itself flash-free. Otherwise the grid, divider visibility, and pane
-  // placement are all responsive `sx` objects that resolve at paint time.
-  const gridTemplateColumns = isCollapsed
-    ? "minmax(0, 1fr)"
-    : perBreakpoint(direction, (d) => (d === "row" ? `${pct}% ${spacing} minmax(0, 1fr)` : "minmax(0, 1fr)"));
-  const dividerDisplay = isCollapsed ? "none" : perBreakpoint(direction, (d) => (d === "row" ? "flex" : "none"));
-  const firstGridColumn = isCollapsed ? "auto" : perBreakpoint(direction, (d) => (d === "row" ? 1 : "auto"));
-  const secondGridColumn = isCollapsed ? "auto" : perBreakpoint(direction, (d) => (d === "row" ? 3 : "auto"));
+  // Which pane is hidden at each breakpoint: `collapsed` side by side, and `stackedCollapsed` where it's
+  // given once stacked. Like the orientation, it's all responsive `sx`, resolved at paint time. A collapse
+  // side by side drops the divider and gives the other pane the whole width.
+  const split = (d: Direction) => d === "row" && !collapsed;
+  const tabbed = (d: Direction) => d === "column" && !!stackedCollapsed;
+  const gridTemplateColumns = perBreakpoint(direction, (d) =>
+    split(d) ? `${pct}% ${spacing} minmax(0, 1fr)` : "minmax(0, 1fr)"
+  );
+  const dividerDisplay = perBreakpoint(direction, (d) => (split(d) ? "flex" : "none"));
+  // Shown one at a time, the stacked panes share a cell, the other only invisible there: it keeps its
+  // size, so a table measures its rows and a plot its axes as though shown, and neither redraws on its
+  // way back. Everything in it is hidden too, past anything that would show itself - a data grid's
+  // column menu buttons, say. A pane collapsed otherwise is taken out of the layout.
+  const stackedMedia = mediaWhere(direction, "column", theme.breakpoints);
+  const paneSx = (pane: "first" | "second", column: 1 | 3) => ({
+    minWidth: 0,
+    height: paneHeight,
+    gridColumn: perBreakpoint(direction, (d) => (split(d) ? column : tabbed(d) ? 1 : "auto")),
+    gridRow: perBreakpoint(direction, (d) => (tabbed(d) ? 1 : "auto")),
+    display: perBreakpoint(direction, (d) => (!tabbed(d) && collapsed === pane ? "none" : "block")),
+    ...(stackedCollapsed === pane &&
+      Object.fromEntries(
+        stackedMedia.map((media) => [media, { visibility: "hidden", "& *": { visibility: "hidden !important" } }])
+      )),
+  });
 
   return (
     <Box ref={containerRef} display="grid" sx={{ gridTemplateColumns, rowGap: gap }}>
@@ -65,7 +77,7 @@ export const ResizablePanes = ({
         filters, sort, grouping and scroll - and whatever reads from it (a plot drawn from the table's
         rows) would stop hearing from it until it came back.
       */}
-      <Box sx={{ minWidth: 0, height: paneHeight, gridColumn: firstGridColumn, display: showFirst ? undefined : "none" }}>
+      <Box sx={paneSx("first", 1)}>
         {first}
       </Box>
 
@@ -105,7 +117,7 @@ export const ResizablePanes = ({
         </Divider>
       </Box>
 
-      <Box sx={{ minWidth: 0, height: paneHeight, gridColumn: secondGridColumn, display: showSecond ? undefined : "none" }}>
+      <Box sx={paneSx("second", 3)}>
         {second}
       </Box>
     </Box>

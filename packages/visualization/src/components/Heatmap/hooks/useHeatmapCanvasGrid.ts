@@ -89,8 +89,11 @@ export function useHeatmapCanvasGrid({
   }, [animationType, drawLatest]);
 
   const [axisScrollPos, setAxisScrollPos] = useState({ left: 0, top: 0 });
+  // Also in state, for the touch gestures, which listen on it.
+  const [mainPane, setMainPane] = useState<HTMLDivElement | null>(null);
   const setMainPaneNode = useCallback((node: HTMLDivElement | null) => {
     mainPaneRef.current = node;
+    setMainPane(node);
     if (node) setAxisScrollPos({ left: node.scrollLeft, top: node.scrollTop });
   }, []);
 
@@ -163,7 +166,7 @@ export function useHeatmapCanvasGrid({
   }, [canvasCellParams, cellAt, onClick, tap]);
 
   return {
-    canvasRef, mainPaneRef, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
+    canvasRef, mainPaneRef, mainPane, canvasTooltipRef, setMainPaneNode, handleGridScroll, axisScrollPos,
     visibleXTickValues, visibleYTickValues,
     canvasHandlers: {
       onMouseMove: handleCanvasMouseMove,
