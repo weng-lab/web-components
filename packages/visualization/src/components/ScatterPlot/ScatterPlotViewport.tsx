@@ -21,8 +21,9 @@ import { useDragSelection } from "./hooks/useDragSelection";
 import { DEFAULT_FIELD_COLORS, FIELD_LEGEND_GAP, FIELD_LEGEND_WIDTH, drawField, getFieldTicks } from "./backgroundField";
 
 type ScatterPlotViewportProps<T extends object> = {
-    /** The plot's offset from the container's left edge - see getPlotLayout. */
+    /** The plot's offset from the container's left and top edges - see getPlotLayout. */
     left: number;
+    top: number;
     width: number;
     height: number;
     margin: { top: number; left: number };
@@ -85,6 +86,7 @@ const hoverAmountAt = (start: number | undefined, now: number) =>
 
 const ScatterPlotViewport = <T extends object>({
     left,
+    top,
     width,
     height,
     margin,
@@ -121,8 +123,11 @@ const ScatterPlotViewport = <T extends object>({
     crosshair,
     divRef,
 }: ScatterPlotViewportProps<T>) => {
-    const graphRef = useRef<SVGRectElement | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    // Held in state rather than refs, so what draws on and listens to them waits for them to appear after loading:
+    // points that arrived before them, as from a cache, are still drawn.
+    const [svg, setSvg] = useState<SVGSVGElement | null>(null);
+    const [graph, setGraph] = useState<SVGRectElement | null>(null);
+    const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
     // When each hovered point began to grow, by pointKey. Timed per point so that when the hovered
     // set shifts - a window swept along a colorbar - points still in it keep their growth and only
     // new ones start from nothing. Painted straight onto the canvas rather than through state: a
@@ -164,14 +169,12 @@ const ScatterPlotViewport = <T extends object>({
 
     // Non-passive (React's onWheel is passive), so the wheel zooms instead of scrolling the page.
     useEffect(() => {
-        const graphElement = graphRef.current;
         const handleWheel = (event: WheelEvent) => { event.preventDefault(); };
-        graphElement?.addEventListener('wheel', handleWheel, { passive: false });
-        return () => graphElement?.removeEventListener('wheel', handleWheel);
-    }, []);
+        graph?.addEventListener('wheel', handleWheel, { passive: false });
+        return () => graph?.removeEventListener('wheel', handleWheel);
+    }, [graph]);
 
-    const svgRef = useRef<SVGSVGElement | null>(null);
-    const twoFingerTouchAction = useTwoFingerGestures(svgRef, {
+    const twoFingerTouchAction = useTwoFingerGestures(svg, {
         onStart: () => {
             cancelSelection();
             setBoxDrag(null);
@@ -179,18 +182,11 @@ const ScatterPlotViewport = <T extends object>({
             return zoom.transformMatrix;
         },
         onMove: ({ from, to, scale }, start) => {
-            const surface = graphRef.current;
-            if (!surface) return;
-            zoom.setTransformMatrix(followFingers(start, toLocal(surface, from), toLocal(surface, to), scale));
+            if (!graph) return;
+            zoom.setTransformMatrix(followFingers(start, toLocal(graph, from), toLocal(graph, to), scale));
         },
     }, !disableZoom);
-    const hint = useTwoFingerHint(svgRef, !disableZoom && !fingerDraws);
-
-    // The zoom holds panning inside the plot area, whose size only the plot knows.
-    const { setPanExtent } = zoom;
-    useEffect(() => {
-        setPanExtent?.(boundedWidth, boundedHeight);
-    }, [setPanExtent, boundedWidth, boundedHeight]);
+    const hint = useTwoFingerHint(svg, !disableZoom && !fingerDraws);
 
     const xScaleTransformed = useMemo(
         () => rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX),
@@ -262,7 +258,6 @@ const ScatterPlotViewport = <T extends object>({
     }, [boundedHeight, boundedWidth, hoveredPointKeys, pointData, fieldRaster, fieldX, fieldY, fieldOpacity, hoverStyle, spotlit, dimStyle]);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
         if (!canvas || showPointAnimation) return;
 
         // Sync start times with the hovered set: kept points keep theirs, new ones start now, and
@@ -295,7 +290,7 @@ const ScatterPlotViewport = <T extends object>({
         });
 
         return () => cancelAnimationFrame(frame);
-    }, [drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation, hoveredPointKeys]);
+    }, [canvas, drawPoints, xScaleTransformed, yScaleTransformed, showPointAnimation, hoveredPointKeys]);
 
     const tap = useTapToActivate<Point<T>>();
     useEffect(() => tap.hover(hoveredPoint), [tap, hoveredPoint]);
@@ -324,7 +319,7 @@ const ScatterPlotViewport = <T extends object>({
 
     /**
      * Panning is coalesced to one zoom update per frame. React flushes mousemove updates
-     * synchronously, and a shared zoom re-renders every synced plot, so handling each move
+     * synchronously, and a synced view re-renders every synced plot, so handling each move
      * outright never lets the browser paint and eventually exceeds React's update depth.
      *
      * The buffer holds nativeEvent, since React clears the synthetic event's currentTarget after
@@ -507,7 +502,8 @@ const ScatterPlotViewport = <T extends object>({
     ) : null;
 
     return (
-        <Box sx={{ position: "relative", marginLeft: `${left}px`, width, height }}>
+        // Offset from the top rather than given a top margin, which would collapse through the container's.
+        <Box sx={{ position: "relative", marginLeft: `${left}px`, top, width, height }}>
             {loading ? (
                 <Box display="flex" width="100%" height="100%" sx={{ justifyContent: "center", alignItems: "center" }}>
                     <CircularProgress />
@@ -515,7 +511,7 @@ const ScatterPlotViewport = <T extends object>({
             ) : (
                 <div style={{ position: "relative" }} ref={divRef}>
                     <canvas
-                        ref={canvasRef}
+                        ref={setCanvas}
                         width={boundedWidth * 2}
                         height={boundedHeight * 2}
                         style={{
@@ -529,7 +525,7 @@ const ScatterPlotViewport = <T extends object>({
                         }}
                     />
                     <svg
-                        ref={svgRef}
+                        ref={setSvg}
                         width={width}
                         height={height}
                         overflow="visible"
@@ -596,7 +592,7 @@ const ScatterPlotViewport = <T extends object>({
                                 );
                             })()}
                             <rect
-                                ref={graphRef}
+                                ref={setGraph}
                                 fill="transparent"
                                 width={boundedWidth}
                                 height={boundedHeight}

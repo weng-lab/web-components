@@ -1,9 +1,9 @@
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { Group } from '@visx/group';
 import { Text } from '@visx/text';
 import { SingleBarProps } from "./types";
 import { Bar, Circle } from "@visx/shape";
-import { getAnimationProps } from "../../utility";
+import { getAnimationProps, truncateToWidth } from "../../utility";
 import { motion } from "framer-motion";
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
@@ -22,6 +22,7 @@ const SingleBar = <T,>({
     barSpacing,
     gapBetweenTextAndBar,
     getLollipopRadius,
+    labelRight,
     animation,
     animationEnabled,
     animationBuffer,
@@ -70,6 +71,10 @@ const SingleBar = <T,>({
     const categoryLabelY = (bandPos ?? 0) + bandSize / 2
 
     const valueLabelX = barX + barWidth + gapBetweenTextAndBar + (bar.lollipopValue && bar.value >= 0 ? getLollipopRadius(bar.lollipopValue) : 0)
+    const label = useMemo(
+        () => bar.label && truncateToWidth(bar.label, labelRight - valueLabelX, 12, fontFamily),
+        [bar.label, labelRight, valueLabelX]
+    )
 
     const valueLabelY = barY + barHeight / 2
 
@@ -134,7 +139,7 @@ const SingleBar = <T,>({
                         fill="black"
                         fontSize={12}
                     >
-                        {bar.label}
+                        {label}
                     </Text>
                 </Group>
             </Wrapper>

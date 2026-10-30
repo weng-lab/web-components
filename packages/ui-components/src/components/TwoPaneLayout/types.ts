@@ -26,8 +26,24 @@ export type TwoPaneLayoutProps = {
   TableComponent: React.ReactNode;
   plots: readonly TwoPanePlotConfig[];
   direction?: ResponsiveDirection;
+  /**
+   * Each pane's height once stacked, its header included - with `stackedLayout` "tabs", the one pane
+   * shown and the tab bar over it.
+   * @default "500px"
+   */
   columnHeight?: string;
+  /**
+   * The panes' height side by side, their headers included.
+   * @default "max(60vh, 600px)"
+   */
   rowHeight?: string;
+  /**
+   * How the panes show once stacked. "tabs" shows one at a time, with the table as a tab before the plots',
+   * so neither is scrolled past to reach the other; they open on the first plot. "stacked" keeps the
+   * table over the plots.
+   * @default "tabs"
+   */
+  stackedLayout?: "tabs" | "stacked";
   /**
    * Initial width of the table pane as a percentage of the container.
    * @default 50

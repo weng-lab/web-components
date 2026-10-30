@@ -10,6 +10,7 @@ import { DEFAULT_DIM_STYLE, equalizeDomains, getDomains, getPointExtents, isSame
 import ScatterPlotViewport from './ScatterPlotViewport';
 import MiniMap from './minimap';
 import PlotZoom from './PlotZoom';
+import { ViewSync } from './ViewSync';
 import DefaultTooltipBody from './tooltip';
 import { useSelectionMode } from './hooks/useSelectionMode';
 import { useMiniMapToggle } from './hooks/useMiniMapToggle';
@@ -32,12 +33,11 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     const initialMiniMapOpen = props.initialState?.minimap?.showWhileZoomed ?? false;
 
     const { parentRef, containerStyle, width: parentWidth, height: parentHeight } = useResponsiveParentSize({ width: props.width, height: props.height });
-    const controlsPosition = props.controlsPosition ?? "left";
     const layout = getPlotLayout({
         parentWidth,
         parentHeight,
         square: props.square ?? false,
-        controls: props.disableZoom ? null : controlsPosition,
+        controls: props.disableZoom ? null : props.controlsPosition ?? "auto",
         legend: Boolean(props.backgroundField?.legend),
     });
     const { margin, boundedWidth, boundedHeight } = layout;
@@ -140,23 +140,25 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     };
 
     const renderPlot = (zoom: ZoomType) => {
-        // Anchor the buttons on the plot area explicitly - a shared zoom is sized by whoever owns
-        // it, so visx's own default anchor (the center of that size) isn't this plot's center.
-        const zoomCenter = { x: boundedWidth / 2, y: boundedHeight / 2 };
-        const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2, point: zoomCenter }); }
-        const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8, point: zoomCenter }); }
+        // About the middle of the plot area, which the zoom is sized to.
+        const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2 }); }
+        const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8 }); }
         const handleZoomReset = () => { zoom.reset(); }
         const zoomed = !isSameTransform(zoom.transformMatrix, zoom.initialTransformMatrix);
 
         return (
             <>
-                {layout.controlsLeft !== null && (
+                {(props.view !== undefined || props.onViewChange) && (
+                    <ViewSync zoom={zoom} view={props.view ?? null} onViewChange={props.onViewChange} xScale={xScale} yScale={yScale} />
+                )}
+                {layout.controls && (
                     <Stack
                         direction="column"
                         sx={{
                             position: 'absolute',
-                            left: layout.controlsLeft,
-                            top: margin.top,
+                            left: layout.controls.left,
+                            right: layout.controls.right,
+                            top: layout.controls.top,
                             zIndex: 10
                         }}
                     >
@@ -171,13 +173,14 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                             highlight={props.controlsHighlight}
                             downloadButton={downloadButton}
                             downloadPlot={handleDownload}
-                            side={controlsPosition}
+                            side={layout.controls.side}
                             miniMap={props.disableMiniMap ? undefined : { open: showMiniMap, toggle: toggleMiniMap }}
                         />
                     </Stack>
                 )}
                 <ScatterPlotViewport
                     left={layout.left}
+                    top={layout.top}
                     width={layout.width}
                     height={layout.height}
                     margin={margin}
@@ -220,7 +223,7 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
                         boundedWidth={boundedWidth}
                         boundedHeight={boundedHeight}
                         plotLeft={layout.left + margin.left}
-                        plotTop={margin.top}
+                        plotTop={layout.top + margin.top}
                         pointData={props.pointData}
                         xScale={xScale}
                         yScale={yScale}
@@ -248,13 +251,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     return (
         <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
-            {props.zoom
-                ? renderPlot(props.zoom)
-                : (
-                    <PlotZoom width={boundedWidth} height={boundedHeight}>
-                        {renderPlot}
-                    </PlotZoom>
-                )}
+            <PlotZoom width={boundedWidth} height={boundedHeight}>
+                {renderPlot}
+            </PlotZoom>
         </ResponsiveContainer>
     );
 }

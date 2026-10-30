@@ -1,4 +1,4 @@
-import { RefObject, useEffect } from "react";
+import { useEffect } from "react";
 import { useStableCallback } from "./useStableCallback";
 
 export type ClientPoint = { clientX: number; clientY: number };
@@ -26,10 +26,11 @@ export type TwoFingerGestureHandlers<S> = {
  * the browser's.
  *
  * Returns the touch-action the element needs, which keeps one-finger page panning and takes pinch.
- * Set it on an outermost svg or an HTML element: browsers ignore touch-action inside an svg.
+ * Set it on an outermost svg or an HTML element: browsers ignore touch-action inside an svg. Takes the
+ * element, held in state rather than a ref, so one that mounts late, as after loading, still gets its listeners.
  */
 export function useTwoFingerGestures<S>(
-  ref: RefObject<Element | null>,
+  element: Element | null,
   handlers: TwoFingerGestureHandlers<S>,
   enabled = true
 ) {
@@ -37,8 +38,9 @@ export function useTwoFingerGestures<S>(
   const onMove = useStableCallback(handlers.onMove);
 
   useEffect(() => {
-    const element = ref.current as HTMLElement | null;
-    if (!element || !enabled) return;
+    // Typed as HTML for its touch events, which an svg has too.
+    const target = element as HTMLElement | null;
+    if (!target || !enabled) return;
 
     let fingers: [number, number] | null = null;
     let start: { midpoint: ClientPoint; distance: number; view: S } | null = null;
@@ -85,18 +87,18 @@ export function useTwoFingerGestures<S>(
       start = null;
     };
 
-    element.addEventListener("touchstart", handleTouchStart, { passive: false });
-    element.addEventListener("touchmove", handleTouchMove, { passive: false });
-    element.addEventListener("touchend", handleTouchEnd);
-    element.addEventListener("touchcancel", handleTouchEnd);
+    target.addEventListener("touchstart", handleTouchStart, { passive: false });
+    target.addEventListener("touchmove", handleTouchMove, { passive: false });
+    target.addEventListener("touchend", handleTouchEnd);
+    target.addEventListener("touchcancel", handleTouchEnd);
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
-      element.removeEventListener("touchstart", handleTouchStart);
-      element.removeEventListener("touchmove", handleTouchMove);
-      element.removeEventListener("touchend", handleTouchEnd);
-      element.removeEventListener("touchcancel", handleTouchEnd);
+      target.removeEventListener("touchstart", handleTouchStart);
+      target.removeEventListener("touchmove", handleTouchMove);
+      target.removeEventListener("touchend", handleTouchEnd);
+      target.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [ref, enabled, onStart, onMove]);
+  }, [element, enabled, onStart, onMove]);
 
   return enabled ? "pan-x pan-y" : undefined;
 }

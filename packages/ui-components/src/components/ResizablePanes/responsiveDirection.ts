@@ -1,4 +1,4 @@
-import type { Breakpoint } from "@mui/material";
+import type { Breakpoint, Breakpoints } from "@mui/material";
 import type { Direction, ResponsiveDirection } from "./types";
 
 /** Breakpoints in ascending order, matching MUI's cascade (each applies from its key upward). */
@@ -36,4 +36,18 @@ export function perBreakpoint<T>(
   return Object.fromEntries(
     (Object.entries(map) as [Breakpoint, Direction][]).map(([bp, d]) => [bp, fn(d)])
   );
+}
+
+/**
+ * The `@media` queries for the widths where `direction` is `d`, in `breakpoints`' terms: for a style that
+ * holds there alone, with no value to reset it to elsewhere, which a responsive `sx` value would need.
+ */
+export function mediaWhere(direction: ResponsiveDirection, d: Direction, breakpoints: Breakpoints): string[] {
+  const map = normalizeDirection(direction);
+  const keys = BREAKPOINTS.filter((bp) => map[bp]);
+  return keys.flatMap((bp, i) => {
+    if (map[bp] !== d) return [];
+    const next = keys[i + 1];
+    return [next ? breakpoints.between(bp, next) : breakpoints.up(bp)];
+  });
 }

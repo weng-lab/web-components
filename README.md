@@ -15,12 +15,12 @@ Run Development Enviorment (from root): `pnpm run dev`
 
 ### Mobile touch tests
 The visualization components each have a `Mobile` story (tagged `mobile`) that lays them out across a phone's width. Playwright drives these in Chromium emulating phones and a tablet, with real touch input (taps, swipes, two-finger pinches). It starts Storybook if it isn't already running.
-- `pnpm test:mobile` - pass/fail checks in `mobile/*.spec.ts`: every mobile story fits the screen and can be scrolled past, taps show tooltips, a second tap clicks, two fingers pan and zoom, and the mouse still works on desktop
+- `pnpm test:mobile` - pass/fail checks in `mobile/*.spec.ts`: every mobile story fits the screen and can be scrolled past, a plot's own rows scroll, taps show tooltips, a second tap clicks, two fingers pan and zoom, and the mouse still works on desktop
 - `pnpm audit:mobile` - taps, swipes, pinches and long-presses every mobile story on every device, and writes what happened, with screenshots, to `mobile/audit-report/index.html`
 
 Emulation can't stand in for iOS Safari, so check changes on a phone too. On the same Wi-Fi, open the "On your network" address `pnpm storybook` prints, as a story on its own page: `http://<that address>:6006/iframe.html?id=visualization-barplot--mobile`, with any mobile story's id.
 
-The touch conventions the components follow: one finger scrolls the page and taps; on plots that pan or zoom, two fingers pan and pinch-zoom; a tap on a mark shows its tooltip, and a second tap on the same mark clicks it.
+The touch conventions the components follow: one finger scrolls the page and taps; on plots that pan or zoom, two fingers pan and pinch-zoom; a tap on a mark shows its tooltip, and a second tap on the same mark clicks it. A plot that scrolls its own rows - a long bar plot, violins on their sides - scrolls them with one finger, as a table does, and the page once they reach their end.
 
 ### Build
 Build a package (from root): `pnpm --filter ${PACKAGE} build`

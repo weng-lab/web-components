@@ -3,12 +3,8 @@ import { scaleBand, scaleLinear } from "@visx/scale";
 import { AxisBottom, AxisLeft, AxisRight } from "@visx/axis";
 import { Group } from "@visx/group";
 import { Text } from "@visx/text";
-import {
-  useTooltip,
-  TooltipWithBounds,
-  Portal,
-  defaultStyles as defaultTooltipStyles,
-} from "@visx/tooltip";
+import { useTheme } from "@mui/material";
+import { PlotTooltip, type PlotTooltipHandle } from "../../tooltip";
 import { downloadAsSVG, downloadSVGAsPNG } from "../../utility";
 import { ResponsiveContainer, useResponsiveParentSize } from "../../responsive";
 import { DotPlotData, DotPlotProps } from "./types";
@@ -142,8 +138,8 @@ const DotPlot = ({
 
   const colorLegendValues = useMemo(() => split(colorDomain[0], colorDomain[1], 4), [colorDomain]);
 
-  const { tooltipData, tooltipLeft, tooltipTop, tooltipOpen, showTooltip, hideTooltip } =
-    useTooltip<DotPlotData>();
+  const theme = useTheme();
+  const tooltipRef = useRef<PlotTooltipHandle<DotPlotData>>(null);
 
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
@@ -171,11 +167,11 @@ const DotPlot = ({
                 style={{ cursor: "default" }}
                 onMouseEnter={(e) => {
                   setHoveredIdx(idx);
-                  showTooltip({ tooltipLeft: e.clientX, tooltipTop: e.clientY, tooltipData: d });
+                  tooltipRef.current?.show(d, e);
                 }}
                 onMouseLeave={() => {
                   setHoveredIdx(null);
-                  hideTooltip();
+                  tooltipRef.current?.hide();
                 }}
               />
             );
@@ -281,33 +277,29 @@ const DotPlot = ({
         </Group>
       </svg>
 
-      {tooltipOpen && tooltipData && (
-        <Portal>
-          <TooltipWithBounds
-            top={tooltipTop}
-            left={tooltipLeft}
-            style={{ ...defaultTooltipStyles, backgroundColor: "#283238", color: "white" }}
-          >
+      <PlotTooltip ref={tooltipRef} zIndex={theme.zIndex.tooltip} style={{ backgroundColor: "#283238", color: "white" }}>
+        {(dot) => (
+          <>
             {!showTooltipData ? (
               <>
-                <p style={{ margin: 0 }}>Percent Expressed: {tooltipData.radius.toFixed(2)}</p>
-                <p style={{ margin: 0 }}>Mean Expression: {tooltipData.color.toFixed(2)}</p>
+                <p style={{ margin: 0 }}>Percent Expressed: {dot.radius.toFixed(2)}</p>
+                <p style={{ margin: 0 }}>Mean Expression: {dot.color.toFixed(2)}</p>
               </>
             ) : (
               <>
                 <p style={{ margin: 0 }}>
                   -log<sub>10</sub>(<i>P</i>
-                  <sub>adj</sub>): {tooltipData.radius.toFixed(2)}
+                  <sub>adj</sub>): {dot.radius.toFixed(2)}
                 </p>
                 <p style={{ margin: 0 }}>
-                  log<sub>2</sub>(fold change): {tooltipData.color.toFixed(2)}
+                  log<sub>2</sub>(fold change): {dot.color.toFixed(2)}
                 </p>
               </>
             )}
-            <p style={{ margin: 0 }}>{tooltipData.x}</p>
-          </TooltipWithBounds>
-        </Portal>
-      )}
+            <p style={{ margin: 0 }}>{dot.x}</p>
+          </>
+        )}
+      </PlotTooltip>
     </ResponsiveContainer>
   );
 };

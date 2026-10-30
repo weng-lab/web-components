@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { loadCsf } from "storybook/internal/csf-tools";
+import { Touch, scrollSettled } from "./touch";
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -136,3 +137,30 @@ export const center = (box: Box) => ({ x: box.x + box.width / 2, y: box.y + box.
 
 /** A screenshot of the surface plotSurface marked, to tell whether a gesture moved it. */
 export const surfaceShot = (page: Page) => page.locator("[data-audit-surface]").screenshot({ scale: "css", timeout: 10_000 });
+
+/**
+ * How far the story's own rows are scrolled - those of a plot that scrolls them itself, as a long bar plot
+ * does - or null where it has none. `toEnd` scrolls them to their end first. Marks them `data-own-rows`.
+ */
+export async function ownRowsScrollTop(page: Page, toEnd = false): Promise<number | null> {
+  return page.evaluate((toEnd) => {
+    const rows = [...document.querySelectorAll("[data-mobile-story] *")].find((el) => {
+      const { overflowY } = getComputedStyle(el);
+      return (overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight + 1;
+    });
+    if (!rows) return null;
+    rows.setAttribute("data-own-rows", "");
+    if (toEnd) rows.scrollTop = rows.scrollHeight;
+    return rows.scrollTop;
+  }, toEnd);
+}
+
+/** Swipes up over the plot, as a reader scrolling down past it would, and waits for the scroll to settle. */
+export async function swipeOver(page: Page) {
+  const surface = await plotSurface(page);
+  const from = { x: surface.x + surface.width / 2, y: surface.y + surface.height * 0.75 };
+  const to = { x: from.x, y: Math.max(from.y - 200, 8) };
+  await (await Touch.on(page)).swipe(from, to);
+  await scrollSettled(page);
+  return { from, to };
+}

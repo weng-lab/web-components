@@ -3,6 +3,7 @@ import { ReactElement } from "react";
 import { AnimationType, DownloadPlotHandle } from '../../utility';
 import { ManualSizeProps } from '../../responsive';
 import type { TapToActivate } from '../../hooks';
+import type { PlotTooltipRef } from '../../tooltip';
 
 type Outliers = "all" | "top" | "bottom" | "none"
 
@@ -53,7 +54,16 @@ export type ViolinPlotProps<T> = ManualSizeProps & {
     disableViolinPlot?: boolean;
     crossProps?: CrossProps;
     violinProps?: ViolinProps;
+    /**
+     * Which way the violins stand. "auto" stands them up unless their labels would run into each other, or
+     * they'd stand too short under them to read, and otherwise lays them on their sides, one to a row with
+     * its label across, in rows that scroll past what fits.
+     * @default "auto", or what `horizontal` says where it's set
+     */
+    orientation?: "auto" | "vertical" | "horizontal";
+    /** @deprecated Use `orientation`, which this sets to "horizontal" or "vertical" where it's left out. */
     horizontal?: boolean;
+    /** How the labels read. Violins "auto" lays on their sides read theirs across, whatever this says. */
     labelOrientation?: "horizontal" | "vertical" | "leftDiagonal" | "rightDiagonal"
     onViolinClicked?: (distribution: Distribution<T>) => void;
     onPointClicked?: (point: ViolinPoint<T>) => void;
@@ -100,10 +110,7 @@ export interface TooltipData<T> {
 }
 
 export interface TooltipProps<T> {
-    left: number;
-    top: number;
     data: TooltipData<T>;
-    open: boolean;
     pointTooltipBody?: (point: ViolinPoint<T>) => ReactElement;
 }
 
@@ -123,4 +130,5 @@ export interface SingleViolinProps<T> {
     onViolinClicked?: (distribution: Distribution<T>) => void | undefined;
     onPointClicked?: (point: ViolinPoint<T>) => void | undefined;
     tap: TapToActivate<string>;
+    tooltipRef: PlotTooltipRef<TooltipData<T>>;
 }

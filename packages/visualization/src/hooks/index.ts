@@ -5,3 +5,5 @@ export { useTwoFingerGestures, toLocal, followFingers } from './useTwoFingerGest
 export type { TwoFingerGestureHandlers } from './useTwoFingerGestures';
 export { useTwoFingerHint } from './useTwoFingerHint';
 export { useDragKeys } from './useDragKeys';
+export { useScrollFade, scrollFadeMask } from './useScrollFade';
+export type { ScrollEnds } from './useScrollFade';

@@ -3,6 +3,7 @@ import { ProvidedZoom } from "@visx/zoom";
 import { CSSProperties, ReactElement, ReactNode } from "react";
 import { DownloadPlotHandle, AnimationType } from '../../utility';
 import { ManualSizeProps } from '../../responsive';
+import type { ControlsSide } from './layout';
 
 /**
  * Shapes a point can be drawn as, for encoding a categorical field alongside color.
@@ -102,6 +103,18 @@ export type Point<T> = {
 export type CrosshairPosition = {
     x: number;
     y: number;
+};
+
+/**
+ * Where a plot is zoomed to, in its data's own terms: the point at the middle of the plot area, and how far the plot
+ * is zoomed in on each axis from showing its whole domain. Unlike the zoom's transform, which is in pixels, it means
+ * the same on plots of any size.
+ */
+export type ScatterPlotView = {
+    x: number;
+    y: number;
+    scaleX: number;
+    scaleY: number;
 };
 
 /** What a drag over the plot does: lasso points, pan, draw a box to zoom into, or nothing. */
@@ -371,13 +384,12 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     onCrosshairChange?: (position: CrosshairPosition | null) => void;
     /**
-     * An externally owned zoom instance. When provided the plot drives that zoom instead of
-     * creating its own, so several plots can share one view - see ScatterPlotSync.
-     *
-     * Plots sharing a zoom must be the same size and share their domains, since the transform
-     * is in pixels.
+     * A view to follow, shared with other plots in data terms so each shows it at its own size - see
+     * ScatterPlotSync. Null to zoom all the way out, as where none has been shared yet.
      */
-    zoom?: ZoomType;
+    view?: ScatterPlotView | null;
+    /** Fired as the plot's own zoom moves, with where it's moved to, for the other plots to follow. */
+    onViewChange?: (view: ScatterPlotView) => void;
     /**
      * Fixes the x axis domain instead of deriving it from the data extents. Useful to keep the
      * axes stable as the data changes, or to give several plots a shared coordinate frame.
@@ -391,12 +403,13 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     yDomain?: [number, number];
     /**
-     * Side of the plot the zoom/selection controls sit on. The plot is narrowed to give them a
-     * lane of their own on that side, so they never cover the axis or the points.
+     * Side of the plot the zoom/selection controls sit on: a column to its right, or a row over it.
+     * The plot gives up a lane of its own to them on that side, so they never cover the points. "auto" takes the right or the top, whichever leaves room for the bigger square plot
+     * area: the top over a plot taller than it is wide, as on a phone.
      * @default
-     * "left"
+     * "auto"
      */
-    controlsPosition?: "left" | "right";
+    controlsPosition?: ControlsSide | "auto";
     /**
      * Lock the plot to a square, sized to the shorter side of its container and centered in it.
      *
@@ -509,7 +522,7 @@ export type ControlButtonsProps = {
     downloadButton: boolean;
     downloadPlot: () => void;
     /** The side of the plot the panel is on, so its tooltips can open toward the plot. */
-    side: "left" | "right";
+    side: ControlsSide;
     /** The minimap toggle, shown when the plot has a minimap. */
     miniMap?: {
         open: boolean;
@@ -532,10 +545,4 @@ type ZoomState = {
     isDragging: boolean;
 };
 
-export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState & {
-    /**
-     * Tells the zoom the size of the plot area it is moving, in pixels, which it holds panning
-     * inside of. Each plot calls this for the zoom it is given; a zoom without it pans freely.
-     */
-    setPanExtent?: (width: number, height: number) => void;
-}
+export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState;

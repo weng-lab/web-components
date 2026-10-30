@@ -7,10 +7,11 @@ import { BarData, BarPlotProps } from './types';
 import { NumberValue } from '@visx/vendor/d3-scale';
 import Legend from './legend';
 import { downloadAsSVG, downloadSVGAsPNG, measureTextWidth } from '../../utility';
-import { ResponsiveContainer, useResponsiveParentSize } from '../../responsive';
+import { useResponsiveParentSize } from '../../responsive';
 import { PlotTooltip, type PlotTooltipHandle } from '../../tooltip';
 import SingleBar from './singleBar';
 import { useTapToActivate } from '../../hooks';
+import { PinnedAxisScroller } from '../../controls';
 
 const fontFamily = "Roboto,Helvetica,Arial,sans-serif"
 
@@ -30,6 +31,7 @@ const BarPlot = <T,>({
     barSize = 15,
     barSpacing = 2,
     fill = false,
+    maxLabelShare = 0.5,
     legendTitle = "FDR",
     legendValues = [1, 0.05, 0.01, 0.001],
     downloadFileName,
@@ -112,10 +114,14 @@ const BarPlot = <T,>({
     const spaceForTopAxis = 50
     const spaceOnBottom = 20
     const legendHeight = lollipopValues.length > 0 ? 30 : 0
+    // The legend over the bars, its margin included. A measured height is the bars' own, under it; one
+    // given takes the legend in.
+    const legendSpace = lollipopValues.length > 0 && height !== undefined ? legendHeight + 14 : 0
+    const barsHeight = ParentHeight - legendSpace
 
     // X padding
     const spaceForCategory = useMemo(() =>
-        Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, "Arial"))),
+        Math.max(...data.map(d => getTextHeight(d.category ?? "", 12, fontFamily))),
         [data])
     const gapBetweenTextAndBar = 10
 
@@ -133,7 +139,7 @@ const BarPlot = <T,>({
     ]).slice(0, -1), [data]);
 
     const dataHeight = ((data.length) * (barSize)) + ((data.length - 1) * (barSpacing))
-    const totalHeight = fill ? ParentHeight - spaceForTopAxis - spaceOnBottom - legendHeight : dataHeight
+    const totalHeight = fill ? barsHeight - spaceForTopAxis - spaceOnBottom : dataHeight
 
     // Scales
     const yScale = useMemo(() =>
@@ -180,7 +186,7 @@ const BarPlot = <T,>({
             });
         }
 
-        const newSpaceForLabel = Math.max(0, Math.ceil(requiredSpace))
+        const newSpaceForLabel = Math.max(0, Math.min(Math.ceil(requiredSpace), Math.floor(availableWidth * maxLabelShare)))
 
         if (Math.abs(newSpaceForLabel - spaceForLabel) > 1) {
             setLabelSpaceDecided(false)
@@ -189,9 +195,31 @@ const BarPlot = <T,>({
             setLabelSpaceDecided(true)
         }
 
-    }, [bars, xScale, spaceForCategory, spaceForLabel, ParentWidth]);
+    }, [bars, xScale, spaceForCategory, spaceForLabel, ParentWidth, maxLabelShare]);
 
     const axisCenter = (xScale.range()[0] + xScale.range()[1]) / 2;
+
+    const topAxis = (
+        <AxisTop
+            scale={xScale}
+            top={0}
+            label={topAxisLabel}
+            labelProps={{ dy: -5, fontSize: 14, fontFamily }}
+            numTicks={ParentWidth < 700 ? 4 : undefined}
+            tickFormat={(value: NumberValue, index: number) => {
+                const num = typeof value === 'number' ? value : value.valueOf();
+
+                if (index === 0 && num < 0 && cutoffNegativeValues && data.some(d => d.value <= negativeCutoff)) {
+                    return "Low Signal";
+                } else {
+                    return num.toString();
+                }
+            }}
+        />
+    );
+    // Held over the bars as they scroll beneath it.
+    const pinnedAxis = !fill && data.length > 0;
+    const settled = labelSpaceDecided && ParentWidth > 0;
 
     //Download the plot as svg or png using the passed ref from the parent
     useImperativeHandle(ref, () => ({
@@ -204,7 +232,7 @@ const BarPlot = <T,>({
     }));
 
     return (
-        <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle} style={{ overflow: 'auto' }}>
+        <div style={{ ...containerStyle, display: "flex", flexDirection: "column" }}>
             {lollipopValues.length > 0 && (
                 <Legend
                     values={lollipopValues}
@@ -218,87 +246,87 @@ const BarPlot = <T,>({
                     loading={!labelSpaceDecided || ParentWidth < 0}
                 />
             )}
-            {data.length === 0 ?
-                <p>No Data To Display</p>
-                :
-                <svg
-                    //define fallback ref if not passed through props
-                    ref={(node) => {
-                        if (svgRef && node) {
-                            svgRef.current = node;
-                        }
-                        outerSvgRef.current = node;
-                    }}
+            {/* The bars scroll here, under the legend. */}
+            <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+                <PinnedAxisScroller
+                    scrollerRef={parentRef}
+                    scroller={node}
+                    pinned={pinnedAxis}
                     width={ParentWidth}
-                    height={fill ? ParentHeight ? ParentHeight - legendHeight : ParentHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
-                    opacity={(labelSpaceDecided && ParentWidth > 0) ? 1 : 0.3}
+                    axisHeight={spaceForTopAxis}
+                    axis={<Group left={spaceForCategory} top={spaceForTopAxis}>{topAxis}</Group>}
+                    opacity={settled ? 1 : 0.3}
                 >
-                    <Group left={spaceForCategory} top={spaceForTopAxis}>
-                        {/* Top Axis with Label */}
-                        <AxisTop
-                            scale={xScale}
-                            top={0}
-                            label={topAxisLabel}
-                            labelProps={{ dy: -5, fontSize: 14, fontFamily }}
-                            numTicks={ParentWidth < 700 ? 4 : undefined}
-                            tickFormat={(value: NumberValue, index: number) => {
-                                const num = typeof value === 'number' ? value : value.valueOf();
-
-                                if (index === 0 && num < 0 && cutoffNegativeValues && data.some(d => d.value <= negativeCutoff)) {
-                                    return "Low Signal";
-                                } else {
-                                    return num.toString();
+                    {data.length === 0 ?
+                        <p>No Data To Display</p>
+                        :
+                        <svg
+                            //define fallback ref if not passed through props
+                            ref={(node) => {
+                                if (svgRef && node) {
+                                    svgRef.current = node;
                                 }
+                                outerSvgRef.current = node;
                             }}
-                        />
+                            width={ParentWidth}
+                            height={fill ? barsHeight : totalHeight + spaceForTopAxis + spaceOnBottom}
+                            opacity={settled ? 1 : 0.3}
+                            style={{ display: "block" }}
+                        >
+                            <Group left={spaceForCategory} top={spaceForTopAxis}>
+                                {/* Top Axis with Label */}
+                                <g className="pinned-axis">{topAxis}</g>
 
-                        {/* Keyed by the rows on show, so every bar remounts, and replays its entry animation, when they
-                            change. Without an animation there is nothing to replay, so the bars are kept. */}
-                        <React.Fragment key={animation ? rowsKey : undefined}>
-                            {bars.map((d, i) => (
-                                <SingleBar
-                                    key={d.id}
-                                    bar={d}
-                                    index={i}
-                                    onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}
-                                    tooltipRef={tooltipRef}
-                                    tap={tap}
-                                    cutoffNegativeValues={cutoffNegativeValues}
-                                    negativeCutoff={negativeCutoff}
-                                    xScale={xScale}
-                                    yScale={yScale}
-                                    barSize={barSize}
-                                    barSpacing={barSpacing}
-                                    gapBetweenTextAndBar={gapBetweenTextAndBar}
-                                    getLollipopRadius={getlollipopRadius}
-                                    animation={animation}
-                                    animationEnabled={animationEnabled}
-                                    animationBuffer={animationBuffer}
-                                />
-                            ))}
-                        </React.Fragment>
-                        <>
-                            <line
-                                x1={xScale(0)}
-                                x2={xScale(0)}
-                                y1={0}
-                                y2={totalHeight}
-                                stroke="#000000"
-                            />
-                        </>
-                        {show95thPercentileLine && xScale.domain()[1] > 1.645 &&
-                            <line
-                                x1={xScale(1.645)}
-                                x2={xScale(1.645)}
-                                y1={0}
-                                y2={totalHeight}
-                                stroke={"black"}
-                                strokeDasharray={'5 7'}
-                            />
-                        }
-                    </Group>
-                </svg>
-            }
+                                {/* Keyed by the rows on show, so every bar remounts, and replays its entry animation, when they
+                                    change. Without an animation there is nothing to replay, so the bars are kept. */}
+                                <React.Fragment key={animation ? rowsKey : undefined}>
+                                    {bars.map((d, i) => (
+                                        <SingleBar
+                                            key={d.id}
+                                            bar={d}
+                                            index={i}
+                                            onBarClicked={onBarClicked as unknown as ((bar: BarData<unknown>) => void) | undefined}
+                                            tooltipRef={tooltipRef}
+                                            tap={tap}
+                                            cutoffNegativeValues={cutoffNegativeValues}
+                                            negativeCutoff={negativeCutoff}
+                                            xScale={xScale}
+                                            yScale={yScale}
+                                            barSize={barSize}
+                                            barSpacing={barSpacing}
+                                            gapBetweenTextAndBar={gapBetweenTextAndBar}
+                                            getLollipopRadius={getlollipopRadius}
+                                            labelRight={ParentWidth - spaceForCategory}
+                                            animation={animation}
+                                            animationEnabled={animationEnabled}
+                                            animationBuffer={animationBuffer}
+                                        />
+                                    ))}
+                                </React.Fragment>
+                                <>
+                                    <line
+                                        x1={xScale(0)}
+                                        x2={xScale(0)}
+                                        y1={0}
+                                        y2={totalHeight}
+                                        stroke="#000000"
+                                    />
+                                </>
+                                {show95thPercentileLine && xScale.domain()[1] > 1.645 &&
+                                    <line
+                                        x1={xScale(1.645)}
+                                        x2={xScale(1.645)}
+                                        y1={0}
+                                        y2={totalHeight}
+                                        stroke={"black"}
+                                        strokeDasharray={'5 7'}
+                                    />
+                                }
+                            </Group>
+                        </svg>
+                    }
+                </PinnedAxisScroller>
+            </div>
             {TooltipContents && (
                 // Matches the MUI tooltip layer, as ScatterPlot's does, so the portalled tooltip
                 // sits above the overlays of whatever page the plot is placed in.
@@ -312,7 +340,7 @@ const BarPlot = <T,>({
                     <CircularProgress sx={{ mt: 10 }} />
                 </div>
             }
-        </ResponsiveContainer>
+        </div>
     );
 };
 

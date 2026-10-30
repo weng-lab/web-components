@@ -194,3 +194,44 @@ export const Mobile: Story = {
     },
     decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
 };
+
+const MANY_TISSUES = [
+    "adipose", "adrenal gland", "blood", "blood vessel", "bone", "bone marrow", "brain", "breast", "connective tissue",
+    "embryo", "epithelium", "esophagus", "eye", "gallbladder", "heart", "kidney", "large intestine", "liver", "lung",
+    "lymph node", "mouth", "muscle", "nerve", "nose", "ovary", "pancreas", "placenta", "prostate", "skin",
+    "small intestine", "spinal cord", "spleen", "stomach", "testis", "thymus", "thyroid", "tongue", "urinary bladder",
+    "uterus", "vagina",
+];
+const MANY_COLORS = ["#f26822", "#5eba47", "#ee2124", "#ebe71b", "#4ac2c5", "#8b7257", "#652c90", "#74cac1"];
+
+// Seeded, so the same violins draw every time.
+const seeded = (seed: number) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// More tissues than stand upright across a phone, as a gene's expression by tissue.
+const manyDistributions = MANY_TISSUES.map((label, i) => {
+    const next = seeded(i + 1);
+    const center = 40 * Math.exp(-i / 8);
+    return {
+        label,
+        violinColor: MANY_COLORS[i % MANY_COLORS.length],
+        data: Array.from({ length: 6 + (i % 7) * 3 }, () => ({ value: Math.max(0, center * (0.4 + 1.2 * next())) })),
+    };
+});
+
+export const MobileMany: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        distributions: manyDistributions,
+        loading: false,
+        axisLabel: "Expression: TPM",
+        labelOrientation: "leftDiagonal",
+        violinProps: {
+            showAllPoints: true,
+            jitter: 10
+        },
+        onViolinClicked: fn(),
+        onPointClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
+};

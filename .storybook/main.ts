@@ -30,7 +30,8 @@ const config: StorybookConfig = {
   ],
   "framework": {
     "name": getAbsolutePath('@storybook/react-vite'),
-    "options": {}
+    // As Next's development server runs an app, so the stories meet what Strict Mode rehearses there.
+    "options": { strictMode: true }
   },
   staticDirs: ["../public"],
   viteFinal: async (config, { configType }) => {

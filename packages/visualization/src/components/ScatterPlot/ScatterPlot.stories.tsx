@@ -1,6 +1,6 @@
 import { Decorator, Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ScatterPlot from './scatterplot';
 import ScatterPlotSync from './ScatterPlotSync';
 import { getSharedDomains } from './helpers';
@@ -306,6 +306,36 @@ export const ControlsRight: Story = {
     }
 };
 
+// The controls in a row over the plot, which is shortened to give them a lane of their own.
+export const ControlsTop: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        controlsPosition: "top",
+    }
+};
+
+/** Placed automatically: on the right of a wide plot, and over a tall one, as on a phone. */
+export const ControlsAuto: Story = {
+    args: {
+        pointData: points,
+        loading: false,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        disableTooltip: true,
+        controlsPosition: "auto",
+    },
+    render: (args) => (
+        <div style={{ display: 'flex', gap: 16, height: '100%' }}>
+            <div style={{ width: 500, height: 320 }}><ScatterPlot {...args} /></div>
+            <div style={{ width: 320, height: '100%' }}><ScatterPlot {...args} /></div>
+        </div>
+    ),
+};
+
 export const Animation: Story = {
     args: {
         pointData: points,
@@ -342,7 +372,8 @@ export const ManualSize: Story = {
 
 // Two plots over the same coordinate space, linked by ScatterPlotSync: hovering either one draws
 // the same crosshair on both, and zooming or panning either one moves both - their minimaps start
-// on, so the shared view shows in each. Only the hovered plot shows a tooltip.
+// on, so the shared view shows in each. They're different sizes, each showing the shared view at
+// its own. Only the hovered plot shows a tooltip.
 const syncedDataA: Point[] = generatePoints(600);
 const syncedDataB: Point[] = generatePoints(600)
     .map((point, index) => ({
@@ -366,7 +397,7 @@ export const SyncedPlots: Story = {
             <ScatterPlotSync {...domains}>
                 {(sync) => (
                     <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-                        <div style={{ flex: 1, height: '100%' }}>
+                        <div style={{ flex: 3, height: '100%' }}>
                             <ScatterPlot
                                 pointData={syncedDataA}
                                 loading={false}
@@ -377,14 +408,13 @@ export const SyncedPlots: Story = {
                                 {...sync}
                             />
                         </div>
-                        <div style={{ flex: 1, height: '100%' }}>
+                        <div style={{ flex: 2, height: '70%' }}>
                             <ScatterPlot
                                 pointData={syncedDataB}
                                 loading={false}
                                 leftAxisLabel="Y-Axis Label"
                                 bottomAxisLabel="Sample B"
                                 disableTooltip
-                                controlsPosition="right"
                                 initialState={{ minimap: { showWhileZoomed: true } }}
                                 {...sync}
                             />
@@ -888,6 +918,49 @@ export const Mobile: Story = {
                 showWhileZoomed: true,
             },
         },
+    },
+    decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
+};
+
+/** Full screen on a phone, as a plot taller than it is wide: its controls placed automatically go over it. */
+export const MobileTall: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        pointData: points,
+        loading: false,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        selectable: true,
+        controlsPosition: "auto",
+        onSelectionChange: fn(),
+        onPointClicked: fn(),
+    },
+    decorators: [(Story) => <div style={{ height: 600 }}><Story /></div>],
+};
+
+/** Given its points while still loading, as from a cache: once loaded they still draw, and two fingers still zoom. */
+export const MobileAfterLoading: Story = {
+    tags: ['mobile', '!autodocs'],
+    globals: { viewport: { value: 'iphone14', isRotated: false } },
+    args: {
+        pointData: points,
+        loading: true,
+        leftAxisLabel: "Y-Axis Label",
+        bottomAxisLabel: "X-Axis Label",
+        selectable: true,
+        onSelectionChange: fn(),
+        onPointClicked: fn(),
+    },
+    render: (args) => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const [loading, setLoading] = useState(true);
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+            const timer = setTimeout(() => setLoading(false), 300);
+            return () => clearTimeout(timer);
+        }, []);
+        return <ScatterPlot {...args} loading={loading} />;
     },
     decorators: [(Story) => <div style={{ height: 360 }}><Story /></div>],
 };

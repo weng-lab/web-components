@@ -1,5 +1,5 @@
 export { ScatterPlot, ScatterPlotSync, getSharedDomains, getShapePoints, getFieldGrid, POINT_SHAPES } from './components/ScatterPlot';
-export type { ChartProps, Point, PointShape, CrosshairPosition, ZoomType, DimStyle, BackgroundField, BackgroundFieldLegendSlot, ScatterPlotSyncProps, SyncedPlotProps } from './components/ScatterPlot';
+export type { ChartProps, Point, PointShape, CrosshairPosition, ScatterPlotView, DimStyle, BackgroundField, BackgroundFieldLegendSlot, ScatterPlotSyncProps, SyncedPlotProps } from './components/ScatterPlot';
 
 export { Graph } from './components/Graph';
 export type { GraphProps } from './components/Graph';
@@ -37,6 +37,9 @@ export { useResponsiveParentSize, ResponsiveContainer } from './responsive';
 export type { ManualSizeProps, UseResponsiveParentSizeResult, ResponsiveContainerProps } from './responsive';
 
 export { useStableCallback } from './hooks';
+
+export { HorizontalScroller } from './controls';
+export type { HorizontalScrollerProps } from './controls';
 
 export { PlotTooltip } from './tooltip';
 export type { PlotTooltipHandle, PlotTooltipRef, PlotTooltipProps } from './tooltip';

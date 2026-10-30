@@ -1,5 +1,6 @@
-import { memo, useCallback, useImperativeHandle, useRef, useState, MouseEvent, ReactNode, Ref, RefObject } from "react";
-import { Portal, Tooltip, defaultStyles } from "@visx/tooltip";
+import { memo, useCallback, useImperativeHandle, useRef, useState, CSSProperties, ReactNode, Ref, RefObject } from "react";
+import { createPortal } from "react-dom";
+import { Tooltip, defaultStyles } from "@visx/tooltip";
 
 /** Offset from the pointer, so the tooltip never sits directly under the cursor. */
 const POINTER_OFFSET = 10;
@@ -8,8 +9,8 @@ const POINTER_OFFSET = 10;
 const VIEWPORT_MARGIN = 8;
 
 export interface PlotTooltipHandle<T> {
-  /** Show the tooltip for `data`, positioned from the pointer event that triggered it. */
-  show: (data: T, event: MouseEvent) => void;
+  /** Show the tooltip for `data`, positioned from the pointer event that triggered it, or any point on the screen. */
+  show: (data: T, event: { clientX: number; clientY: number }) => void;
   hide: () => void;
 }
 
@@ -31,6 +32,8 @@ export interface PlotTooltipProps<T> {
    * z-index, which leaves the tooltip below anything positioned in the root stacking context.
    */
   zIndex?: number;
+  /** Styles over visx's defaults, as a dark tooltip's colors. */
+  style?: CSSProperties;
 }
 
 interface PlotTooltipState<T> {
@@ -132,7 +135,7 @@ const useMeasuredSize = () => {
  * do is sit partly off-screen - never widen the page under it. The measured flip is then about
  * readability rather than about scrollbars.
  */
-function PlotTooltip<T>({ ref, children, zIndex }: PlotTooltipProps<T>) {
+function PlotTooltip<T>({ ref, children, zIndex, style }: PlotTooltipProps<T>) {
   const [state, setState] = useState<PlotTooltipState<T>>({ open: false, left: 0, top: 0 });
   const [measureRef, size] = useMeasuredSize();
 
@@ -150,8 +153,10 @@ function PlotTooltip<T>({ ref, children, zIndex }: PlotTooltipProps<T>) {
   const left = size ? placeAlongAxis(state.left, size.width, screen.left, screen.left + screen.width) : state.left + POINTER_OFFSET;
   const top = size ? placeAlongAxis(state.top, size.height, screen.top, screen.top + screen.height) : state.top + POINTER_OFFSET;
 
-  return (
-    <Portal>
+  // In a div of its own at the end of the page. Not visx's Portal, which makes its div while rendering: Strict Mode's
+  // rehearsed remount dropped it, and a tooltip shown as its plot mounted went unseen.
+  return createPortal(
+    <div>
       <Tooltip
         ref={measureRef}
         left={left}
@@ -162,11 +167,12 @@ function PlotTooltip<T>({ ref, children, zIndex }: PlotTooltipProps<T>) {
         offsetTop={0}
         // Spread last so the viewport anchoring the placement depends on cannot be overridden by
         // the `position: absolute` in visx's default styles.
-        style={{ ...defaultStyles, position: "fixed", zIndex }}
+        style={{ ...defaultStyles, ...style, position: "fixed", zIndex }}
       >
         {children(state.data)}
       </Tooltip>
-    </Portal>
+    </div>,
+    document.body
   );
 }
 

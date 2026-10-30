@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { BarChart, ScatterPlot } from "@mui/icons-material";
 import { Button, Stack, Typography } from "@mui/material";
 import { LicenseInfo } from "@mui/x-license";
 import type { GridFilterModel } from "@mui/x-data-grid-premium";
@@ -128,5 +129,61 @@ export const TabFiltersTable: Story = {
 
     await userEvent.click(canvas.getByRole("tab", { name: "Site: CCH" }));
     await waitFor(() => expect(shownPlot()).toHaveTextContent("S01, S04, S07, S10"));
+  },
+};
+
+/**
+ * Stacked, as on a phone, the table is a tab before the plots' rather than a pane over them, and the
+ * layout opens on the first plot. Full screen pins whichever tab is open over the page.
+ */
+export const StackedAsTabs: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  render: () => {
+    const { sortedFilteredData, tableProps } = useTablePlotSync({
+      rows: siteRows,
+      getRowId: (row) => row.sample_id,
+      initialSort: [{ field: "sample_id", sort: "asc" }],
+    });
+    return (
+      <TwoPaneLayout
+        direction="column"
+        TableComponent={<SyncedTable tableProps={tableProps} rows={siteRows} />}
+        plots={[
+          { tabTitle: "Bar Plot", icon: <BarChart />, plotComponent: <RowList rows={sortedFilteredData} /> },
+          { tabTitle: "UMAP", icon: <ScatterPlot />, plotComponent: <RowList rows={sortedFilteredData} /> },
+        ]}
+        columnHeight="460px"
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The tab not open is only invisible, so it's told apart by its visibility rather than its layout box.
+    const shown = (el: HTMLElement | undefined) => !!el && el.checkVisibility({ visibilityProperty: true });
+    const plot = () => canvas.getAllByTestId("plot-rows").find(shown);
+
+    // Opens on the first plot, the table's tab beside it.
+    await waitFor(() => expect(plot()).toBeDefined());
+    expect(canvas.getByRole("tab", { name: "Bar Plot" })).toHaveAttribute("aria-selected", "true");
+    expect(shown(canvas.queryByRole("grid") ?? undefined)).toBe(false);
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Table" }));
+    await waitFor(() => expect(shown(canvas.getByRole("grid"))).toBe(true));
+    expect(plot()).toBeUndefined();
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Bar Plot" }));
+    await waitFor(() => expect(plot()).toBeDefined());
+
+    // Full screen pins the layout over the window, and leaves it where it was on the way out.
+    const pinned = () => {
+      let el: HTMLElement | null = canvas.getByRole("tablist");
+      while (el && getComputedStyle(el).position !== "fixed") el = el.parentElement;
+      return el;
+    };
+    await userEvent.click(canvas.getByRole("button", { name: "Full screen" }));
+    await waitFor(() => expect(pinned()).not.toBeNull());
+    await userEvent.click(canvas.getByRole("button", { name: "Exit full screen" }));
+    await waitFor(() => expect(pinned()).toBeNull());
   },
 };

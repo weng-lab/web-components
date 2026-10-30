@@ -4,6 +4,7 @@ import HomeIcon from "@mui/icons-material/Home";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import SettingsIcon from "@mui/icons-material/Settings";
 import BiotechIcon from "@mui/icons-material/Biotech";
+import ViewTimelineIcon from "@mui/icons-material/ViewTimeline";
 import { DetailsTabs } from "../..";
 
 const meta = {
@@ -69,4 +70,25 @@ export const WithMoreTabs: Story = {
     return <DetailsTabs tabs={mixedTabs} value={value} onChange={setValue} />;
   },
   args: { tabs: mixedTabs, value: "overview", onChange: () => {} },
+};
+
+const phoneTabs = [
+  { value: "overview", label: "Overview", icon: <HomeIcon /> },
+  { value: "data", label: "Data", icon: <BarChartIcon /> },
+  { value: "browser", label: "Genome Browser", icon: <ViewTimelineIcon /> },
+  { value: "biotech", label: "Biotech", icon: <BiotechIcon /> },
+  { value: "settings", label: "Settings", icon: <SettingsIcon /> },
+];
+
+/** On a phone, where the tabs scroll and a long label wraps onto a second line, making its tab the tallest. */
+export const Phone: Story = {
+  tags: ["mobile", "!autodocs"],
+  globals: { viewport: { value: "iphone14", isRotated: false } },
+  render: () => {
+    const [value, setValue] = useState("overview");
+    return (
+      <DetailsTabs tabs={phoneTabs} value={value} onChange={setValue} selectedBackgroundColor="rgba(73, 77, 107, .15)" />
+    );
+  },
+  args: { tabs: phoneTabs, value: "overview", onChange: () => {} },
 };

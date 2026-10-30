@@ -167,6 +167,25 @@ export function measureTextWidth(text: string, fontSize: number, fontFamily: str
     return ctx.measureText(text).width;
 }
 
+/**
+ * The text cut short with an ellipsis to fit `maxWidth` px, or whole where it fits. Empty where not even
+ * the ellipsis fits.
+ */
+export function truncateToWidth(text: string, maxWidth: number, fontSize: number, fontFamily: string): string {
+    if (measureTextWidth(text, fontSize, fontFamily) <= maxWidth) return text;
+    const fits = (length: number) => measureTextWidth(`${text.slice(0, length).trimEnd()}…`, fontSize, fontFamily) <= maxWidth;
+    if (!fits(0)) return "";
+    // The longest prefix that fits with the ellipsis.
+    let low = 0;
+    let high = text.length - 1;
+    while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if (fits(mid)) low = mid;
+        else high = mid - 1;
+    }
+    return `${text.slice(0, low).trimEnd()}…`;
+}
+
 // Maximum stagger delay (in seconds) regardless of how many bars are being animated
 const MAX_ANIMATION_DELAY = 1;
 // Seconds, for every type but "pop"
