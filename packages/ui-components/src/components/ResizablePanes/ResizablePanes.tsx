@@ -49,8 +49,9 @@ export const ResizablePanes = ({
   // side by side drops the divider and gives the other pane the whole width.
   const split = (d: Direction) => d === "row" && !collapsed;
   const tabbed = (d: Direction) => d === "column" && !!stackedCollapsed;
+  // The divider is centered on `pct`, so the panes are equal at 50 and the divider stays under the pointer.
   const gridTemplateColumns = perBreakpoint(direction, (d) =>
-    split(d) ? `${pct}% ${spacing} minmax(0, 1fr)` : "minmax(0, 1fr)"
+    split(d) ? `calc(${pct}% - ${spacing} / 2) ${spacing} minmax(0, 1fr)` : "minmax(0, 1fr)"
   );
   const dividerDisplay = perBreakpoint(direction, (d) => (split(d) ? "flex" : "none"));
   // Shown one at a time, the stacked panes share a cell, the other only invisible there: it keeps its

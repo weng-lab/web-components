@@ -12,8 +12,6 @@ export type SyncedPlotProps = {
     onCrosshairChange: (position: CrosshairPosition | null) => void;
     xDomain?: [number, number];
     yDomain?: [number, number];
-    width?: number;
-    height?: number;
 };
 
 export type ScatterPlotSyncProps = {
@@ -39,9 +37,6 @@ export type ScatterPlotSyncProps = {
      */
     xDomain?: [number, number];
     yDomain?: [number, number];
-    /** Fixes every synced plot at this size rather than letting each fill its own container. */
-    width?: number;
-    height?: number;
 };
 
 /**
@@ -50,25 +45,26 @@ export type ScatterPlotSyncProps = {
  *
  * They share the view in their data's terms - the point at the middle of each plot, and how far
  * each is zoomed in - which each shows at its own size, so they can be any size, and resized one
- * apart from another. Pass the shared domains through.
+ * apart from another. Pass the shared domains through: new ones zoom the plots back out, as the view
+ * was in the old ones' terms.
  *
  * Only the hovered plot shows a tooltip - the mirrored crosshair is an overlay, and does not
  * trigger the other plots' hover behavior.
  */
-const ScatterPlotSync = ({ children, xDomain, yDomain, width, height }: ScatterPlotSyncProps) => {
-    const [view, setView] = useState<ScatterPlotView | null>(null);
+const ScatterPlotSync = ({ children, xDomain, yDomain }: ScatterPlotSyncProps) => {
+    // By value, as a consumer may pass fresh arrays on every render.
+    const domains = String([xDomain, yDomain]);
+    const [shared, setShared] = useState<{ view: ScatterPlotView; domains: string } | null>(null);
     const [crosshairPosition, setCrosshairPosition] = useState<CrosshairPosition | null>(null);
 
     return children({
-        view,
-        onViewChange: setView,
+        view: shared?.domains === domains ? shared.view : null,
+        onViewChange: (view) => setShared({ view, domains }),
         crosshair: true,
         crosshairPosition,
         onCrosshairChange: setCrosshairPosition,
         xDomain,
         yDomain,
-        width,
-        height,
     });
 };
 

@@ -384,17 +384,8 @@ export type ChartProps<T, S extends boolean | undefined, Z extends boolean | und
      */
     onCrosshairChange?: (position: CrosshairPosition | null) => void;
     /**
-     * An externally owned zoom instance. When provided the plot drives that zoom instead of
-     * creating its own.
-     *
-     * Plots sharing a zoom must be the same size and share their domains, since the transform
-     * is in pixels. To keep plots of any size on one view, share `view` instead, as
-     * ScatterPlotSync does.
-     */
-    zoom?: ZoomType;
-    /**
      * A view to follow, shared with other plots in data terms so each shows it at its own size - see
-     * ScatterPlotSync. Null where none has been shared yet.
+     * ScatterPlotSync. Null to zoom all the way out, as where none has been shared yet.
      */
     view?: ScatterPlotView | null;
     /** Fired as the plot's own zoom moves, with where it's moved to, for the other plots to follow. */
@@ -554,10 +545,4 @@ type ZoomState = {
     isDragging: boolean;
 };
 
-export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState & {
-    /**
-     * Tells the zoom the size of the plot area it is moving, in pixels, which it holds panning
-     * inside of. Each plot calls this for the zoom it is given; a zoom without it pans freely.
-     */
-    setPanExtent?: (width: number, height: number) => void;
-}
+export type ZoomType = ProvidedZoom<React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>> & ZoomState;

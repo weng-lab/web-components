@@ -274,7 +274,7 @@ export const clampTranslate = (translate: number, scale: number, size: number, s
 
 /**
  * Value comparison for transform matrices. Reference comparison is not enough once a matrix can
- * come from outside the component (a shared zoom, a restored view) rather than only from visx.
+ * be built outside visx, as one following a shared view is.
  */
 export const isSameTransform = (a: TransformMatrix, b: TransformMatrix) => (
     a.scaleX === b.scaleX &&

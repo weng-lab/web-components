@@ -49,9 +49,12 @@ type ViewSyncProps = {
 export const ViewSync = ({ zoom, view, onViewChange, xScale, yScale }: ViewSyncProps) => {
     const { transformMatrix, initialTransformMatrix, setTransformMatrix } = zoom;
 
-    // Follows the shared view, and keeps to it as the plot is resized.
+    // Follows the shared view, and keeps to it as the plot is resized. With none, it's zoomed all the way out.
     useLayoutEffect(() => {
-        if (!view) return;
+        if (!view) {
+            if (!isSameTransform(transformMatrix, initialTransformMatrix)) setTransformMatrix(initialTransformMatrix);
+            return;
+        }
         const target = transformOf(view, transformMatrix, xScale, yScale);
         if (!near(target, transformMatrix)) setTransformMatrix(target);
         // Not on the plot's own moves, which it shares instead.

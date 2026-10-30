@@ -1,12 +1,8 @@
-import React, { ReactElement, useCallback, useRef } from 'react';
+import React, { ReactElement, useCallback } from 'react';
 import { Zoom as VisxZoom, ZoomProps } from '@visx/zoom';
 import { TransformMatrix, ZoomType } from './types';
 import { clampTranslate, isSameTransform } from './helpers';
 
-/**
- * Shared by every plot that creates a zoom, so a plot driving its own zoom and a plot driving a
- * shared one behave identically.
- */
 const initialTransformMatrix = {
     scaleX: 1,
     scaleY: 1,
@@ -37,24 +33,13 @@ const reachable = (previous: number, next: number, min: number, max: number) => 
 };
 
 type PlotZoomProps = {
-    /**
-     * Size of the zoomed area. Only used by visx to pick a default anchor point for operations
-     * that have none of their own; the plots always pass an explicit one.
-     */
+    /** The plot area: what panning is held inside of, and whose middle a zoom without a point of its own is about. */
     width: number;
     height: number;
     children: (zoom: ZoomType) => ReactElement;
 };
 
 const PlotZoom = ({ width, height, children }: PlotZoomProps) => {
-    // The plot area the pan is held to, reported by the plots themselves (see ZoomType's
-    // setPanExtent): a shared zoom is created before any of its plots has been measured. A ref,
-    // as it is only read while a transform is being applied.
-    const extentRef = useRef({ width: 0, height: 0 });
-    const setPanExtent = useCallback((extentWidth: number, extentHeight: number) => {
-        extentRef.current = { width: extentWidth, height: extentHeight };
-    }, []);
-
     /**
      * Zooming is held to the scale limits, and panning to what the plot shows when zoomed all the
      * way out about its center - so the view can be dragged no further, at any zoom, than
@@ -82,15 +67,15 @@ const PlotZoom = ({ width, height, children }: PlotZoomProps) => {
             translateY: part(previous.translateY, next.translateY),
         };
 
-        const { width: extentWidth, height: extentHeight } = extentRef.current;
+        // Unmeasured, it pans freely.
         const held = {
             ...scaled,
-            translateX: extentWidth > 0 ? clampTranslate(scaled.translateX, scaled.scaleX, extentWidth, scaleXMin) : scaled.translateX,
-            translateY: extentHeight > 0 ? clampTranslate(scaled.translateY, scaled.scaleY, extentHeight, scaleYMin) : scaled.translateY,
+            translateX: width > 0 ? clampTranslate(scaled.translateX, scaled.scaleX, width, scaleXMin) : scaled.translateX,
+            translateY: height > 0 ? clampTranslate(scaled.translateY, scaled.scaleY, height, scaleYMin) : scaled.translateY,
         };
         // The same object where nothing moved, so dragging against the edge doesn't re-render the plot.
         return isSameTransform(held, previous) ? previous : held;
-    }, []);
+    }, [width, height]);
 
     return (
         <Zoom
@@ -100,7 +85,7 @@ const PlotZoom = ({ width, height, children }: PlotZoomProps) => {
             constrain={constrain}
             initialTransformMatrix={initialTransformMatrix}
         >
-            {(zoom) => children({ ...(zoom as ZoomType), setPanExtent })}
+            {(zoom) => children(zoom as ZoomType)}
         </Zoom>
     );
 };

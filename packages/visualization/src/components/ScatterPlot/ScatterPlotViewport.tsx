@@ -188,12 +188,6 @@ const ScatterPlotViewport = <T extends object>({
     }, !disableZoom);
     const hint = useTwoFingerHint(svg, !disableZoom && !fingerDraws);
 
-    // The zoom holds panning inside the plot area, whose size only the plot knows.
-    const { setPanExtent } = zoom;
-    useEffect(() => {
-        setPanExtent?.(boundedWidth, boundedHeight);
-    }, [setPanExtent, boundedWidth, boundedHeight]);
-
     const xScaleTransformed = useMemo(
         () => rescaleX(xScale, zoom.transformMatrix.translateX, zoom.transformMatrix.scaleX),
         [xScale, zoom.transformMatrix]
@@ -325,7 +319,7 @@ const ScatterPlotViewport = <T extends object>({
 
     /**
      * Panning is coalesced to one zoom update per frame. React flushes mousemove updates
-     * synchronously, and a shared zoom re-renders every synced plot, so handling each move
+     * synchronously, and a synced view re-renders every synced plot, so handling each move
      * outright never lets the browser paint and eventually exceeds React's update depth.
      *
      * The buffer holds nativeEvent, since React clears the synthetic event's currentTarget after

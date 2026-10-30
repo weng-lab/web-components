@@ -140,11 +140,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
     };
 
     const renderPlot = (zoom: ZoomType) => {
-        // Anchor the buttons on the plot area explicitly - a shared zoom is sized by whoever owns
-        // it, so visx's own default anchor (the center of that size) isn't this plot's center.
-        const zoomCenter = { x: boundedWidth / 2, y: boundedHeight / 2 };
-        const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2, point: zoomCenter }); }
-        const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8, point: zoomCenter }); }
+        // About the middle of the plot area, which the zoom is sized to.
+        const handleZoomIn = () => { zoom.scale({ scaleX: 1.2, scaleY: 1.2 }); }
+        const handleZoomOut = () => { zoom.scale({ scaleX: 0.8, scaleY: 0.8 }); }
         const handleZoomReset = () => { zoom.reset(); }
         const zoomed = !isSameTransform(zoom.transformMatrix, zoom.initialTransformMatrix);
 
@@ -253,13 +251,9 @@ const ScatterPlot = <T extends object, S extends boolean | undefined = undefined
 
     return (
         <ResponsiveContainer parentRef={parentRef} containerStyle={containerStyle}>
-            {props.zoom
-                ? renderPlot(props.zoom)
-                : (
-                    <PlotZoom width={boundedWidth} height={boundedHeight}>
-                        {renderPlot}
-                    </PlotZoom>
-                )}
+            <PlotZoom width={boundedWidth} height={boundedHeight}>
+                {renderPlot}
+            </PlotZoom>
         </ResponsiveContainer>
     );
 }
